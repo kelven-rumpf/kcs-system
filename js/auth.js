@@ -1,0 +1,448 @@
+/**
+ * auth.js — Módulo de Autenticação (Cloud-Only) e Multi-Auth SaaS
+ */
+import { appCloud, dbCloud, checkTenantUserLimit } from './services/cloud.js';
+import { TENANT_KEYS, ROLES, SECTORS } from './config.js';
+
+let currentUser = null;
+let authInstance = null;
+let onAuthChangeCallback = null;
+
+export function initAuth(callback) {
+    return new Promise(async (resolve) => {
+        onAuthChangeCallback = callback;
+        
+        const { getAuth, onAuthStateChanged } = await import('https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js');
+        const { doc, getDoc, setDoc, collection, getDocs } = await import('https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js');
+        
+        authInstance = getAuth(appCloud);
+        
+        onAuthStateChanged(authInstance, async (user) => {
+            if (user) {
+                const userRef = doc(dbCloud, "users", user.uid);
+                const userSnap = await getDoc(userRef);
+                
+                let userData;
+
+                if (userSnap.exists()) {
+                    // 1º Prioridade: O usuário já existe no banco de dados. Login direto.
+                    userData = userSnap.data();
+                    let needsUpdate = false;
+                    
+                    // PATCH CORRETIVO: Garante que usuários legados ganhem o ID no documento
+                    if (!userData.id) {
+                        userData.id = user.uid;
+                        needsUpdate = true;
+                    }
+                    
+                    if (!userData.displayName || String(userData.displayName) === 'undefined') {
+                        userData.displayName = user.displayName || (user.email ? user.email.split('@')[0] : 'Usuário KCS');
+                        needsUpdate = true;
+                    }
+                    if (!userData.email || String(userData.email) === 'undefined') {
+                        userData.email = user.email || '';
+                        needsUpdate = true;
+                    }
+                    if (needsUpdate) {
+                        await setDoc(userRef, userData, { merge: true });
+                    }
+                } else {
+                    // Novo usuário. Vamos verificar a governança.
+                    const usersSnap = await getDocs(collection(dbCloud, "users"));
+                    const isFirstUser = usersSnap.empty;
+                    
+                    let role = ROLES.USER;
+                    let companyId = 'LIMBO_TENANT';
+                    let sectorId = SECTORS[0].id;
+                    
+                    if (isFirstUser) {
+                        role = ROLES.SUPER_ADMIN; 
+                    } else {
+                        const safeEmail = user.email ? user.email.toLowerCase().trim() : '';
+                        const userDomain = safeEmail.includes('@') ? safeEmail.split('@')[1] : '';
+                        
+                        // 2º Prioridade: Existe convite pendente na collection 'invites'?
+                        const inviteRef = doc(dbCloud, "invites", safeEmail);
+                        const inviteSnap = await getDoc(inviteRef);
+                        
+                        if (inviteSnap.exists()) {
+                            const inviteData = inviteSnap.data();
+                            role = inviteData.role || ROLES.USER;
+                            companyId = inviteData.tenantId || 'LIMBO_TENANT';
+                            sectorId = inviteData.sectorId || SECTORS[0].id;
+                        } else {
+                            // 3º Prioridade: Não tem convite? Tenta Auto-Provisionamento pelo Domínio
+                            const companiesSnap = await getDocs(collection(dbCloud, "companies"));
+                            let matchedCompanyId = null;
+                            
+                            companiesSnap.forEach(doc => {
+                                const cData = doc.data();
+                                const domains = cData.domains || [];
+                                if (domains.includes(userDomain)) {
+                                    matchedCompanyId = cData.companyId;
+                                }
+                            });
+
+                            if (matchedCompanyId) {
+                                role = ROLES.USER;
+                                companyId = matchedCompanyId;
+                                sectorId = SECTORS[0].id; 
+                            } else {
+                                // BLOQUEIO IMEDIATO! Sem convite e sem domínio válido.
+                                const { signOut } = await import('https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js');
+                                await signOut(authInstance);
+                                
+                                alert(`ACESSO NEGADO 🛑\n\nO domínio corporativo (@${userDomain}) não está cadastrado e você não possui um convite direto pendente.\n\nContate o administrador da empresa.`);
+                                
+                                if (onAuthChangeCallback) onAuthChangeCallback(null);
+                                resolve(null);
+                                return; 
+                            }
+                        }
+                    }
+
+                  // --- VALIDAÇÃO DE LIMITE SAAS ---
+                    if (!isFirstUser && companyId !== 'LIMBO_TENANT') {
+                        const limitCheck = await checkTenantUserLimit(companyId);
+                        
+                        if (!limitCheck.allowed) {
+                            const { signOut } = await import('https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js');
+                            await signOut(authInstance);
+                            
+                            // UX Writing: Alerta mais suave e acolhedor
+                            alert(`Ops, casa cheia! 🏠\n\n${limitCheck.message}\n\nPor favor, avise o Administrador do sistema para liberar mais espaço para você entrar no time.`);
+                            
+                            if (onAuthChangeCallback) onAuthChangeCallback(null);
+                            resolve(null);
+                            return;
+                        }
+                    }
+                    
+                    // Se passou por tudo, cria o usuário na collection.
+                    userData = { 
+                        id: user.uid, 
+                        email: user.email || '', 
+                        displayName: user.displayName || (user.email ? user.email.split('@')[0] : 'Usuário KCS'), 
+                        photoURL: user.photoURL || '', 
+                        role: role,
+                        companyId: companyId,
+                        sectorId: sectorId
+                    };
+                    await setDoc(userRef, userData); 
+                }
+
+                // Configura as variáveis de sessão para o Front-end
+                const companyId = userData.companyId || 'LIMBO_TENANT';
+                const sectorId = userData.sectorId || SECTORS[0].id;
+                let companyName = "Empresa Pendente";
+                let botName = "Assistente KCS";
+                let tenantMaxUsers = 5;
+                let tenantPlan = 'Bronze';
+
+                if (companyId !== 'LIMBO_TENANT') {
+                    let tenantRef = doc(dbCloud, "tenants", companyId);
+                    let tenantSnap = await getDoc(tenantRef);
+                    
+                    if (!tenantSnap.exists()) {
+                        tenantRef = doc(dbCloud, "companies", companyId);
+                        tenantSnap = await getDoc(tenantRef);
+                    }
+
+                    if (tenantSnap.exists()) {
+                        const tData = tenantSnap.data();
+                        companyName = tData.companyName || companyName;
+                        botName = tData.botName || botName;
+                        
+                        // Lendo os dados reais salvos no Firestore
+                        tenantMaxUsers = tData.maxUsers || 5;
+                        tenantPlan = tData.plan || 'Bronze';
+                    }
+                }
+
+                sessionStorage.setItem(TENANT_KEYS.USER_ID, user.uid);
+                sessionStorage.setItem(TENANT_KEYS.COMPANY_ID, companyId);
+                sessionStorage.setItem(TENANT_KEYS.SECTOR_ID, sectorId);
+                sessionStorage.setItem(TENANT_KEYS.COMPANY_NAME, companyName);
+                sessionStorage.setItem(TENANT_KEYS.BOT_NAME, botName);
+                
+                // NOVO: Salvando na sessão para o render.js puxar e colorir o Badge corretamente
+                sessionStorage.setItem('tenant_max_users', tenantMaxUsers);
+                sessionStorage.setItem('tenant_plan', tenantPlan);
+
+                // INJEÇÃO DIRETA: Garante que as chaves id e uid estejam sempre presentes no estado global
+                currentUser = { 
+                    ...userData, 
+                    companyName, 
+                    botName,
+                    uid: user.uid,
+                    id: user.uid
+                };
+                
+                if (onAuthChangeCallback) onAuthChangeCallback(currentUser);
+                resolve(currentUser);
+            } else {
+                sessionStorage.clear();
+                currentUser = null;
+                if (onAuthChangeCallback) onAuthChangeCallback(null);
+                resolve(null);
+            }
+        });
+    });
+}
+
+// ==========================================
+// MÉTODOS DE AUTENTICAÇÃO (MULTI-AUTH)
+// ==========================================
+export async function loginWithGoogle() {
+    try {
+        const { GoogleAuthProvider, signInWithPopup } = await import('https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js');
+        const provider = new GoogleAuthProvider();
+        provider.setCustomParameters({ prompt: 'select_account' });
+        await signInWithPopup(authInstance, provider);
+        return { success: true };
+    } catch(e) {
+        return { success: false, message: e.message };
+    }
+}
+
+export async function loginWithMicrosoft() {
+    try {
+        const { OAuthProvider, signInWithPopup } = await import('https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js');
+        const provider = new OAuthProvider('microsoft.com');
+        provider.setCustomParameters({ prompt: 'select_account' });
+        await signInWithPopup(authInstance, provider);
+        return { success: true };
+    } catch(e) {
+        return { success: false, message: e.message };
+    }
+}
+
+export async function loginWithEmail(email, password) {
+    try {
+        const { signInWithEmailAndPassword } = await import('https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js');
+        await signInWithEmailAndPassword(authInstance, email, password);
+        return { success: true };
+    } catch(e) {
+        return { success: false, message: 'Dados incorretos ou usuário inexistente.' };
+    }
+}
+
+export async function registerWithEmail(email, password) {
+    try {
+        const { createUserWithEmailAndPassword } = await import('https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js');
+        await createUserWithEmailAndPassword(authInstance, email, password);
+        return { success: true };
+    } catch(e) {
+        return { success: false, message: 'Falha no cadastro. O e-mail pode já estar em uso.' };
+    }
+}
+
+export async function logout() {
+    if(authInstance) {
+        const { signOut } = await import('https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js');
+        await signOut(authInstance);
+    }
+}
+
+// ==========================================
+// UTILITÁRIOS E PERMISSÕES
+// ==========================================
+export function isAuthenticated() { return currentUser !== null; }
+export function getCurrentUser() { return currentUser; }
+export function hasRole(role) { return currentUser && currentUser.role === role; }
+export function hasPermission(action) {
+    if (!currentUser) return false;
+    const r = currentUser.role;
+    if (r === ROLES.SUPER_ADMIN) return true; 
+    if (r === ROLES.ADMIN) return true; 
+    if (r === ROLES.ANALYST) return ['create_article', 'edit_article', 'delete_article', 'validate_article', 'read_article', 'search', 'manage_sql'].includes(action);
+    if (r === ROLES.USER) return ['read_article', 'like_article', 'comment_article', 'search'].includes(action);
+    return false;
+}
+
+// ==========================================
+// GESTÃO DE USUÁRIOS E CONVITES (SAAS)
+// ==========================================
+export async function getAllUsersFromCloud() {
+    const { collection, getDocs, query, where } = await import('https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js');
+    let usersQuery;
+    if (currentUser.role === ROLES.SUPER_ADMIN) {
+        usersQuery = collection(dbCloud, "users");
+    } else {
+        const currentCompanyId = sessionStorage.getItem(TENANT_KEYS.COMPANY_ID);
+        usersQuery = query(collection(dbCloud, "users"), where("companyId", "==", currentCompanyId));
+    }
+    const snap = await getDocs(usersQuery);
+    const users = [];
+    snap.forEach(d => users.push(d.data()));
+    return users; 
+}
+
+export async function updateUserRoleInCloud(uid, newRole) {
+    const { doc, updateDoc } = await import('https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js');
+    await updateDoc(doc(dbCloud, "users", uid), { role: newRole });
+    return { success: true };
+}
+
+export async function updateUserCompanyInCloud(uid, newCompanyId) {
+    const { doc, updateDoc } = await import('https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js');
+    await updateDoc(doc(dbCloud, "users", uid), { companyId: newCompanyId });
+    return { success: true };
+}
+
+export async function updateUserSectorInCloud(uid, newSectorId) {
+    const { doc, updateDoc } = await import('https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js');
+    await updateDoc(doc(dbCloud, "users", uid), { sectorId: newSectorId });
+    return { success: true };
+}
+
+export async function deleteUserInCloud(uid) {
+    const { doc, deleteDoc } = await import('https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js');
+    await deleteDoc(doc(dbCloud, "users", uid));
+    return { success: true };
+}
+
+export async function createCompanyInCloud(companyName, domainStr) {
+    const { doc, setDoc, getDoc } = await import('https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js');
+    
+    if (!companyName || companyName.trim().length < 3) throw new Error("Nome da empresa inválido.");
+    if (!domainStr) throw new Error("É necessário fornecer ao menos um domínio.");
+
+    // 1. Múltiplos Domínios: Transforma a string separada por vírgula em array e limpa os dados
+    const domains = domainStr.split(',')
+                             .map(d => d.trim().toLowerCase().replace('@',''))
+                             .filter(Boolean);
+
+    if (domains.length === 0) throw new Error("Domínio inválido.");
+
+    // Corta no primeiro ponto (ex: kcshub.com.br vira kcshub) e limpa sobras
+    const companyId = domains[0].split('.')[0].replace(/[^a-z0-9]/g, '');
+    if (!companyId) throw new Error("Domínio principal inválido para gerar o ID do tenant.");
+
+    const companyRef = doc(dbCloud, "companies", companyId);
+    
+    // 3. Validação de Duplicidade: Verifica se o ID gerado já existe no banco para não sobrescrever
+    const docSnap = await getDoc(companyRef);
+    if (docSnap.exists()) throw new Error("Já existe uma empresa cadastrada com este domínio principal.");
+
+    // 4. Criação do Documento no Firestore
+    await setDoc(companyRef, {
+        companyId,
+        companyName: companyName.trim(),
+        domains,
+        botName: `IA - ${companyName.trim().split(' ')[0]}`,
+        plan: 'Starter', // Define o plano básico como padrão
+        maxUsers: 5,     // Define o limite padrão
+        createdAt: new Date().toISOString()
+    });
+    
+    return { success: true, companyId };
+}
+
+export async function getAllCompaniesFromCloud() {
+    const { collection, getDocs } = await import('https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js');
+    const snap = await getDocs(collection(dbCloud, "companies"));
+    const companies = [];
+    snap.forEach(d => companies.push(d.data()));
+    return companies;
+}
+
+export async function inviteUserToSystem(email, role, tenantId, sectorId) {
+    const { doc, setDoc } = await import('https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js');
+    const safeEmail = email.toLowerCase().trim();
+    await setDoc(doc(dbCloud, "invites", safeEmail), {
+        email: safeEmail,
+        role: role,
+        tenantId: tenantId,
+        sectorId: sectorId,
+        invitedBy: currentUser.email || 'Admin',
+        invitedAt: new Date().toISOString()
+    });
+    return { success: true };
+}
+
+export async function getAllInvitedUsers() {
+    const { collection, getDocs, query, where } = await import('https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js');
+    let inviteQuery;
+    if (currentUser.role === ROLES.SUPER_ADMIN) {
+        inviteQuery = collection(dbCloud, "invites");
+    } else {
+        const currentCompanyId = sessionStorage.getItem(TENANT_KEYS.COMPANY_ID);
+        inviteQuery = query(collection(dbCloud, "invites"), where("tenantId", "==", currentCompanyId));
+    }
+    const snap = await getDocs(inviteQuery);
+    const invites = [];
+    snap.forEach(d => invites.push(d.data()));
+    return invites;
+}
+
+export async function removeInvitedUser(email) {
+    const { doc, deleteDoc } = await import('https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js');
+    await deleteDoc(doc(dbCloud, "invites", email.toLowerCase().trim()));
+    return { success: true };
+}
+
+// NOVA FUNÇÃO: ATUALIZAR PLANO E LIMITES DA EMPRESA (Sincronizado com maxUsers) 10/04/2026
+export async function updateCompanyPlanInCloud(companyId, planName, maxUsers) {
+    const { doc, updateDoc } = await import('https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js');
+    await updateDoc(doc(dbCloud, "companies", companyId), {
+        plan: planName,
+        maxUsers: Number(maxUsers)
+    });
+    return { success: true };
+}
+
+// NOVA FUNÇÃO: BUSCA VISÃO GERAL DE EMPRESAS PARA O ADMIN E MASTER
+export async function fetchCompaniesOverview() {
+    const { collection, getDocs, query, where, getCountFromServer } = await import('https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js');
+    
+    // Trazemos todas as empresas
+    const companiesSnap = await getDocs(collection(dbCloud, "companies"));
+    const overview = [];
+
+    // Otimização: Promise.all para buscar as contagens em paralelo
+    const countPromises = companiesSnap.docs.map(async (doc) => {
+        const data = doc.data();
+        const q = query(collection(dbCloud, "users"), where("companyId", "==", data.companyId));
+        const countSnap = await getCountFromServer(q);
+        
+        return {
+            ...data,
+            userCount: countSnap.data().count,
+            plan: data.plan || 'Starter', // Fallback seguro
+            maxUsers: data.maxUsers || 5
+        };
+    });
+
+    return await Promise.all(countPromises);
+}
+
+export async function updateCompanyDetailsInCloud(companyId, newName, domainsStr, newPlan) {
+    const { doc, updateDoc } = await import('https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js');
+    
+    const domains = domainsStr.split(',')
+                              .map(d => d.trim().toLowerCase().replace('@',''))
+                              .filter(Boolean);
+
+    const companyRef = doc(dbCloud, "companies", companyId);
+    
+    let maxUsers = 5;
+    if (newPlan === 'Teams') maxUsers = 20;
+    if (newPlan === 'Unlimited') maxUsers = 9999;
+
+    await updateDoc(companyRef, {
+        companyName: newName.trim(),
+        domains: domains,
+        plan: newPlan,
+        maxUsers: maxUsers,
+        botName: `IA - ${newName.trim().split(' ')[0]}`
+    });
+    
+    return { success: true };
+}
+
+export async function deleteCompanyInCloud(companyId) {
+    const { doc, deleteDoc } = await import('https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js');
+    await deleteDoc(doc(dbCloud, "companies", companyId));
+    return { success: true };
+}
