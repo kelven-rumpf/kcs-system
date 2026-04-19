@@ -34,12 +34,12 @@
     --shadow-card: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.06);
 
     /* Sistema de Cores Premium (Light Mode - Contraste Nítido contra Fadiga Visual) */
-    --bg-canvas: #EEF2F7;       /* Fundo da aplicação (absorvente) */
-    --bg-surface: #F8FAFC;      /* Superfícies primárias e Sidebar */
-    --bg-surface-glass: rgba(248, 250, 252, 0.85); /* Para Glassmorphism */
+    --bg-canvas: #F7F9FC;       /* Fundo off-white macio para conforto visual */
+    --bg-surface: #FFFFFF;      /* Superfícies limpas e destacadas */
+    --bg-surface-glass: rgba(255, 255, 255, 0.85); /* Glassmorphism nítido */
     
-    --border-subtle: #E2E8F0;   /* Slate 200 - Bordas finas para divisórias internas */
-    --border-strong: #CBD5E1;   /* Slate 300 - Bordas de Precisão para contornos de cards */
+    --border-subtle: #E5E7EB;   /* Cinza suave para separar sem poluir */
+    --border-strong: #D1D5DB;   /* Borda de destaque para modais e cards */
     
     --text-primary: #0f172a;    /* Slate 900 */
     --text-secondary: #475569;  /* Slate 600 - Textos de apoio e labels */
@@ -77,13 +77,13 @@ html.dark, .dark {
     /* Sombra Orgânica Adaptada para o Dark Mode */
     --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.04);
 
-    /* Cores: Evitando preto puro (#000) - Usando Blueish Grays profundos */
-    --bg-canvas: #090b11;       /* Fundo abissal tech */
-    --bg-surface: #11141d;      /* Cards e Modais */
-    --bg-surface-glass: rgba(17, 20, 29, 0.85); 
+    /* Cores: Dark Mode Profundo (Linear App Style) */
+    --bg-canvas: #0A0A0A;       /* Fundo quase preto absoluto para contraste máximo em OLED */
+    --bg-surface: #141414;      /* Cards com elevação sutil (1 nível) */
+    --bg-surface-glass: rgba(20, 20, 20, 0.80); 
     
-    --border-subtle: rgba(255, 255, 255, 0.06);
-    --border-strong: rgba(255, 255, 255, 0.12);
+    --border-subtle: rgba(255, 255, 255, 0.08);
+    --border-strong: rgba(255, 255, 255, 0.16);
     
     --text-primary: #f8fafc;
     --text-secondary: #94a3b8;
@@ -136,7 +136,7 @@ img {
     margin-bottom: 1rem;
     border-radius: 0.75rem;
     box-shadow: var(--shadow-card); 
-    border: 1px solid var(--border-strong); /* Borda externa nítida separando o card do Canvas */
+    border: 1px solid var(--border-strong);
     background-color: var(--bg-surface);
 }
 
@@ -897,7 +897,7 @@ table th {
 
 table tbody tr {
     transition: var(--transition-fast) !important;
-    background-color: #FFFFFF; 
+    background-color: var(--bg-surface); 
 }
 
 table tbody tr td {
@@ -933,4 +933,76 @@ html:not(.dark) .custom-scrollbar::-webkit-scrollbar-thumb {
 }
 html:not(.dark) .custom-scrollbar:hover::-webkit-scrollbar-thumb {
     background-color: var(--text-muted);
+}
+
+
+/* ==========================================================================
+   14. OVERRIDES GLOBAIS BLINDADOS (DARK MODE & DROPDOWNS)
+   ========================================================================== */
+/* Garante que o Tailwind respeite nossas variáveis de Dark Mode limpo */
+html.dark body, 
+html.dark main,
+html.dark .bg-bg-main,
+html.dark .bg-\[\#131314\] {
+    background-color: var(--bg-canvas) !important;
+    color: var(--text-primary) !important;
+}
+
+html.dark aside,
+html.dark .sidebar,
+html.dark header,
+html.dark .bg-surface,
+html.dark .bg-\[\#1e1f20\],
+html.dark .modal-content-box {
+    background-color: var(--bg-surface) !important;
+    border-color: var(--border-subtle) !important;
+}
+
+/* Campos de Formulário Modernos e com Contraste no Dark Mode */
+html.dark input, 
+html.dark textarea, 
+html.dark select {
+    background-color: var(--bg-canvas) !important;
+    border: 1px solid var(--border-strong) !important;
+    color: var(--text-primary) !important;
+}
+html.dark input:focus, 
+html.dark textarea:focus, 
+html.dark select:focus {
+    border-color: var(--accent-blue) !important;
+    box-shadow: 0 0 0 2px var(--accent-blue-glow) !important;
+}
+
+/* Correção de Elevação para Menus Dropdown (Perfil e Notificações) */
+#profile-dropdown, 
+#notif-dropdown {
+    background-color: var(--bg-surface) !important;
+    border: 1px solid var(--border-strong) !important;
+    border-radius: 1.25rem !important;
+    box-shadow: var(--shadow-float) !important;
+    backdrop-filter: blur(12px);
+}
+#profile-dropdown .border-b, 
+#notif-dropdown .border-b {
+    border-color: var(--border-subtle) !important;
+}
+html.dark #profile-dropdown button:hover, 
+html.dark #notif-dropdown button:hover,
+html.dark #notif-dropdown .hover\:bg-gray-800:hover {
+    background-color: var(--bg-canvas) !important; /* Hover nítido */
+}
+
+/* ==========================================================================
+   15. CORREÇÕES DE CONFLITO VISUAL (CHATBOT)
+   ========================================================================== */
+/* Remove o contorno duplo forçado pelas regras globais de textarea no Dark/Light mode */
+#chatbot-input,
+html.dark #chatbot-input:focus, 
+html.light #chatbot-input:focus,
+#chatbot-input:focus {
+    border: none !important;
+    border-color: transparent !important;
+    box-shadow: none !important;
+    outline: none !important;
+    background-color: transparent !important;
 }

@@ -190,8 +190,8 @@ export function initChatbot() {
     }
     
     const windowClasses = isPopout 
-        ? 'flex flex-col bg-white dark:bg-surface w-full h-full pointer-events-auto z-[9999]'
-        : 'hidden flex-col bg-white dark:bg-surface border-0 sm:border border-gray-200 dark:border-border-subtle rounded-none sm:rounded-2xl shadow-2xl w-full sm:w-[400px] h-[100dvh] sm:h-[600px] max-h-[100dvh] overflow-hidden pointer-events-auto transition-all duration-300 absolute bottom-0 sm:bottom-20 right-0 origin-bottom-right z-[9999]';
+        ? 'flex flex-col bg-surface w-full h-full pointer-events-auto z-[9999]'
+        : 'hidden flex-col bg-surface border-0 sm:border border-border-strong rounded-none sm:rounded-[1.5rem] shadow-float w-full sm:w-[400px] h-[100dvh] sm:h-[600px] max-h-[100dvh] overflow-hidden pointer-events-auto transition-all duration-400 ease-out absolute bottom-0 sm:bottom-24 sm:right-6 origin-bottom-right z-[9999] scale-95 opacity-0 [&:not(.hidden)]:scale-100 [&:not(.hidden)]:opacity-100';
 
     const headerButtons = isPopout 
         ? `<div class="absolute right-3 top-[env(safe-area-inset-top,0.5rem)] sm:top-3.5 flex items-center gap-1">
@@ -604,18 +604,19 @@ async function processPromptWithRAGAndStream(userQuestion, botName, messagesEl, 
     5. CONTEXTO DE CONHECIMENTO
     Baseie-se ESTRITAMENTE no contexto fornecido abaixo.`;
 
-    const promptText = `CONTEXTO: ${contextString || 'Vazio.'} | PERGUNTA: "${userQuestion}"`;
+    // UNIFICANDO AS INSTRUÇÕES DIRETAMENTE NO PAYLOAD PARA EVITAR ERRO 400
+    const promptText = `${systemPrompt}\n\n---\n\nCONTEXTO DE CONHECIMENTO:\n${contextString || 'Vazio.'}\n\nPERGUNTA DO USUÁRIO:\n"${userQuestion}"`;
 
     const model = 'gemini-2.5-flash';
     const URL = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${CONFIG.GEMINI_API_KEY}`;
     
     const requestBody = {
-        systemInstruction: { parts: [{ text: systemPrompt }] },
-        contents: [{ parts: [{ text: promptText }] }],
+        contents: [{ 
+            role: "user",
+            parts: [{ text: promptText }] 
+        }],
         generationConfig: {
             temperature: 0.2,
-            topK: 1,
-            topP: 0.8,
             maxOutputTokens: 1024
         }
     };

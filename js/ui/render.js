@@ -196,19 +196,19 @@ function renderArticleTable(articles) {
     const canDelete = hasPermission('delete_article');
 
     let tableHtml = `
-    <div class="col-span-full w-full overflow-x-auto bg-white dark:bg-[#15171b] border border-gray-200 dark:border-[#3a3b3d] rounded-xl shadow-sm">
+    <div class="col-span-full w-full overflow-x-auto bg-surface border border-border-strong rounded-2xl shadow-card">
         <table class="w-full text-left border-collapse whitespace-nowrap">
             <thead>
-                <tr class="bg-gray-50 dark:bg-[#131314] border-b border-gray-200 dark:border-[#3a3b3d]">
-                    <th class="px-4 py-3 text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">ID / Ref</th>
-                    <th class="px-4 py-3 text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-full">Título e Categoria</th>
-                    <th class="px-4 py-3 text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Autor</th>
-                    <th class="px-4 py-3 text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Revisão</th>
-                    <th class="px-4 py-3 text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
-                    <th class="px-4 py-3 text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-right">Ações</th>
+                <tr class="border-b-2 border-border-subtle bg-bg-canvas/50">
+                    <th class="px-5 py-4 text-[11px] font-semibold text-text-muted uppercase tracking-wide">ID / Ref</th>
+                    <th class="px-5 py-4 text-[11px] font-semibold text-text-muted uppercase tracking-wide w-full">Título e Categoria</th>
+                    <th class="px-5 py-4 text-[11px] font-semibold text-text-muted uppercase tracking-wide">Autor</th>
+                    <th class="px-5 py-4 text-[11px] font-semibold text-text-muted uppercase tracking-wide">Revisão</th>
+                    <th class="px-5 py-4 text-[11px] font-semibold text-text-muted uppercase tracking-wide">Status</th>
+                    <th class="px-5 py-4 text-[11px] font-semibold text-text-muted uppercase tracking-wide text-right">Ações</th>
                 </tr>
             </thead>
-            <tbody class="divide-y divide-gray-100 dark:divide-gray-800/50">
+            <tbody class="divide-y divide-border-subtle bg-surface">
     `;
 
     tableHtml += articles.map(article => {
@@ -223,22 +223,22 @@ function renderArticleTable(articles) {
 
         return `
             <tr class="hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors group cursor-pointer" onclick="window.__kcs.viewArticle('${article.id}')">
-                <td class="px-4 py-3">
+                <td class="px-5 py-4">
                     <span class="text-[11px] font-mono font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded">${kcsNum}</span>
                 </td>
-                <td class="px-4 py-3 max-w-[300px]">
+                <td class="px-5 py-4 max-w-[300px]">
                     <p class="text-sm font-semibold text-gray-900 dark:text-white truncate" title="${escapeHtml(article.title)}">${escapeHtml(article.title)}</p>
                     <p class="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5 truncate">${categoryDisplayName !== 'Sem categoria' ? escapeHtml(categoryDisplayName) : 'Sem categoria'}</p>
                 </td>
                 
-                <td class="px-4 py-3">
+                <td class="px-5 py-4">
                     <div class="flex items-center gap-1.5" title="Autor original">
                         <div class="w-5 h-5 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-[9px] font-bold text-gray-600 dark:text-gray-300">${authorName.charAt(0).toUpperCase()}</div>
                         <span class="text-xs text-gray-700 dark:text-gray-300 font-medium">${escapeHtml(authorName)}</span>
                     </div>
                 </td>
 
-                <td class="px-4 py-3">
+                <td class="px-5 py-4">
                     ${reviewerName && article.status === 'approved' 
                         ? `<div class="flex items-center gap-1.5" title="Revisado por">
                                <i class="ph-fill ph-check-circle text-green-500 dark:text-green-400 text-sm"></i>
@@ -248,10 +248,10 @@ function renderArticleTable(articles) {
                     }
                 </td>
 
-                <td class="px-4 py-3">
+                <td class="px-5 py-4">
                     <span class="text-[10px] font-bold px-2.5 py-1 rounded-full ${statusColor}">${statusLabel}</span>
                 </td>
-                <td class="px-4 py-3 text-right">
+                <td class="px-5 py-4 text-right">
                     <div class="flex items-center justify-end gap-2 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity" onclick="event.stopPropagation()">
                         ${canEdit ? `<button onclick="window.__kcs.editArticle('${article.id}')" class="p-1.5 text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 bg-gray-100 hover:bg-blue-50 dark:bg-[#1e1f20] dark:hover:bg-blue-900/30 rounded transition-colors" title="Editar"><i class="ph-fill ph-pencil-simple text-sm"></i></button>` : ''}
                         ${canDelete ? `<button onclick="window.__kcs.deleteArticle('${article.id}')" class="p-1.5 text-gray-500 hover:text-red-600 dark:hover:text-red-400 bg-gray-100 hover:bg-red-50 dark:bg-[#1e1f20] dark:hover:bg-red-900/30 rounded transition-colors" title="Excluir"><i class="ph-fill ph-trash text-sm"></i></button>` : ''}
@@ -391,18 +391,18 @@ function renderSqlTable(scripts) {
   const user = getCurrentUser();
   
   let tableHtml = `
-    <div class="col-span-full w-full overflow-x-auto bg-white dark:bg-[#15171b] border border-gray-200 dark:border-[#3a3b3d] rounded-xl shadow-sm">
+    <div class="col-span-full w-full overflow-x-auto bg-surface border border-border-strong rounded-2xl shadow-card">
         <table class="w-full text-left border-collapse whitespace-nowrap">
             <thead>
-                <tr class="bg-gray-50 dark:bg-[#131314] border-b border-gray-200 dark:border-[#3a3b3d]">
-                    <th class="px-4 py-3 text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Ref</th>
-                    <th class="px-4 py-3 text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-full">Nome do Script</th>
-                    <th class="px-4 py-3 text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Banco</th>
-                    <th class="px-4 py-3 text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Operação</th>
-                    <th class="px-4 py-3 text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-right">Ações</th>
+                <tr class="border-b-2 border-border-subtle bg-bg-canvas/50">
+                    <th class="px-5 py-4 text-[11px] font-semibold text-text-muted uppercase tracking-wide">Ref</th>
+                    <th class="px-5 py-4 text-[11px] font-semibold text-text-muted uppercase tracking-wide w-full">Nome do Script</th>
+                    <th class="px-5 py-4 text-[11px] font-semibold text-text-muted uppercase tracking-wide">Banco</th>
+                    <th class="px-5 py-4 text-[11px] font-semibold text-text-muted uppercase tracking-wide">Operação</th>
+                    <th class="px-5 py-4 text-[11px] font-semibold text-text-muted uppercase tracking-wide text-right">Ações</th>
                 </tr>
             </thead>
-            <tbody class="divide-y divide-gray-100 dark:divide-gray-800/50">
+            <tbody class="divide-y divide-border-subtle bg-surface">
   `;
 
   tableHtml += scripts.map(s => {
@@ -419,20 +419,20 @@ function renderSqlTable(scripts) {
 
       return `
       <tr class="hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors group cursor-pointer" onclick="window.__kcs.viewSqlScript('${s.id}')">
-          <td class="px-4 py-3">
+          <td class="px-5 py-4">
               <span class="text-[10px] font-mono font-bold text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20 px-2 py-1 rounded">${sqlNum}</span>
           </td>
-          <td class="px-4 py-3 max-w-[300px]">
+          <td class="px-5 py-4 max-w-[300px]">
               <p class="text-sm font-semibold text-gray-900 dark:text-white truncate" title="${escapeHtml(s.name)}">${escapeHtml(s.name)}</p>
               <p class="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5">${escapeHtml(authorName)} · ${formatDate(s.updatedAt)}</p>
           </td>
-          <td class="px-4 py-3">
+          <td class="px-5 py-4">
               <span class="text-[9px] ${dbInfo.color} px-2 py-0.5 rounded font-bold uppercase">${dbInfo.label}</span>
           </td>
-          <td class="px-4 py-3">
+          <td class="px-5 py-4">
               ${badgeHtml}
           </td>
-          <td class="px-4 py-3 text-right">
+          <td class="px-5 py-4 text-right">
               <div class="flex items-center justify-end gap-2 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity" onclick="event.stopPropagation()">
                   <button onclick="window.__kcs.explainSql('${s.id}')" class="p-1.5 text-gray-500 hover:text-yellow-600 dark:hover:text-yellow-400 bg-gray-100 hover:bg-yellow-50 dark:bg-[#1e1f20] dark:hover:bg-yellow-900/30 rounded transition-colors" title="A IA explicará o que este script faz"><i class="ph-fill ph-lightbulb text-sm"></i></button>
                   ${canManage ? `<button onclick="window.__kcs.editSqlScript('${s.id}')" class="p-1.5 text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 bg-gray-100 hover:bg-blue-50 dark:bg-[#1e1f20] dark:hover:bg-blue-900/30 rounded transition-colors" title="Editar"><i class="ph-fill ph-pencil-simple text-sm"></i></button>` : ''}
@@ -695,8 +695,8 @@ export function renderDashboard(articles, scripts, topAnalysts = [], topCollabor
         const isStale = isApproved && daysOld > 6; 
         
         if (isReported) a._alertReason = 'Reporte de Erro';
-        else if (isStagnantDraft) a._alertReason = 'Rascunho Esquecido (> 3 dias)';
-        else if (isHighViewDraft) a._alertReason = 'Rascunho com Alto Acesso (>5)';
+        else if (isStagnantDraft) a._alertReason = 'Rascunho (> 3 dias)';
+        else if (isHighViewDraft) a._alertReason = 'Alto Acesso (>5)';
         else if (isStale) a._alertReason = 'Revisão Vencida (> 6 dias)';
         
         return isReported || isHighViewDraft || isStagnantDraft || isStale;
@@ -728,228 +728,219 @@ export function renderDashboard(articles, scripts, topAnalysts = [], topCollabor
 
     // 5. RENDERIZAÇÃO DA UI
     container.innerHTML = `
-        <h2 class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-            <i class="ph-fill ph-chart-line-up text-blue-600 dark:text-blue-400"></i> Dashboard de Governança KCS
+        <h2 class="text-xl sm:text-2xl font-bold text-text-primary mb-4 flex items-center gap-2">
+            <i class="ph-fill ph-chart-line-up text-blue-500"></i> Dashboard de Governança
         </h2>
         
-        <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
-            <div class="bg-surface border border-border-subtle rounded-xl p-4 shadow-sm">
-                <p class="text-xs text-gray-500 dark:text-gray-400 uppercase flex items-center gap-1"><i class="ph ph-file-text"></i>Procedimentos</p>
-                <p class="text-3xl font-bold text-gray-900 dark:text-white mt-1">${articles.length}</p>
+        <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5 mb-6">
+            <div class="bg-surface border border-border-subtle rounded-2xl p-5 shadow-card hover:shadow-md hover:-translate-y-1 transition-all duration-300 cursor-default group">
+                <p class="text-[11px] text-text-muted uppercase font-bold tracking-wider flex items-center gap-2 mb-2"><i class="ph ph-file-text text-gray-400 group-hover:text-blue-500 transition-colors text-lg"></i>Procedimentos</p>
+                <p class="text-4xl font-extrabold text-text-primary">${articles.length}</p>
             </div>
-            <div class="bg-surface border border-border-subtle rounded-xl p-4 shadow-sm">
-                <p class="text-xs text-gray-500 dark:text-gray-400 uppercase flex items-center gap-1"><i class="ph ph-check-circle"></i>KCS Aprovados</p>
-                <p class="text-3xl font-bold text-blue-600 dark:text-blue-400 mt-1">${validArticles.length}</p>
+            <div class="bg-surface border border-border-subtle rounded-2xl p-5 shadow-card hover:shadow-md hover:-translate-y-1 transition-all duration-300 cursor-default group">
+                <p class="text-[11px] text-text-muted uppercase font-bold tracking-wider flex items-center gap-2 mb-2"><i class="ph ph-check-circle text-gray-400 group-hover:text-blue-500 transition-colors text-lg"></i>KCS Aprovados</p>
+                <p class="text-4xl font-extrabold text-blue-600 dark:text-blue-400">${validArticles.length}</p>
             </div>
-            <div class="bg-surface border border-border-subtle rounded-xl p-4 shadow-sm">
-                <p class="text-xs text-gray-500 dark:text-gray-400 uppercase flex items-center gap-1"><i class="ph ph-eye"></i>Total de Acessos</p>
-                <p class="text-3xl font-bold text-green-600 dark:text-green-400 mt-1">${totalViews}</p>
+            <div class="bg-surface border border-border-subtle rounded-2xl p-5 shadow-card hover:shadow-md hover:-translate-y-1 transition-all duration-300 cursor-default group">
+                <p class="text-[11px] text-text-muted uppercase font-bold tracking-wider flex items-center gap-2 mb-2"><i class="ph ph-eye text-gray-400 group-hover:text-green-500 transition-colors text-lg"></i>Total de Acessos</p>
+                <p class="text-4xl font-extrabold text-green-600 dark:text-green-400">${totalViews}</p>
             </div>
-            <div class="bg-surface border border-border-subtle rounded-xl p-4 shadow-sm border-b-4 border-b-red-500">
-                <p class="text-xs text-red-500 dark:text-red-400 font-bold uppercase flex items-center gap-1"><i class="ph-fill ph-warning-octagon text-red-500"></i>Alerta de Qualidade</p>
-                <p class="text-3xl font-bold text-red-600 dark:text-red-400 mt-1">${qualityAlertArticles.length}</p>
+            <div class="bg-surface border border-red-500/30 dark:border-red-500/20 rounded-2xl p-5 shadow-card hover:shadow-md hover:-translate-y-1 transition-all duration-300 cursor-default relative overflow-hidden group">
+                <div class="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-red-500 to-orange-500 opacity-80"></div>
+                <p class="text-[11px] text-red-600 dark:text-red-400 font-bold uppercase tracking-wider flex items-center gap-2 mb-2"><i class="ph-fill ph-warning-octagon text-lg group-hover:scale-110 transition-transform"></i>Alerta de Qualidade</p>
+                <p class="text-4xl font-extrabold text-red-600 dark:text-red-400">${qualityAlertArticles.length}</p>
             </div>
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-            <div class="bg-surface border border-border-subtle rounded-xl p-5 shadow-sm">
-                <h3 class="text-sm font-bold text-purple-600 dark:text-purple-400 uppercase tracking-wider mb-4 border-b border-border-subtle pb-2 flex items-center gap-2">
-                    <i class="ph-fill ph-medal text-[18px]"></i> Top Analistas (Curadoria KCS)
+            <div class="bg-surface border border-border-strong rounded-2xl p-5 shadow-card transition-all">
+                <h3 class="text-sm font-bold text-purple-600 dark:text-purple-400 uppercase tracking-wider mb-4 border-b border-border-subtle pb-3 flex items-center gap-2">
+                    <i class="ph-fill ph-medal text-[18px]"></i> Top Analistas (Curadoria)
                 </h3>
-                <div class="space-y-3">
-                    ${finalAnalysts.filter(a => (a.articlesApproved || a.approved || 0) > 0).map((u, i) => `
-                        <div class="flex items-center justify-between bg-bg-main p-3 rounded-lg border border-border-subtle">
-                            <div class="flex items-center gap-3">
-                                <div class="w-6 text-center font-bold text-gray-400 dark:text-gray-500">#${i + 1}</div>
-                                <div class="w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 flex items-center justify-center font-bold text-xs border border-purple-200 dark:border-purple-800/50">${(u.displayName || u.name || '?').charAt(0).toUpperCase()}</div>
-                                <p class="text-sm font-bold text-gray-900 dark:text-white">${escapeHtml(formatFullName(u.displayName || u.name))}</p>
-                            </div>
-                            <div class="text-right">
-                                <span class="bg-purple-100 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 text-xs px-2 py-1 rounded font-bold">${u.articlesApproved || u.approved || 0}</span>
-                                <p class="text-[9px] text-gray-500 uppercase mt-0.5 tracking-wider">Aprovados</p>
-                            </div>
-                        </div>
-                    `).join('') || '<p class="text-xs text-gray-500 dark:text-gray-400 text-center py-2">Nenhuma aprovação registrada.</p>'}
+                <div class="table-responsive custom-scrollbar">
+                    <table class="w-full text-left border-collapse whitespace-nowrap">
+                        <tbody class="divide-y divide-border-subtle text-sm">
+                            ${finalAnalysts.filter(a => (a.articlesApproved || a.approved || 0) > 0).map((u, i) => `
+                                <tr class="hover:bg-bg-canvas transition-colors group">
+                                    <td class="px-4 py-3 flex items-center gap-3">
+                                        <div class="w-6 text-center font-bold text-text-muted">#${i + 1}</div>
+                                        <div class="w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 flex items-center justify-center font-bold text-xs border border-purple-200 dark:border-purple-800/50">${(u.displayName || u.name || '?').charAt(0).toUpperCase()}</div>
+                                        <p class="font-bold text-text-primary">${escapeHtml(formatFullName(u.displayName || u.name))}</p>
+                                    </td>
+                                    <td class="px-4 py-3 text-right">
+                                        <span class="bg-purple-100 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 text-xs px-2 py-1 rounded font-bold">${u.articlesApproved || u.approved || 0}</span>
+                                    </td>
+                                </tr>
+                            `).join('') || '<tr><td colspan="2" class="p-4 text-xs text-text-muted text-center italic">Nenhuma aprovação registrada.</td></tr>'}
+                        </tbody>
+                    </table>
                 </div>
             </div>
 
-            <div class="bg-surface border border-border-subtle rounded-xl p-5 shadow-sm">
-                <h3 class="text-sm font-bold text-green-600 dark:text-green-400 uppercase tracking-wider mb-4 border-b border-border-subtle pb-2 flex items-center gap-2">
+            <div class="bg-surface border border-border-strong rounded-2xl p-5 shadow-card transition-all">
+                <h3 class="text-sm font-bold text-green-600 dark:text-green-400 uppercase tracking-wider mb-4 border-b border-border-subtle pb-3 flex items-center gap-2">
                     <i class="ph-fill ph-hand-heart text-[18px]"></i> Top Colaboradores (Envios)
                 </h3>
-                <div class="space-y-3">
-                    ${finalCollaborators.filter(c => (c.draftsSubmitted || c.drafts || 0) > 0).map((u, i) => `
-                        <div class="flex items-center justify-between bg-bg-main p-3 rounded-lg border border-border-subtle">
-                            <div class="flex items-center gap-3">
-                                <div class="w-6 text-center font-bold text-gray-400 dark:text-gray-500">#${i + 1}</div>
-                                <div class="w-8 h-8 rounded-full bg-green-100 dark:bg-green-900/20 text-green-600 dark:text-green-400 flex items-center justify-center font-bold text-xs border border-green-200 dark:border-green-800/50">${(u.displayName || u.name || '?').charAt(0).toUpperCase()}</div>
-                                <p class="text-sm font-bold text-gray-900 dark:text-white">${escapeHtml(formatFullName(u.displayName || u.name))}</p>
-                            </div>
-                            <div class="text-right">
-                                <span class="bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-400 text-xs px-2 py-1 rounded font-bold">${u.draftsSubmitted || u.drafts || 0}</span>
-                                <p class="text-[9px] text-gray-500 uppercase mt-0.5 tracking-wider">Rascunhos</p>
-                            </div>
-                        </div>
-                    `).join('') || '<p class="text-xs text-gray-500 dark:text-gray-400 text-center py-2">Nenhum envio registrado.</p>'}
+                <div class="table-responsive custom-scrollbar">
+                    <table class="w-full text-left border-collapse whitespace-nowrap">
+                        <tbody class="divide-y divide-border-subtle text-sm">
+                            ${finalCollaborators.filter(c => (c.draftsSubmitted || c.drafts || 0) > 0).map((u, i) => `
+                                <tr class="hover:bg-bg-canvas transition-colors group">
+                                    <td class="px-4 py-3 flex items-center gap-3">
+                                        <div class="w-6 text-center font-bold text-text-muted">#${i + 1}</div>
+                                        <div class="w-8 h-8 rounded-full bg-green-100 dark:bg-green-900/20 text-green-600 dark:text-green-400 flex items-center justify-center font-bold text-xs border border-green-200 dark:border-green-800/50">${(u.displayName || u.name || '?').charAt(0).toUpperCase()}</div>
+                                        <p class="font-bold text-text-primary">${escapeHtml(formatFullName(u.displayName || u.name))}</p>
+                                    </td>
+                                    <td class="px-4 py-3 text-right">
+                                        <span class="bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-400 text-xs px-2 py-1 rounded font-bold">${u.draftsSubmitted || u.drafts || 0}</span>
+                                    </td>
+                                </tr>
+                            `).join('') || '<tr><td colspan="2" class="p-4 text-xs text-text-muted text-center italic">Nenhum envio registrado.</td></tr>'}
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
 
-        <div class="bg-surface border border-border-subtle rounded-xl p-5 shadow-sm mb-6 border-l-4 border-l-red-500">
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between border-b border-border-subtle pb-3 mb-4 gap-2">
+        <div class="bg-surface border border-border-strong rounded-2xl p-5 shadow-card mb-6 transition-all relative overflow-hidden">
+            <div class="absolute top-0 left-0 w-1 h-full bg-red-500"></div>
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between border-b border-border-subtle pb-4 mb-4 gap-3">
                 <div class="flex items-center gap-3">
-                    <h3 class="text-sm font-bold text-gray-800 dark:text-gray-300 uppercase tracking-wider flex items-center gap-2">
+                    <h3 class="text-sm font-bold text-text-primary uppercase tracking-wider flex items-center gap-2">
                         <i class="ph-fill ph-siren text-[18px] text-red-500"></i> Fila de Revisão Crítica
                     </h3>
-                    <button onclick="window.copyTableToClipboard('dash-table-urgents', this)" class="text-gray-400 hover:text-blue-500 dark:hover:text-blue-400 transition-colors px-2 py-1 rounded bg-bg-main border border-border-subtle shadow-sm" title="Copiar Tabela para Excel/Chat">
+                    <button onclick="window.copyTableToClipboard('dash-table-urgents', this)" class="text-text-muted hover:text-blue-500 transition-colors px-2 py-1 rounded bg-bg-canvas border border-border-strong shadow-sm touch-target" title="Copiar Tabela">
                         <i class="ph ph-copy text-[16px] align-middle"></i>
                     </button>
                 </div>
-                
-                <div class="flex items-center gap-1.5 text-[10px] text-gray-500 dark:text-gray-400 font-medium bg-bg-main px-3 py-1.5 rounded-lg border border-border-subtle">
+                <div class="flex items-center gap-1.5 text-[10px] text-text-secondary font-medium bg-bg-canvas px-3 py-2 rounded-lg border border-border-strong">
                     <i class="ph-fill ph-info text-blue-500"></i>
-                    <span><strong>Gatilhos:</strong> 1. Reporte de Erro | 2. Rascunho parado > 3 dias | 3. Rascunho com > 5 views | 4. Aprovado obsoleto > 6 dias</span>
+                    <span><strong>Gatilhos:</strong> Reporte, Rascunho Parado, Acessos Elevados ou Obsoleto</span>
                 </div>
             </div>
 
-            <div class="overflow-x-auto">
-                <table id="dash-table-urgents" class="w-full text-left border-collapse">
+            <div class="table-responsive custom-scrollbar">
+                <table id="dash-table-urgents" class="w-full text-left border-collapse whitespace-nowrap">
                     <thead>
-                        <tr class="border-b border-border-subtle text-[10px] uppercase tracking-wider text-gray-500">
-                            <th class="pb-2 font-bold pl-2">KCS ID</th>
-                            <th class="pb-2 font-bold">Título do Procedimento</th>
-                            <th class="pb-2 font-bold text-center">Acessos</th>
-                            <th class="pb-2 font-bold">Gatilho Identificado</th>
-                            <th class="pb-2 font-bold text-right pr-2">Ação</th>
+                        <tr class="bg-bg-canvas/50 border-b border-border-subtle text-[10px] uppercase tracking-wider text-text-muted">
+                            <th class="py-3 px-4 font-bold">KCS ID</th>
+                            <th class="py-3 px-4 font-bold">Título do Procedimento</th>
+                            <th class="py-3 px-4 font-bold text-center">Acessos</th>
+                            <th class="py-3 px-4 font-bold">Gatilho</th>
+                            <th class="py-3 px-4 font-bold text-right">Ação</th>
                         </tr>
                     </thead>
                     <tbody class="text-sm divide-y divide-border-subtle">
                         ${urgentArticles.map(art => `
-                            <tr class="hover:bg-gray-50 dark:hover:bg-bg-main transition-colors group cursor-pointer" onclick="window.__kcs.viewArticle('${art.id}')">
-                                <td class="py-3 pl-2 pr-2 font-mono text-blue-600 dark:text-blue-400 font-bold text-xs">#${art.articleNumber || '---'}</td>
-                                <td class="py-3 pr-2 font-medium text-gray-800 dark:text-gray-200 max-w-[300px] truncate" title="${escapeHtml(art.title)}">${escapeHtml(art.title)}</td>
-                                <td class="py-3 pr-2 text-center text-gray-600 dark:text-gray-400"><i class="ph ph-eye mr-1"></i>${art.views || 0}</td>
-                                <td class="py-3 pr-2">
-                                    <span class="inline-flex items-center gap-1 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-900/50 text-[10px] px-2 py-1 rounded font-bold uppercase tracking-tight">
+                            <tr class="hover:bg-bg-canvas transition-colors group cursor-pointer" onclick="window.__kcs.viewArticle('${art.id}')">
+                                <td class="py-3 px-4 font-mono text-blue-600 dark:text-blue-400 font-bold text-xs">#${art.articleNumber || '---'}</td>
+                                <td class="py-3 px-4 font-medium text-text-primary max-w-[250px] truncate" title="${escapeHtml(art.title)}">${escapeHtml(art.title)}</td>
+                                <td class="py-3 px-4 text-center text-text-secondary"><i class="ph ph-eye mr-1"></i>${art.views || 0}</td>
+                                <td class="py-3 px-4">
+                                    <span class="inline-flex items-center gap-1 bg-red-50 dark:bg-red-900/10 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-900/30 text-[10px] px-2 py-1 rounded font-bold uppercase tracking-tight">
                                         <i class="ph-fill ph-warning-circle"></i> ${escapeHtml(art._alertReason)}
                                     </span>
                                 </td>
-                                <td class="py-3 text-right pr-2">
-                                    <button class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-xs font-bold px-3 py-1.5 bg-blue-50 dark:bg-blue-900/20 rounded transition-colors opacity-100 lg:opacity-0 lg:group-hover:opacity-100">
+                                <td class="py-3 px-4 text-right">
+                                    <button class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-xs font-bold px-3 py-1.5 bg-blue-50 dark:bg-blue-900/20 rounded-lg transition-colors opacity-100 lg:opacity-0 lg:group-hover:opacity-100">
                                         Revisar
                                     </button>
                                 </td>
                             </tr>
-                        `).join('') || '<tr><td colspan="5" class="py-6 text-center text-sm font-medium text-green-600 dark:text-green-500"><i class="ph-fill ph-check-circle text-xl align-middle mr-1"></i> Tudo certo! Nenhum alerta crítico na base.</td></tr>'}
+                        `).join('') || '<tr><td colspan="5" class="py-6 text-center text-sm font-medium text-green-600"><i class="ph-fill ph-check-circle text-xl align-middle mr-1"></i> Nenhum alerta crítico.</td></tr>'}
                     </tbody>
                 </table>
             </div>
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            
-            <div class="bg-surface border border-border-subtle rounded-xl p-5 shadow-sm">
-                <div class="flex items-center gap-3 border-b border-border-subtle pb-2 mb-4">
-                    <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
-                        <i class="ph-bold ph-trend-up text-blue-500"></i> Artigos Mais Acessados
+            <div class="bg-surface border border-border-strong rounded-2xl p-5 shadow-card transition-all">
+                <div class="flex items-center gap-3 border-b border-border-subtle pb-3 mb-4">
+                    <h3 class="text-sm font-bold text-text-primary flex items-center gap-2 uppercase tracking-wider">
+                        <i class="ph-bold ph-trend-up text-blue-500"></i> Top Acessados
                     </h3>
-                    <button onclick="window.copyTableToClipboard('dash-table-views', this)" class="text-gray-400 hover:text-blue-500 dark:hover:text-blue-400 transition-colors px-2 py-0.5 rounded bg-bg-main border border-border-subtle shadow-sm" title="Copiar Tabela para Excel/Chat">
-                        <i class="ph ph-copy text-[14px] align-middle"></i>
+                    <button onclick="window.copyTableToClipboard('dash-table-views', this)" class="text-text-muted hover:text-blue-500 transition-colors px-2 py-1 rounded bg-bg-canvas border border-border-strong shadow-sm touch-target" title="Copiar Tabela">
+                        <i class="ph ph-copy text-[16px] align-middle"></i>
                     </button>
                 </div>
                 
-                <div class="overflow-x-auto">
-                    <table id="dash-table-views" class="w-full text-left border-collapse">
+                <div class="table-responsive custom-scrollbar">
+                    <table id="dash-table-views" class="w-full text-left border-collapse whitespace-nowrap">
                         <thead>
-                            <tr class="border-b border-border-subtle text-[9px] uppercase tracking-wider text-gray-500">
-                                <th class="pb-2 font-bold pl-1">Título</th>
-                                <th class="pb-2 font-bold">Autor</th>
-                                <th class="pb-2 font-bold">Revisão</th>
-                                <th class="pb-2 font-bold text-right pr-1">Views</th>
+                            <tr class="bg-bg-canvas/50 border-b border-border-subtle text-[10px] uppercase tracking-wider text-text-muted">
+                                <th class="py-3 px-4 font-bold">Título</th>
+                                <th class="py-3 px-4 font-bold">Autor</th>
+                                <th class="py-3 px-4 font-bold text-right">Views</th>
                             </tr>
                         </thead>
                         <tbody class="text-sm divide-y divide-border-subtle">
                             ${sortedByViews.filter(a => (a.views || 0) > 0).map((a, i) => {
                                 const authorName = formatFullName(a.createdBy);
-                                const reviewerName = a.approvedBy || a.validatedBy || a.reviewedBy || (a.status === 'approved' ? a.updatedBy : null);
-                                
                                 return `
-                                <tr class="hover:bg-gray-50 dark:hover:bg-bg-main transition-colors group cursor-pointer" onclick="window.__kcs.viewArticle('${a.id}')">
-                                    <td class="py-2.5 pl-1 pr-2 font-medium text-gray-800 dark:text-gray-200 max-w-[140px] truncate" title="${escapeHtml(a.title)}">
-                                        <span class="text-gray-400 dark:text-gray-500 mr-1 font-mono text-[10px]">${i+1}.</span>
+                                <tr class="hover:bg-bg-canvas transition-colors group cursor-pointer" onclick="window.__kcs.viewArticle('${a.id}')">
+                                    <td class="py-3 px-4 font-medium text-text-primary max-w-[200px] truncate" title="${escapeHtml(a.title)}">
+                                        <span class="text-text-muted mr-1 font-mono text-[10px]">${i+1}.</span>
                                         <span class="text-xs">${escapeHtml(a.title)}</span>
                                     </td>
-                                    <td class="py-2.5 pr-2">
-                                        <div class="flex items-center gap-1.5" title="Autor original">
-                                            <div class="w-4 h-4 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-[8px] font-bold text-gray-600 dark:text-gray-300">${authorName.charAt(0).toUpperCase()}</div>
-                                            <span class="text-[11px] text-gray-700 dark:text-gray-300 font-medium">${escapeHtml(authorName)}</span>
+                                    <td class="py-3 px-4">
+                                        <div class="flex items-center gap-1.5">
+                                            <div class="w-5 h-5 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-[9px] font-bold text-text-secondary">${authorName.charAt(0).toUpperCase()}</div>
+                                            <span class="text-[11px] text-text-secondary font-medium">${escapeHtml(authorName)}</span>
                                         </div>
                                     </td>
-                                    <td class="py-2.5 pr-2">
-                                        ${reviewerName && a.status === 'approved' 
-                                            ? `<div class="flex items-center gap-1" title="Revisado por">
-                                                   <i class="ph-fill ph-check-circle text-green-500 dark:text-green-400 text-xs"></i>
-                                                   <span class="text-[11px] text-gray-700 dark:text-gray-300 font-medium">${escapeHtml(formatFullName(reviewerName))}</span>
-                                               </div>` 
-                                            : `<span class="text-[10px] text-gray-400 dark:text-gray-500 italic flex items-center gap-1"><i class="ph ph-clock text-[10px]"></i> Pendente</span>`
-                                        }
+                                    <td class="py-3 px-4 text-right">
+                                        <span class="bg-bg-canvas border border-border-strong text-text-secondary text-[10px] px-2 py-1 rounded font-bold">${a.views}</span>
                                     </td>
-                                    <td class="py-2.5 text-right pr-1">
-                                        <span class="bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 text-[10px] px-1.5 py-0.5 rounded font-medium inline-block">${a.views}</span>
-                                    </td>
-                                </tr>
-                                `;
-                            }).join('') || '<tr><td colspan="4" class="py-4 text-xs text-gray-400 dark:text-gray-500 text-center">Nenhuma visualização registrada.</td></tr>'}
+                                </tr>`;
+                            }).join('') || '<tr><td colspan="3" class="py-4 text-xs text-text-muted text-center">Nenhum dado.</td></tr>'}
                         </tbody>
                     </table>
                 </div>
             </div>
 
-            <div class="bg-surface border border-border-subtle rounded-xl p-5 shadow-sm">
-                <div class="flex items-center gap-3 border-b border-border-subtle pb-2 mb-4">
-                    <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
-                        <i class="ph-bold ph-database text-purple-500"></i> Scripts SQL Mais Úteis
+            <div class="bg-surface border border-border-strong rounded-2xl p-5 shadow-card transition-all">
+                <div class="flex items-center gap-3 border-b border-border-subtle pb-3 mb-4">
+                    <h3 class="text-sm font-bold text-text-primary flex items-center gap-2 uppercase tracking-wider">
+                        <i class="ph-bold ph-database text-purple-500"></i> Scripts Úteis
                     </h3>
-                    <button onclick="window.copyTableToClipboard('dash-table-sql', this)" class="text-gray-400 hover:text-purple-500 dark:hover:text-purple-400 transition-colors px-2 py-0.5 rounded bg-bg-main border border-border-subtle shadow-sm" title="Copiar Tabela para Excel/Chat">
-                        <i class="ph ph-copy text-[14px] align-middle"></i>
+                    <button onclick="window.copyTableToClipboard('dash-table-sql', this)" class="text-text-muted hover:text-purple-500 transition-colors px-2 py-1 rounded bg-bg-canvas border border-border-strong shadow-sm touch-target" title="Copiar Tabela">
+                        <i class="ph ph-copy text-[16px] align-middle"></i>
                     </button>
                 </div>
                 
-                <div class="overflow-x-auto">
-                    <table id="dash-table-sql" class="w-full text-left border-collapse">
+                <div class="table-responsive custom-scrollbar">
+                    <table id="dash-table-sql" class="w-full text-left border-collapse whitespace-nowrap">
                         <thead>
-                            <tr class="border-b border-border-subtle text-[9px] uppercase tracking-wider text-gray-500">
-                                <th class="pb-2 font-bold pl-1">Nome do Script</th>
-                                <th class="pb-2 font-bold">Autor</th>
-                                <th class="pb-2 font-bold text-right pr-1">Útil</th>
+                            <tr class="bg-bg-canvas/50 border-b border-border-subtle text-[10px] uppercase tracking-wider text-text-muted">
+                                <th class="py-3 px-4 font-bold">Nome do Script</th>
+                                <th class="py-3 px-4 font-bold">Autor</th>
+                                <th class="py-3 px-4 font-bold text-right">Útil</th>
                             </tr>
                         </thead>
                         <tbody class="text-sm divide-y divide-border-subtle">
                             ${topScripts.filter(s => (s.likes||[]).length > 0).map((s, i) => {
                                 const authorName = formatFullName(s.createdBy);
                                 return `
-                                <tr class="hover:bg-gray-50 dark:hover:bg-bg-main transition-colors group cursor-pointer" onclick="window.__kcs.viewSqlScript('${s.id}')">
-                                    <td class="py-2.5 pl-1 pr-2 font-medium text-gray-800 dark:text-gray-200 max-w-[180px] truncate" title="${escapeHtml(s.name)}">
-                                        <span class="text-gray-400 dark:text-gray-500 mr-1 font-mono text-[10px]">${i+1}.</span>
+                                <tr class="hover:bg-bg-canvas transition-colors group cursor-pointer" onclick="window.__kcs.viewSqlScript('${s.id}')">
+                                    <td class="py-3 px-4 font-medium text-text-primary max-w-[200px] truncate" title="${escapeHtml(s.name)}">
+                                        <span class="text-text-muted mr-1 font-mono text-[10px]">${i+1}.</span>
                                         <span class="text-xs">${escapeHtml(s.name)}</span>
                                     </td>
-                                    <td class="py-2.5 pr-2">
-                                        <div class="flex items-center gap-1.5" title="Autor original">
-                                            <div class="w-4 h-4 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-[8px] font-bold text-gray-600 dark:text-gray-300">${authorName.charAt(0).toUpperCase()}</div>
-                                            <span class="text-[11px] text-gray-700 dark:text-gray-300 font-medium">${escapeHtml(authorName)}</span>
+                                    <td class="py-3 px-4">
+                                        <div class="flex items-center gap-1.5">
+                                            <div class="w-5 h-5 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-[9px] font-bold text-text-secondary">${authorName.charAt(0).toUpperCase()}</div>
+                                            <span class="text-[11px] text-text-secondary font-medium">${escapeHtml(authorName)}</span>
                                         </div>
                                     </td>
-                                    <td class="py-2.5 text-right pr-1">
-                                        <span class="text-purple-600 dark:text-purple-400 text-xs font-medium"><i class="ph-fill ph-heart mr-1 align-text-bottom"></i>${(s.likes||[]).length}</span>
+                                    <td class="py-3 px-4 text-right">
+                                        <span class="text-purple-600 dark:text-purple-400 text-xs font-bold"><i class="ph-fill ph-heart mr-1 align-text-bottom"></i>${(s.likes||[]).length}</span>
                                     </td>
-                                </tr>
-                                `;
-                            }).join('') || '<tr><td colspan="3" class="py-4 text-xs text-gray-400 dark:text-gray-500 text-center">Nenhum dado registrado.</td></tr>'}
+                                </tr>`;
+                            }).join('') || '<tr><td colspan="3" class="py-4 text-xs text-text-muted text-center">Nenhum dado.</td></tr>'}
                         </tbody>
                     </table>
                 </div>
             </div>
-            
         </div>
     `;
 }

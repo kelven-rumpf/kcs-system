@@ -431,10 +431,11 @@ export function openViewModal(article, currentUser) {
 
     modal = document.createElement('div');
     modal.id = modalId;
-    modal.className = 'dynamic-view-modal fixed inset-0 bg-black/80 z-[300] flex items-center justify-center p-2 sm:p-6 animate-fade-in transition-all duration-300';
+    // PACTH AQUI: Backdrop blur e cor de fundo transparente aprimorada
+    modal.className = 'dynamic-view-modal fixed inset-0 bg-black/60 backdrop-blur-md z-[300] flex items-center justify-center p-2 sm:p-6 animate-fade-in transition-all duration-300';
     
     modal.innerHTML = `
-        <div class="modal-content-box bg-white dark:bg-[#15171b] border border-gray-300 dark:border-[#3a3b3d] rounded-2xl w-full max-w-[95vw] xl:max-w-5xl flex flex-col shadow-2xl relative transition-all duration-300 max-h-[95vh]">
+        <div class="modal-content-box bg-surface border border-border-strong rounded-2xl w-full max-w-[95vw] xl:max-w-5xl flex flex-col shadow-float relative max-h-[95vh]" style="animation: slideUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;">
             
             <div class="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-gray-300 dark:border-[#3a3b3d] shrink-0 bg-gray-50 dark:bg-[#1e1f20] rounded-t-2xl cursor-pointer hover:bg-gray-100 dark:hover:bg-[#2a2b2f] transition-colors w-full select-none" onclick="window.__kcs.toggleMinimize('${modalId}')">
                 <h2 class="text-sm font-bold text-gray-900 dark:text-white truncate flex-1 pr-2 sm:pr-4 flex items-center gap-2">
@@ -957,166 +958,149 @@ export async function openSettingsModal() {
         let companiesHtml = '';
         if (isSuperAdmin) {
             companiesHtml = `
-            <div class="mb-8 border border-purple-200 dark:border-purple-900/30 bg-purple-50/50 dark:bg-purple-900/10 rounded-xl p-5">
+            <div class="mb-6 bg-surface border border-border-strong rounded-2xl p-5 sm:p-6 shadow-card transition-all">
                 <h3 class="text-sm font-bold text-purple-600 dark:text-purple-400 uppercase tracking-wider mb-4 flex items-center gap-2">
                     <i class="ph-fill ph-buildings text-[18px]"></i> Painel Master (Empresas Clientes)
                 </h3>
                 
-                <div class="flex flex-col sm:flex-row gap-2 mb-6">
-                    <input type="text" id="new-company-name" placeholder="Nome da Empresa" class="flex-[2] bg-white dark:bg-[#1e1f20] border border-gray-300 dark:border-[#3a3b3d] rounded-lg px-3 py-2 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-purple-500 focus:outline-none" />
-                    <input type="text" id="new-company-domain" placeholder="Domínios (ex: nissei.com, nisseisa.com)" class="flex-[2] bg-white dark:bg-[#1e1f20] border border-gray-300 dark:border-[#3a3b3d] rounded-lg px-3 py-2 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-purple-500 focus:outline-none font-mono" />
-                    <button onclick="window.__kcs.createNewCompany()" class="bg-purple-600 hover:bg-purple-700 text-white px-5 py-2 rounded-lg text-sm font-bold transition-all shadow-md active:scale-95 shrink-0">Cadastrar Cliente</button>
+                <div class="flex flex-col sm:flex-row gap-3 mb-6">
+                    <input type="text" id="new-company-name" placeholder="Nome da Empresa" class="flex-[2] bg-bg-canvas border border-border-strong rounded-xl px-4 py-2.5 text-sm text-text-primary outline-none focus:border-purple-500 transition-colors" />
+                    <input type="text" id="new-company-domain" placeholder="Domínios (ex: nissei.com)" class="flex-[2] bg-bg-canvas border border-border-strong rounded-xl px-4 py-2.5 text-sm text-text-primary outline-none font-mono focus:border-purple-500 transition-colors" />
+                    <button onclick="window.__kcs.createNewCompany()" class="bg-purple-600 hover:bg-purple-700 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-all shadow-md shrink-0">Cadastrar Cliente</button>
                 </div>
                 
-                <div class="hidden sm:flex items-center text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2 px-3 mt-4">
-                    <div class="flex-[2]">Empresa</div>
-                    <div class="flex-[2]">Domínios</div>
-                    <div class="w-24 text-right pr-2">Ações</div>
-                </div>
-
-                <div class="flex flex-col border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden max-h-80 overflow-y-auto custom-scrollbar bg-white dark:bg-[#15171b]">
-                    ${companies.map(c => {
-                        const domainsArray = Array.isArray(c.domains) ? c.domains : (c.domains ? String(c.domains).split(',') : []);
-                        const domainsLabel = domainsArray.join(', ') || 'Nenhum';
-                        
-                        return `
-                        <div class="flex flex-col sm:flex-row sm:items-center p-3 border-b last:border-b-0 border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors gap-3 group">
-                            
-                            <div class="flex-[2] min-w-0">
-                                <div class="flex items-center gap-2 mb-0.5">
-                                    <span class="font-bold text-sm text-gray-900 dark:text-white truncate">${safeText(c.companyName)}</span>
-                                    <span class="text-[9px] font-black px-1.5 py-0.5 rounded bg-purple-100 dark:bg-purple-900/40 text-purple-600 dark:text-purple-400 border border-purple-200 dark:border-purple-800/50 uppercase tracking-tighter shrink-0">${c.plan || 'Starter'}</span>
-                                </div>
-                                <div class="company-id-display" style="font-size: 11px !important;">ID: ${c.companyId.toUpperCase()}</div>
-                            </div>
-
-                            <div class="flex-[2] min-w-0 flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400">
-                                <i class="ph ph-globe text-gray-400 dark:text-gray-500"></i>
-                                <span class="truncate" title="${safeText(domainsLabel)}">${safeText(domainsLabel)}</span>
-                            </div>
-
-                            <div class="flex items-center justify-end gap-1.5 w-full sm:w-auto mt-2 sm:mt-0 shrink-0 opacity-100 sm:opacity-50 group-hover:opacity-100 transition-opacity">
-                                <button onclick="window.__kcs.promptEditCompany('${c.companyId}', '${safeText(c.companyName)}', '${safeText(domainsLabel)}', '${c.plan || 'Starter'}')" 
-                                        class="flex-1 sm:flex-none bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 px-3 py-1.5 rounded-md text-[11px] font-bold transition-colors">
-                                    Editar
-                                </button>
-                                <button onclick="window.__kcs.deleteCompany('${c.companyId}')" 
-                                        class="px-2.5 py-1.5 bg-red-50 dark:bg-red-900/10 hover:bg-red-100 dark:hover:bg-red-900/30 text-red-600 dark:text-red-500 rounded-md text-[14px] transition-colors">
-                                    <i class="ph ph-trash"></i>
-                                </button>
-                            </div>
-                        </div>
-                    `}).join('')}
+                <div class="table-responsive custom-scrollbar">
+                    <table class="w-full text-left border-collapse whitespace-nowrap">
+                        <thead>
+                            <tr class="bg-bg-canvas/50 border-b border-border-subtle text-[10px] font-bold text-text-muted uppercase tracking-wider">
+                                <th class="px-4 py-3">Empresa / Tenant</th>
+                                <th class="px-4 py-3">Domínios</th>
+                                <th class="px-4 py-3 text-right">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-border-subtle text-sm">
+                            ${companies.map(c => {
+                                const domainsArray = Array.isArray(c.domains) ? c.domains : (c.domains ? String(c.domains).split(',') : []);
+                                const domainsLabel = domainsArray.join(', ') || 'Nenhum';
+                                return `
+                                <tr class="hover:bg-bg-canvas transition-colors group">
+                                    <td class="px-4 py-3">
+                                        <div class="font-bold text-text-primary">${safeText(c.companyName)} <span class="ml-2 text-[9px] px-1.5 py-0.5 rounded bg-purple-100 dark:bg-purple-900/40 text-purple-600 dark:text-purple-400 border border-purple-200 dark:border-purple-800/50 uppercase tracking-tighter">${c.plan || 'Starter'}</span></div>
+                                        <div class="text-[11px] text-text-muted font-mono mt-0.5">ID: ${c.companyId.toUpperCase()}</div>
+                                    </td>
+                                    <td class="px-4 py-3 text-text-secondary"><i class="ph ph-globe mr-1"></i>${safeText(domainsLabel)}</td>
+                                    <td class="px-4 py-3 text-right">
+                                        <button onclick="window.__kcs.promptEditCompany('${c.companyId}', '${safeText(c.companyName)}', '${safeText(domainsLabel)}', '${c.plan || 'Starter'}')" class="text-xs font-bold text-text-secondary hover:text-purple-500 bg-bg-canvas border border-border-strong px-3 py-1.5 rounded-lg mr-2 transition-colors">Editar</button>
+                                        <button onclick="window.__kcs.deleteCompany('${c.companyId}')" class="text-xs text-red-500 hover:text-red-700 bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-900/30 px-2.5 py-1.5 rounded-lg transition-colors"><i class="ph ph-trash"></i></button>
+                                    </td>
+                                </tr>`;
+                            }).join('') || '<tr><td colspan="3" class="p-4 text-xs text-text-muted text-center italic">Nenhuma empresa cadastrada.</td></tr>'}
+                        </tbody>
+                    </table>
                 </div>
             </div>`;
         }
 
         const invitesHtml = `
-        <div class="mb-8 border border-blue-200 dark:border-blue-900/30 bg-blue-50/50 dark:bg-blue-900/10 rounded-xl p-5">
+        <div class="mb-6 bg-surface border border-border-strong rounded-2xl p-5 sm:p-6 shadow-card transition-all">
             <h3 class="text-sm font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider mb-4 flex items-center gap-2">
                 <i class="ph-fill ph-envelope-simple text-[18px]"></i> Whitelist de Exceção (Convites)
             </h3>
-            <p class="text-xs text-gray-500 dark:text-gray-400 mb-4">Use este painel para liberar e-mails que não possuam o domínio oficial da empresa.</p>
             
-            <form id="form-invite-user" class="flex flex-wrap lg:flex-nowrap gap-2 mb-4">
-                <input type="email" id="invite-email" placeholder="E-mail (ex: nome@gmail.com)" class="flex-[2] min-w-[200px] bg-white dark:bg-[#1e1f20] border border-gray-300 dark:border-[#3a3b3d] rounded-lg px-3 py-2 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" required />
-                
-                ${isSuperAdmin ? `
-                <select id="invite-company" class="flex-1 min-w-[150px] bg-white dark:bg-[#1e1f20] border border-gray-300 dark:border-[#3a3b3d] rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
-                    ${companiesSelectOptions}
-                </select>
-                ` : `<input type="hidden" id="invite-company" value="${currentUser.companyId}" />`}
-                
-                <select id="invite-sector" class="flex-1 min-w-[150px] bg-white dark:bg-[#1e1f20] border border-gray-300 dark:border-[#3a3b3d] rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
-                    ${sectorsOptionsHtml('')}
-                </select>
-                
-                <select id="invite-role" class="flex-1 min-w-[120px] bg-white dark:bg-[#1e1f20] border border-gray-300 dark:border-[#3a3b3d] rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+            <form id="form-invite-user" class="flex flex-col lg:flex-row gap-3 mb-6">
+                <input type="email" id="invite-email" placeholder="E-mail (ex: nome@gmail.com)" class="flex-[2] bg-bg-canvas border border-border-strong rounded-xl px-4 py-2.5 text-sm text-text-primary outline-none focus:border-blue-500 transition-colors" required />
+                ${isSuperAdmin ? `<select id="invite-company" class="flex-1 bg-bg-canvas border border-border-strong rounded-xl px-3 py-2.5 text-sm text-text-primary outline-none cursor-pointer focus:border-blue-500 transition-colors">${companiesSelectOptions}</select>` : `<input type="hidden" id="invite-company" value="${currentUser.companyId}" />`}
+                <select id="invite-sector" class="flex-1 bg-bg-canvas border border-border-strong rounded-xl px-3 py-2.5 text-sm text-text-primary outline-none cursor-pointer focus:border-blue-500 transition-colors">${sectorsOptionsHtml('')}</select>
+                <select id="invite-role" class="flex-1 bg-bg-canvas border border-border-strong rounded-xl px-3 py-2.5 text-sm text-text-primary outline-none cursor-pointer focus:border-blue-500 transition-colors">
                     ${isSuperAdmin ? `<option value="super_admin">Super Admin</option>` : ''}
                     <option value="admin">Admin</option>
                     <option value="analyst">Analista KCS</option>
                     <option value="user" selected>Usuário Base</option>
                 </select>
-                
-                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg text-sm font-bold transition-colors shadow-md">Autorizar</button>
+                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-colors shadow-md">Autorizar</button>
             </form>
             
-            <div class="space-y-2 max-h-40 overflow-y-auto">
-                ${invites.map(inv => `
-                    <div class="flex items-center justify-between bg-white dark:bg-[#1e1f20] p-3 rounded-lg border border-gray-200 dark:border-[#3a3b3d] shadow-sm">
-                        <div class="flex items-center gap-3">
-                            <div class="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center"><i class="ph-fill ph-envelope"></i></div>
-                            <div>
-                                <p class="text-sm font-bold text-gray-900 dark:text-white">${safeText(inv.email)}</p>
-                                <p class="text-[10px] text-gray-500 uppercase font-bold tracking-tight">${inv.role} | Setor: ${inv.sectorId} ${isSuperAdmin ? `| Empresa: ${inv.tenantId || inv.companyId}` : ''}</p>
-                            </div>
-                        </div>
-                        <button onclick="window.__kcs.removeInvite('${inv.email}')" class="text-red-600 dark:text-red-400 font-bold px-3 py-1.5 bg-red-50 dark:bg-red-900/10 hover:bg-red-100 dark:hover:bg-red-900/20 rounded-md transition-colors text-xs">Revogar</button>
-                    </div>
-                `).join('') || '<p class="text-xs text-gray-500 text-center py-2 italic">Nenhum convite pendente.</p>'}
+            <div class="table-responsive custom-scrollbar">
+                <table class="w-full text-left border-collapse whitespace-nowrap">
+                    <tbody class="divide-y divide-border-subtle text-sm">
+                        ${invites.map(inv => `
+                            <tr class="hover:bg-bg-canvas transition-colors group">
+                                <td class="px-4 py-3 flex items-center gap-3">
+                                    <div class="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center"><i class="ph-fill ph-envelope"></i></div>
+                                    <div>
+                                        <p class="font-bold text-text-primary">${safeText(inv.email)}</p>
+                                        <p class="text-[10px] text-text-muted uppercase font-bold tracking-tight">${inv.role} | Setor: ${inv.sectorId}</p>
+                                    </div>
+                                </td>
+                                <td class="px-4 py-3 text-right">
+                                    <button onclick="window.__kcs.removeInvite('${inv.email}')" class="text-xs font-bold text-red-500 hover:text-red-700 bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-900/30 px-3 py-1.5 rounded-lg transition-colors">Revogar</button>
+                                </td>
+                            </tr>
+                        `).join('') || '<tr><td class="p-4 text-xs text-text-muted text-center italic">Nenhum convite pendente.</td></tr>'}
+                    </tbody>
+                </table>
             </div>
         </div>`;
 
         const activeUsersHtml = `
-        <div class="mb-8 border border-gray-200 dark:border-[#3a3b3d] bg-gray-50 dark:bg-[#131314] rounded-xl p-5">
-            <h3 class="text-sm font-bold text-gray-800 dark:text-gray-300 uppercase tracking-wider mb-4 flex items-center gap-2">
+        <div class="mb-6 bg-surface border border-border-strong rounded-2xl p-5 sm:p-6 shadow-card transition-all">
+            <h3 class="text-sm font-bold text-text-primary uppercase tracking-wider mb-4 flex items-center gap-2">
                 <i class="ph-fill ph-users text-[18px]"></i> Usuários Registrados
             </h3>
-            <div class="space-y-2">
-                ${users.map(u => {
-                    const safeName = (u.displayName && String(u.displayName) !== 'undefined') ? u.displayName : 'Usuário KCS';
-                    const safeEmail = (u.email && String(u.email) !== 'undefined') ? u.email : 'Sem e-mail';
-                    return `
-                    <div class="flex flex-col lg:flex-row lg:items-center justify-between bg-white dark:bg-[#1e1f20] p-3 rounded-lg border border-gray-200 dark:border-[#3a3b3d] shadow-sm gap-3 transition-colors hover:border-gray-300 dark:hover:border-gray-700">
-                        <div class="flex items-center gap-3">
-                            <img src="${u.photoURL || 'https://via.placeholder.com/40'}" class="w-10 h-10 rounded-full border border-gray-300 dark:border-gray-600 object-cover" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\\'http://www.w3.org/2000/svg\\' viewBox=\\'0 0 100 100\\'><circle cx=\\'50\\' cy=\\'50\\' r=\\'50\\' fill=\\'%23CBD5E1\\'/></svg>'">
-                            <div>
-                                <p class="text-sm font-bold text-gray-900 dark:text-white">${safeText(safeName)}</p>
-                                <p class="text-[10px] text-gray-500 font-mono">${safeText(safeEmail)}</p>
-                            </div>
-                        </div>
-                        <div class="flex flex-wrap items-center gap-2">
-                            ${isSuperAdmin ? `
-                            <select onchange="window.__kcs.updateUserCompany('${u.id}', this.value)" class="bg-gray-50 dark:bg-[#131314] border border-gray-300 dark:border-[#3a3b3d] rounded-md px-2 py-1.5 text-xs text-purple-700 dark:text-purple-300 font-bold cursor-pointer shadow-sm focus:ring-1 focus:ring-purple-500 focus:outline-none">
-                                <option value="LIMBO_TENANT" ${u.companyId === 'LIMBO_TENANT' ? 'selected' : ''}>⚠️ Pendente</option>
-                                ${companiesSelectOptions.replace(`value="${u.companyId}"`, `value="${u.companyId}" selected`)}
-                            </select>` : ''}
-
-                            <select onchange="window.__kcs.updateUserSector('${u.id}', this.value)" class="bg-gray-50 dark:bg-[#131314] border border-gray-300 dark:border-[#3a3b3d] rounded-md px-2 py-1.5 text-xs text-green-700 dark:text-green-300 font-bold cursor-pointer focus:ring-1 focus:ring-green-500 focus:outline-none">
-                                ${sectorsOptionsHtml(u.sectorId || 'TI')}
-                            </select>
-
-                            <select onchange="window.__kcs.updateUserRole('${u.id}', this.value)" class="bg-gray-50 dark:bg-[#131314] border border-gray-300 dark:border-[#3a3b3d] rounded-md px-2 py-1.5 text-xs text-blue-700 dark:text-blue-300 font-bold cursor-pointer focus:ring-1 focus:ring-blue-500 focus:outline-none">
-                                ${isSuperAdmin ? `<option value="super_admin" ${u.role === 'super_admin' ? 'selected' : ''}>Super Admin</option>` : ''}
-                                <option value="admin" ${u.role === 'admin' ? 'selected' : ''}>Admin</option>
-                                <option value="analyst" ${u.role === 'analyst' ? 'selected' : ''}>Analista</option>
-                                <option value="user" ${u.role === 'user' ? 'selected' : ''}>Usuário</option>
-                            </select>
-                            
-                            <button onclick="window.__kcs.deleteUser('${u.id}')" class="text-red-600 dark:text-red-400 font-bold bg-red-100 dark:bg-red-900/20 px-3 py-1.5 rounded-md text-xs transition-colors hover:bg-red-200 dark:hover:bg-red-900/40">
-                                <i class="ph ph-trash"></i>
-                            </button>
-                        </div>
-                    </div>`;
-                }).join('') || '<p class="text-xs text-gray-500 text-center py-4">Nenhum usuário ativo.</p>'}
+            <div class="table-responsive custom-scrollbar">
+                <table class="w-full text-left border-collapse whitespace-nowrap">
+                    <tbody class="divide-y divide-border-subtle text-sm">
+                        ${users.map(u => {
+                            const safeName = (u.displayName && String(u.displayName) !== 'undefined') ? u.displayName : 'Usuário KCS';
+                            const safeEmail = (u.email && String(u.email) !== 'undefined') ? u.email : 'Sem e-mail';
+                            return `
+                            <tr class="hover:bg-bg-canvas transition-colors group">
+                                <td class="px-4 py-3 flex items-center gap-3">
+                                    <img src="${u.photoURL || 'https://via.placeholder.com/40'}" class="w-9 h-9 rounded-full object-cover border border-border-strong" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\\'http://www.w3.org/2000/svg\\' viewBox=\\'0 0 100 100\\'><circle cx=\\'50\\' cy=\\'50\\' r=\\'50\\' fill=\\'%23CBD5E1\\'/></svg>'">
+                                    <div>
+                                        <p class="font-bold text-text-primary">${safeText(safeName)}</p>
+                                        <p class="text-[11px] text-text-muted font-mono">${safeText(safeEmail)}</p>
+                                    </div>
+                                </td>
+                                <td class="px-4 py-3">
+                                    <div class="flex items-center gap-2 justify-end">
+                                        ${isSuperAdmin ? `
+                                        <select onchange="window.__kcs.updateUserCompany('${u.id}', this.value)" class="bg-bg-canvas border border-border-strong rounded-lg px-2 py-1.5 text-xs text-purple-600 dark:text-purple-400 font-bold cursor-pointer outline-none">
+                                            <option value="LIMBO_TENANT" ${u.companyId === 'LIMBO_TENANT' ? 'selected' : ''}>⚠️ Pendente</option>
+                                            ${companiesSelectOptions.replace(`value="${u.companyId}"`, `value="${u.companyId}" selected`)}
+                                        </select>` : ''}
+                                        <select onchange="window.__kcs.updateUserSector('${u.id}', this.value)" class="bg-bg-canvas border border-border-strong rounded-lg px-2 py-1.5 text-xs text-green-600 dark:text-green-400 font-bold cursor-pointer outline-none">
+                                            ${sectorsOptionsHtml(u.sectorId || 'TI')}
+                                        </select>
+                                        <select onchange="window.__kcs.updateUserRole('${u.id}', this.value)" class="bg-bg-canvas border border-border-strong rounded-lg px-2 py-1.5 text-xs text-blue-600 dark:text-blue-400 font-bold cursor-pointer outline-none">
+                                            ${isSuperAdmin ? `<option value="super_admin" ${u.role === 'super_admin' ? 'selected' : ''}>Super Admin</option>` : ''}
+                                            <option value="admin" ${u.role === 'admin' ? 'selected' : ''}>Admin</option>
+                                            <option value="analyst" ${u.role === 'analyst' ? 'selected' : ''}>Analista</option>
+                                            <option value="user" ${u.role === 'user' ? 'selected' : ''}>Usuário</option>
+                                        </select>
+                                        <button onclick="window.__kcs.deleteUser('${u.id}')" class="text-red-500 hover:text-red-700 bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-900/30 px-2.5 py-1.5 rounded-lg transition-colors"><i class="ph ph-trash"></i></button>
+                                    </div>
+                                </td>
+                            </tr>`;
+                        }).join('') || '<tr><td colspan="2" class="p-4 text-xs text-text-muted text-center italic">Nenhum usuário ativo.</td></tr>'}
+                    </tbody>
+                </table>
             </div>
         </div>`;
 
         const backupHtml = isSuperAdmin ? `
-            <div class="border border-green-200 dark:border-green-900/30 bg-green-50/50 dark:bg-green-900/10 rounded-xl p-5 mb-4 shadow-sm">
-                <h3 class="text-sm font-bold text-green-700 dark:text-green-400 uppercase tracking-wider mb-2 flex items-center gap-2">
-                    <i class="ph-fill ph-hard-drives text-[18px]"></i> Proteção de Dados e Backup
-                </h3>
-                <p class="text-xs text-gray-600 dark:text-gray-400 mb-4 leading-relaxed">
-                    O backup é executado na arquitetura Cloud do Google (Firestore). 
-                    Ao disparar o backup manualmente, todo o banco de dados será condensado em um arquivo seguro depositado no Bucket: 
-                    <strong class="font-mono text-[11px] bg-green-100 dark:bg-green-900/30 px-1 py-0.5 rounded text-green-800 dark:text-green-300">gs://kcs-system-180db-backups</strong>.
-                </p>
-                <button onclick="window.__kcs.triggerManualBackup()" class="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-5 py-2.5 rounded-lg text-sm font-bold transition-all shadow-md hover:shadow-lg active:scale-95">
-                    <i class="ph-bold ph-cloud-arrow-down text-lg"></i>
-                    Disparar Backup na Nuvem
-                </button>
-            </div>` : '';
+        <div class="mb-4 bg-surface border border-green-500/30 rounded-2xl p-5 sm:p-6 shadow-card transition-all relative overflow-hidden">
+            <div class="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-green-500 to-emerald-500 opacity-80"></div>
+            <h3 class="text-sm font-bold text-green-600 dark:text-green-400 uppercase tracking-wider mb-2 flex items-center gap-2">
+                <i class="ph-fill ph-hard-drives text-[18px]"></i> Proteção de Dados e Backup
+            </h3>
+            <p class="text-xs text-text-secondary mb-4 leading-relaxed max-w-2xl">
+                O backup exporta toda a base (Firestore) para o Bucket: <strong class="font-mono text-[11px] bg-green-50 dark:bg-green-900/20 px-1.5 py-0.5 rounded text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800">gs://kcs-system-180db-backups</strong>.
+            </p>
+            <button onclick="window.__kcs.triggerManualBackup()" class="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-all shadow-md hover:shadow-lg active:scale-95 w-max">
+                <i class="ph-bold ph-cloud-arrow-down text-lg"></i> Disparar Backup
+            </button>
+        </div>` : '';
 
         usersList.innerHTML = companiesHtml + invitesHtml + activeUsersHtml + backupHtml;
 

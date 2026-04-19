@@ -28,7 +28,17 @@
   <script>
     tailwind.config = {
       darkMode: 'class',
-      theme: { extend: { colors: { surface: '#1e1f20', 'surface-overlay': '#2a2b2d', 'border-subtle': '#3a3b3d', 'bg-main': '#131314' } } },
+      theme: { 
+        extend: { 
+          colors: { 
+            surface: 'var(--bg-surface)', 
+            'surface-overlay': 'var(--bg-surface-glass)', 
+            'border-subtle': 'var(--border-subtle)', 
+            'border-strong': 'var(--border-strong)',
+            'bg-main': 'var(--bg-canvas)' 
+          } 
+        } 
+      },
     };
   </script>
 
@@ -121,15 +131,15 @@
     html.light body,
     html.light .bg-bg-main,
     html.light .bg-\[\#131314\] { 
-        background-color: #EEF2F7 !important; 
-        color: #0F172A !important; 
+        background-color: var(--bg-canvas) !important; 
+        color: var(--text-primary) !important; 
     }
 
     /* 2. Sidebar e Header (Surface - Nível 1) */
     html.light .bg-surface,
     html.light .bg-\[\#1e1f20\] { 
-        background-color: #F8FAFC !important; 
-        border-color: #E2E8F0 !important; 
+        background-color: var(--bg-surface) !important; 
+        border-color: var(--border-strong) !important; 
     }
 
     /* 3. Cards, Modais e Áreas de Destaque (Overlay - Nível 2) */
