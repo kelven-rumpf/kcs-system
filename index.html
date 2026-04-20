@@ -25,228 +25,15 @@
   </script>
 
   <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      darkMode: 'class',
-      theme: { 
-        extend: { 
-          colors: { 
-            surface: 'var(--bg-surface)', 
-            'surface-overlay': 'var(--bg-surface-glass)', 
-            'border-subtle': 'var(--border-subtle)', 
-            'border-strong': 'var(--border-strong)',
-            'bg-main': 'var(--bg-canvas)' 
-          } 
-        } 
-      },
-    };
-  </script>
-
   <script src="https://cdn.jsdelivr.net/npm/dexie@4.4.2/dist/dexie.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/fuse.js@6.6.2"></script>
   <script src="https://cdn.jsdelivr.net/npm/@phosphor-icons/web"></script>
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/shepherd.js@11.0.1/dist/css/shepherd.css"/>
   <script src="https://cdn.jsdelivr.net/npm/shepherd.js@11.0.1/dist/js/shepherd.min.js"></script>
-  <link rel="stylesheet" href="style.css">
-
-  <style>
-    /* Cores Inteligentes do Badge (Light/Dark) */
-    :root {
-        --kcs-unlimited: #c2410c;
-        --kcs-teams: #4338ca;
-        --kcs-starter: #15803d;
-        --kcs-badge-glow: transparent;
-    }
-
-    html.dark {
-        --kcs-unlimited: #fb923c;
-        --kcs-teams: #818cf8;
-        --kcs-starter: #4ade80;
-        --kcs-badge-glow: 0 0 8px currentColor;
-    }
-
-    /* Estrutura Minimalista */
-    .kcs-plan-badge {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 10px;
-        font-weight: 700;
-        letter-spacing: 1px;
-        text-transform: uppercase;
-        padding: 2px 10px;
-        border-radius: 4px;
-        border: 1px solid currentColor;
-        white-space: nowrap;
-        line-height: 1.2;
-        margin-top: 4px; 
-    }
-
-    html.dark .kcs-plan-badge {
-        text-shadow: var(--kcs-badge-glow);
-    }
-
-    body { background: #131314; font-family: 'Google Sans', 'Segoe UI', system-ui, -apple-system, sans-serif; }
-    ::-webkit-scrollbar { width: 6px; height: 6px; }
-    ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: #3a3b3d; border-radius: 3px; }
-    ::-webkit-scrollbar-thumb:hover { background: #555; }
-    .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-    .line-clamp-3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-    textarea { tab-size: 2; }
-    input:-webkit-autofill { -webkit-box-shadow: 0 0 0 30px #1e1f20 inset !important; -webkit-text-fill-color: #fff !important; }
-    
-    @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-    @keyframes slideOut { from { opacity: 1; } to { transform: translateX(100%); opacity: 0; } }
-    @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
-    .animate-slide-in { animation: slideIn 0.3s ease-out; }
-    .animate-slide-out { animation: slideOut 0.3s ease-in; }
-    .animate-fade-in { animation: fadeIn 0.2s ease-out; }
-    svg { flex-shrink: 0; }
-    input:focus, textarea:focus, select:focus { outline: none; box-shadow: 0 0 0 2px rgba(59,130,246,0.3); }
-
-    i.ph, i.ph-fill { line-height: 1; vertical-align: middle; }
-
-    .shepherd-element { background: #1e1f20 !important; border: 1px solid #3a3b3d !important; border-radius: 12px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); padding: 0 !important; overflow: hidden; }
-    .shepherd-arrow:before { background: #1e1f20 !important; border: 1px solid #3a3b3d !important; }
-    .shepherd-header { background: transparent !important; border-bottom: 1px solid #3a3b3d !important; padding: 16px 20px !important; margin: 0 !important; align-items: center; }
-    .shepherd-title { font-size: 1rem !important; font-weight: bold !important; color: #fff !important; margin: 0 !important; display: flex; align-items: center; gap: 8px;}
-    .shepherd-text { font-size: 0.875rem !important; color: #d1d5db !important; line-height: 1.5 !important; padding: 20px !important; margin: 0 !important; }
-    .shepherd-footer { padding: 0 20px 20px !important; margin: 0 !important; border: none !important; background: transparent !important;}
-    .shepherd-cancel-icon { color: #9ca3af !important; transition: color 0.2s; margin-bottom: 0 !important; }
-    .shepherd-cancel-icon:hover { color: #fff !important; }
-
-    /* Alternância de Ícones Tema */
-    html.dark #theme-icon-sun { display: block; }
-    html.dark #theme-icon-moon { display: none; }
-    html.light #theme-icon-sun { display: none; }
-    html.light #theme-icon-moon { display: block; }
-
-    /* ==========================================================================
-       LIGHT MODE - UX/UI OTIMIZADO (Redução de Fadiga Visual e Elevação)
-       ========================================================================== */
-    
-    /* 1. Canvas Principal (Fundo da aplicação) - Fundo absorvente */
-    html.light body,
-    html.light .bg-bg-main,
-    html.light .bg-\[\#131314\] { 
-        background-color: var(--bg-canvas) !important; 
-        color: var(--text-primary) !important; 
-    }
-
-    /* 2. Sidebar e Header (Surface - Nível 1) */
-    html.light .bg-surface,
-    html.light .bg-\[\#1e1f20\] { 
-        background-color: var(--bg-surface) !important; 
-        border-color: var(--border-strong) !important; 
-    }
-
-    /* 3. Cards, Modais e Áreas de Destaque (Overlay - Nível 2) */
-    html.light .bg-surface-overlay,
-    html.light .modal-box,
-    html.light #article-modal > div,
-    html.light #view-modal > div,
-    html.light #sql-modal > div,
-    html.light .login-container { 
-        background-color: #FFFFFF !important; 
-        border-color: #E2E8F0 !important; 
-        box-shadow: 0 4px 6px -1px rgba(15, 23, 42, 0.05), 0 2px 4px -2px rgba(15, 23, 42, 0.03) !important;
-    }
-
-    /* Variantes de Transparência (Blur) */
-    html.light .bg-bg-main\/50, 
-    html.light .bg-bg-main\/30 { 
-        background-color: rgba(238, 242, 247, 0.85) !important; 
-        backdrop-filter: blur(8px);
-    }
-
-    /* 4. Bordas e Separadores (Guias visuais brandas) */
-    html.light .border-border-subtle, 
-    html.light .border-gray-700, 
-    html.light .border-gray-700\/50, 
-    html.light .border-gray-700\/30 { 
-        border-color: #E2E8F0 !important; 
-    }
-
-    /* 5. Interações, Menus e Hover States */
-    html.light .bg-gray-800\/50, 
-    html.light .bg-gray-800,
-    html.light .bg-gray-700\/60,
-    html.light .bg-gray-600, 
-    html.light .bg-gray-700 { 
-        background-color: #F8FAFC !important; 
-        border-color: #E2E8F0 !important; 
-        color: #334155 !important; 
-    }
-
-    html.light .hover\:bg-gray-800:hover,
-    html.light .hover\:bg-gray-700:hover,
-    html.light .hover\:bg-gray-600:hover,
-    html.light .hover\:bg-gray-500:hover,
-    html.light .hover\:bg-gray-100:hover { 
-        background-color: #E5E7EB !important; 
-        color: #0F172A !important; 
-    }
-
-    /* 6. Hierarquia Tipográfica (Chega de branco "invisível") */
-    html.light .text-white:not([class*="bg-blue"]):not([class*="bg-purple"]):not([class*="bg-red"]):not([class*="bg-green"]) { color: #0F172A !important; }
-    html.light .text-gray-300 { color: #334155 !important; }
-    html.light .text-gray-400 { color: #475569 !important; }
-    html.light .text-gray-500 { color: #64748B !important; }
-
-    /* 7. Fundo Escurecido de Modais (Foco direcional) */
-    html.light .bg-black\/30, 
-    html.light .bg-black\/50, 
-    html.light .bg-black\/60,
-    html.light .bg-black\/70,
-    html.light .modal-backdrop { 
-        background-color: rgba(15, 23, 42, 0.4) !important; 
-        backdrop-filter: blur(4px); 
-        border: none !important;
-    }
-
-    /* 8. Campos de Input e Textarea */
-    html.light input, 
-    html.light textarea, 
-    html.light select {
-        background-color: #FFFFFF !important;
-        border: 1px solid #CBD5E1 !important;
-        color: #0F172A !important;
-    }
-    html.light input:focus, 
-    html.light textarea:focus, 
-    html.light select:focus {
-        border-color: #3B82F6 !important;
-        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15) !important;
-        outline: none !important;
-    }
-
-    /* 9. Tabelas: Zebra Striping e Limpeza Visual */
-    html.light .table-responsive, 
-    html.light table {
-        background-color: #FFFFFF !important;
-    }
-    html.light table th {
-        background-color: #F8FAFC !important;
-        color: #475569 !important;
-        border-bottom: 1px solid #CBD5E1 !important;
-        font-weight: 600 !important;
-    }
-    html.light table tbody tr { background-color: #FFFFFF !important; transition: background-color 0.2s ease; }
-    html.light table tbody tr:nth-child(even) { background-color: #F8FAFC !important; }
-    html.light table tbody tr:hover { background-color: #E5E7EB !important; }
-    html.light table td { border-bottom: 1px solid #E2E8F0 !important; color: #334155 !important; }
-
-    /* 10. Scrollbar Refinada */
-    html.light ::-webkit-scrollbar-thumb { 
-        background: #CBD5E1; 
-        border-radius: 6px;
-        border: 3px solid transparent; 
-        background-clip: padding-box;
-    }
-    html.light ::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
-  </style>
+  
+  <link rel="stylesheet" href="css/style.css">
+ 
 </head>
 <body class="bg-bg-main text-white h-[100dvh] overflow-hidden"> 
 
@@ -260,11 +47,8 @@
   <div id="toast-container" class="fixed top-4 right-4 z-[150] flex flex-col gap-2 max-w-sm w-[90vw] sm:w-auto"></div>
 
   <div id="login-screen" class="hidden fixed inset-0 z-[100] flex items-center justify-center login-page-bg transition-colors duration-500 p-4 sm:p-6 overflow-hidden">
-    
     <div class="login-container relative w-full max-w-[420px] p-8 sm:p-10 rounded-[20px] shadow-2xl flex flex-col transform transition-all">
-        
         <span class="absolute top-5 right-6 text-[10px] login-text-muted font-mono font-bold tracking-widest px-2 py-1 rounded border login-border-subtle">v1.0.1</span>
-        
         <div class="flex flex-col items-center text-center mb-8 mt-2">
             <div class="w-16 h-16 bg-blue-600/10 rounded-2xl flex items-center justify-center mb-4 border border-blue-500/20 shadow-inner">
                 <i class="ph ph-book-open text-[32px] text-blue-500"></i>
@@ -272,19 +56,17 @@
             <h1 class="text-2xl font-bold login-text-primary tracking-tight">KCS Hub</h1>
             <p class="login-text-secondary text-sm mt-1">Acesse sua base de conhecimento</p>
         </div>
-
         <div id="login-form" class="w-full"></div>
-
         <div class="mt-8 flex items-center justify-center gap-2 text-xs login-text-muted font-medium w-full">
             <i class="ph ph-lock text-[16px]"></i> Acesso via Whitelist SaaS
         </div>
-
     </div>
   </div>
 
-  <div id="app-screen" class="hidden h-[100dvh] w-full flex flex-col relative overflow-hidden">
-    <header class="bg-surface border-b border-border-subtle px-4 py-2 flex items-center gap-3 sm:gap-4 shrink-0 relative z-30 h-16">
-      <button id="btn-toggle-sidebar" onclick="document.getElementById('sidebar').classList.remove('-translate-x-full'); document.getElementById('sidebar-overlay').classList.remove('hidden');" class="lg:hidden text-gray-400 hover:text-gray-900 dark:hover:text-white p-2 transition-colors touch-target">
+  <div id="app-screen" class="hidden h-[100dvh] w-full relative overflow-hidden workbench-grid">
+    
+    <header class="workbench-titlebar bg-surface border-b border-border-subtle px-4 py-2 flex items-center gap-3 sm:gap-4 shrink-0 relative z-30 h-16">
+      <button id="btn-toggle-sidebar" onclick="document.getElementById('sidebar').classList.remove('-translate-x-full');" class="lg:hidden text-gray-400 hover:text-gray-900 dark:hover:text-white p-2 transition-colors touch-target">
         <i class="ph ph-list text-[24px]"></i>
       </button>
       
@@ -333,51 +115,48 @@
                     </div>
                 </div>
                 <div class="p-2 flex flex-col gap-0.5">
-    <button id="btn-admin-panel" onclick="window.__kcs.openSettings()" class="hidden items-center gap-3 w-full px-3 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-colors">
-        <i class="ph ph-gear-six text-lg"></i> Administração
-    </button>
-    
-    <button id="btn-company-settings" onclick="window.__kcs.openCompanySettings()" class="hidden items-center gap-3 w-full px-3 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-colors">
-        <i class="ph ph-buildings text-lg"></i> Planos e Limites
-    </button>
-    
-    <button onclick="window.__kcs.toggleTheme()" class="flex items-center gap-3 w-full px-3 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-colors">
-        <i id="theme-toggle-icon" class="ph ph-moon text-lg"></i> Alternar Tema
-    </button>
-    
-    <hr class="my-1.5 border-gray-100 dark:border-border-subtle">
-    
-    <button onclick="window.__kcs.logout()" class="flex items-center gap-3 w-full px-3 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-colors">
-        <i class="ph ph-sign-out text-lg"></i> Sair do Sistema
-    </button>
-</div>
-                
+                    <button id="btn-admin-panel" onclick="window.__kcs.openSettings()" class="hidden items-center gap-3 w-full px-3 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-colors">
+                        <i class="ph ph-gear-six text-lg"></i> Administração
+                    </button>
+                    <button id="btn-company-settings" onclick="window.__kcs.openCompanySettings()" class="hidden items-center gap-3 w-full px-3 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-colors">
+                        <i class="ph ph-buildings text-lg"></i> Planos e Limites
+                    </button>
+                    <button onclick="window.__kcs.toggleTheme()" class="flex items-center gap-3 w-full px-3 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-colors">
+                        <i id="theme-toggle-icon" class="ph ph-moon text-lg"></i> Alternar Tema
+                    </button>
+                    <hr class="my-1.5 border-gray-100 dark:border-border-subtle">
+                    <button onclick="window.__kcs.logout()" class="flex items-center gap-3 w-full px-3 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-colors">
+                        <i class="ph ph-sign-out text-lg"></i> Sair do Sistema
+                    </button>
+                </div>
             </div>
         </div>
       </div>
     </header>
 
-    <div class="flex flex-1 overflow-hidden relative">
-      <div id="sidebar-overlay" class="hidden fixed inset-0 bg-black/60 z-40 lg:hidden backdrop-blur-sm" onclick="document.getElementById('sidebar').classList.add('-translate-x-full');this.classList.add('hidden')"></div>
-      
-      <aside id="sidebar" class="w-[80vw] max-w-[280px] lg:w-64 bg-surface border-r border-border-subtle flex flex-col shrink-0 overflow-y-auto fixed lg:static inset-y-0 left-0 z-50 lg:z-0 transform -translate-x-full lg:translate-x-0 transition-transform duration-300">
-       <div class="flex items-center justify-between p-4 border-b border-border-subtle lg:hidden">
-            <div class="flex items-center gap-2 shrink-0">
-                <div class="w-7 h-7 rounded-lg bg-blue-600/20 flex items-center justify-center">
-                    <i class="ph ph-book-open text-blue-400 text-[18px]"></i>
-                </div>
-                
-                <div class="flex flex-col items-start justify-center">
-                    <span class="text-sm font-semibold text-gray-900 dark:text-white truncate leading-none">KCS Hub</span>
-                    <div id="company-plan-badge-mobile"></div>
-                </div>
-
-            </div>
-            <button onclick="document.getElementById('sidebar').classList.add('-translate-x-full'); document.getElementById('sidebar-overlay').classList.add('hidden');" class="text-gray-400 hover:text-gray-900 dark:hover:text-white touch-target">
-                <i class="ph ph-x text-[20px]"></i>
+    <div class="workbench-activitybar">
+        <div class="activitybar-top">
+            <button type="button" class="activitybar-btn active" data-view="articles" title="Artigos (Base de Conhecimento)">
+                <i class="ph ph-files"></i>
             </button>
-       </div>
+            <button type="button" class="activitybar-btn" data-view="semantic-search" title="Busca Semântica">
+                <i class="ph ph-magnifying-glass"></i>
+            </button>
+            <button type="button" class="activitybar-btn" data-view="sql" title="Biblioteca SQL">
+                <i class="ph ph-database"></i>
+            </button>
+        </div>
 
+        <div class="activitybar-bottom">
+            <button type="button" class="activitybar-btn" data-view="account" title="Minha Conta">
+                <i class="ph ph-user-circle"></i>
+            </button>
+            <button type="button" class="activitybar-btn" data-view="settings" title="Configurações e Administração">
+                <i class="ph ph-gear"></i>
+            </button>
+        </div>
+    </div>
+    <aside id="sidebar" class="workbench-sidebar bg-surface border-r border-border-subtle flex flex-col shrink-0 overflow-y-auto z-50 lg:z-0">
        <div class="p-3 space-y-2 border-b border-border-subtle">
           <button id="btn-new-article" class="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2.5 rounded-xl transition-colors shadow-lg shadow-blue-500/20 touch-target">
             <i class="ph ph-plus-circle text-[18px]"></i> Novo Procedimento
@@ -388,20 +167,33 @@
             </button>
           </div>
         </div>
-       
-       <nav id="sidebar-nav" class="flex-1 p-2 space-y-0.5 overflow-y-auto pb-[env(safe-area-inset-bottom,1rem)]"></nav>
-        
-        
-      </aside>
+       <nav id="sidebar-nav" class="flex-1 p-2 space-y-0.5 overflow-y-auto"></nav>
+    </aside>
 
-      <main class="flex-1 overflow-y-auto p-4 md:p-6 relative pb-[calc(env(safe-area-inset-bottom,1rem)+4rem)] sm:pb-6">
+    <main class="workbench-editor flex-1 overflow-y-auto p-4 md:p-6 relative">
         <div id="dashboard-container" class="hidden space-y-6"></div>
         <div id="articles-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4"></div>
-      </main>
-    </div>
+    </main>
+
+    <div id="kcs-dock" class="workbench-panel"></div>
+
+    <footer class="workbench-statusbar flex items-center justify-between z-50 select-none px-3">
+        <div class="flex items-center gap-3">
+            <span class="flex items-center gap-1 hover:bg-white/20 px-2 py-0.5 cursor-pointer rounded"><i class="ph-bold ph-x-circle text-red-400"></i> 0</span>
+            <span class="flex items-center gap-1 hover:bg-white/20 px-2 py-0.5 cursor-pointer rounded"><i class="ph-bold ph-warning text-yellow-400"></i> 0</span>
+            <span class="flex items-center gap-1 hover:bg-white/20 px-2 py-0.5 cursor-pointer rounded"><i class="ph-bold ph-broadcast text-blue-400"></i> Firebase Connected</span>
+        </div>
+        <div class="flex items-center gap-3">
+            <span id="app-version-display" class="hover:bg-white/20 px-2 py-0.5 cursor-pointer rounded">v1.0.1</span>
+            <span class="hover:bg-white/20 px-2 py-0.5 cursor-pointer rounded hidden sm:inline">UTF-8</span>
+            <span class="hover:bg-white/20 px-2 py-0.5 cursor-pointer rounded"><i class="ph-bold ph-bell"></i></span>
+        </div>
+    </footer>
 
     <div id="chatbot-container"></div>
   </div>
+
+  <div id="overlay-root"></div>
 
   <div id="article-modal" class="hidden fixed inset-0 bg-black/70 z-50 items-center justify-center p-2 sm:p-4 modal-backdrop backdrop-blur-sm">
     <div class="bg-surface border border-border-subtle rounded-xl sm:rounded-2xl w-full max-w-4xl h-[100dvh] sm:h-auto sm:max-h-[90vh] flex flex-col shadow-2xl modal-box">
@@ -411,14 +203,14 @@
         </div>
         <form id="article-form" class="flex-1 overflow-y-auto flex flex-col custom-scrollbar">
             <div id="article-form-body" class="p-4 sm:p-6 space-y-4 flex-1"></div>
-            <div class="flex flex-col sm:flex-row justify-end gap-3 px-4 sm:px-6 py-4 border-t border-border-subtle bg-bg-main/50 pb-[calc(env(safe-area-inset-bottom,0)+1rem)] sm:pb-4" id="article-form-footer"></div>
+            <div class="flex flex-col sm:flex-row justify-end gap-3 px-4 sm:px-6 py-4 border-t border-border-subtle bg-bg-main/50 pb-4" id="article-form-footer"></div>
         </form>
     </div>
   </div>
 
   <div id="view-modal" class="hidden fixed inset-0 bg-black/70 z-50 items-center justify-center p-2 sm:p-4 modal-backdrop backdrop-blur-sm">
     <div class="bg-surface border border-border-subtle rounded-xl sm:rounded-2xl w-full max-w-4xl h-[100dvh] sm:h-auto sm:max-h-[90vh] overflow-y-auto shadow-2xl relative modal-box custom-scrollbar">
-        <div id="view-modal-content" class="p-4 sm:p-6 pb-[calc(env(safe-area-inset-bottom,0)+1rem)]"></div>
+        <div id="view-modal-content" class="p-4 sm:p-6"></div>
     </div>
   </div>
 
@@ -430,26 +222,31 @@
         </div>
         <form id="sql-form" class="flex-1 overflow-y-auto flex flex-col custom-scrollbar">
             <div id="sql-form-body" class="p-4 sm:p-6 space-y-4 flex-1"></div>
-            <div id="sql-form-footer" class="flex flex-col sm:flex-row justify-end gap-3 px-4 sm:px-6 py-4 border-t border-border-subtle bg-bg-main/50 pb-[calc(env(safe-area-inset-bottom,0)+1rem)] sm:pb-4"></div>
+            <div id="sql-form-footer" class="flex flex-col sm:flex-row justify-end gap-3 px-4 sm:px-6 py-4 border-t border-border-subtle bg-bg-main/50 pb-4"></div>
         </form>
     </div>
   </div>
 
   <div id="category-modal" class="hidden fixed inset-0 bg-black/70 z-[100] items-center justify-center p-4 modal-backdrop">
-    <div class="bg-surface border border-border-subtle rounded-2xl w-full max-w-lg max-h-[80vh] flex flex-col shadow-2xl modal-box"><div class="flex items-center justify-between px-6 py-4 border-b border-border-subtle"><h2 class="text-lg font-bold text-gray-900 dark:text-white">Categorias</h2><button id="btn-close-category-modal" class="text-gray-400 hover:text-gray-900 dark:hover:text-white touch-target"><i class="ph ph-x text-[20px]"></i></button></div><div class="flex-1 overflow-y-auto p-4 custom-scrollbar"><div id="category-list" class="space-y-0.5 mb-4"></div><form id="category-form" class="bg-gray-50 dark:bg-bg-main rounded-lg p-4 space-y-3 border border-border-subtle"><p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Nova Categoria</p><div class="grid grid-cols-3 gap-2"><input type="text" id="cat-name" placeholder="Nome" required class="col-span-2 bg-surface border border-border-subtle rounded-lg px-3 py-2 text-gray-900 dark:text-white text-sm" /><input type="text" id="cat-icon" placeholder="Ícone" value="ph-folder" class="bg-surface border border-border-subtle rounded-lg px-3 py-2 text-gray-900 dark:text-white text-sm text-center" /></div><select id="cat-parent" class="w-full bg-surface border border-border-subtle rounded-lg px-3 py-2 text-gray-900 dark:text-white text-sm"><option value="">Raiz</option></select><button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm py-2.5 rounded-lg touch-target transition-colors">Adicionar</button></form></div></div>
+    <div class="bg-surface border border-border-subtle rounded-2xl w-full max-w-lg max-h-[80vh] flex flex-col shadow-2xl modal-box">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-border-subtle">
+            <h2 class="text-lg font-bold text-gray-900 dark:text-white">Categorias</h2>
+            <button id="btn-close-category-modal" class="text-gray-400 hover:text-gray-900 dark:hover:text-white touch-target"><i class="ph ph-x text-[20px]"></i></button>
+        </div>
+        <div class="flex-1 overflow-y-auto p-4 custom-scrollbar">
+            <div id="category-list" class="space-y-0.5 mb-4"></div>
+            <form id="category-form" class="bg-gray-50 dark:bg-bg-main rounded-lg p-4 space-y-3 border border-border-subtle">
+                <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Nova Categoria</p>
+                <div class="grid grid-cols-3 gap-2">
+                    <input type="text" id="cat-name" placeholder="Nome" required class="col-span-2 bg-surface border border-border-subtle rounded-lg px-3 py-2 text-gray-900 dark:text-white text-sm" />
+                    <input type="text" id="cat-icon" placeholder="Ícone" value="ph-folder" class="bg-surface border border-border-subtle rounded-lg px-3 py-2 text-gray-900 dark:text-white text-sm text-center" />
+                </div>
+                <select id="cat-parent" class="w-full bg-surface border border-border-subtle rounded-lg px-3 py-2 text-gray-900 dark:text-white text-sm"><option value="">Raiz</option></select>
+                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm py-2.5 rounded-lg touch-target transition-colors">Adicionar</button>
+            </form>
+        </div>
+    </div>
   </div>
-
-  <div id="confirm-modal" class="hidden fixed inset-0 bg-black/70 z-[110] items-center justify-center p-4 modal-backdrop">
-    <div class="bg-surface border border-border-subtle rounded-2xl w-full max-w-sm shadow-2xl p-6 modal-box"><div class="flex items-center gap-3 mb-4"><div class="w-10 h-10 rounded-full bg-red-100 dark:bg-red-600/20 flex items-center justify-center shrink-0"><i class="ph ph-warning-circle text-red-600 dark:text-red-400 text-[24px]"></i></div><p id="confirm-message" class="text-sm font-semibold text-gray-800 dark:text-gray-200"></p></div><div class="flex flex-col sm:flex-row justify-end gap-3"><button id="btn-confirm-no" class="text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white px-4 py-2.5 rounded-lg transition-colors border border-gray-300 dark:border-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-800 touch-target w-full sm:w-auto">Cancelar</button><button id="btn-confirm-yes" class="text-sm font-bold bg-red-600 hover:bg-red-700 text-white px-4 py-2.5 rounded-lg shadow-md transition-colors touch-target w-full sm:w-auto">Confirmar</button></div></div>
-  </div>
-
-  <div id="alert-modal" class="hidden fixed inset-0 bg-black/70 z-[110] items-center justify-center p-4 modal-backdrop">
-    <div class="bg-surface border border-border-subtle rounded-2xl w-full max-w-sm md:max-w-lg shadow-2xl p-6 text-center modal-box"><p id="alert-message" class="text-sm text-gray-700 dark:text-gray-300 mb-5 text-left max-h-[50vh] overflow-y-auto bg-gray-50 dark:bg-bg-main p-4 rounded-lg border border-border-subtle font-mono custom-scrollbar"></p><button id="btn-alert-ok" class="w-full text-sm bg-blue-600 hover:bg-blue-700 font-bold transition-colors text-white px-4 py-3 rounded-lg shadow-md touch-target">Entendi</button></div>
-  </div>
-
-  <div id="settings-modal" class="hidden fixed inset-0 bg-black/70 z-[90] items-center justify-center p-2 sm:p-4 md:p-8 modal-backdrop"><div class="bg-surface border border-border-subtle rounded-xl sm:rounded-2xl w-full max-w-5xl h-[100dvh] sm:h-[90vh] flex flex-col shadow-2xl modal-box"><div class="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-border-subtle shrink-0"><h2 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2"><i class="ph-fill ph-gear"></i> Admin</h2><button onclick="document.getElementById('settings-modal').classList.add('hidden'); document.getElementById('settings-modal').classList.remove('flex');" class="text-gray-400 hover:text-gray-900 dark:hover:text-white touch-target"><i class="ph ph-x text-[24px] font-bold"></i></button></div><div class="flex flex-col flex-1 overflow-hidden bg-gray-50 dark:bg-bg-main sm:rounded-b-2xl"><div id="settings-users-col" class="w-full p-4 md:p-6 flex flex-col overflow-hidden"><div class="flex-1 overflow-y-auto pr-2 custom-scrollbar"><div id="users-list" class="space-y-6"></div></div></div></div></div></div>
-  <div id="history-modal" class="hidden fixed inset-0 bg-black/70 z-50 items-center justify-center p-4 modal-backdrop"><div class="bg-surface border border-border-subtle rounded-2xl w-full max-w-2xl max-h-[80vh] flex flex-col shadow-2xl modal-box"><div class="flex items-center justify-between px-6 py-4 border-b border-border-subtle"><h2 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2"><i class="ph ph-clock-counter-clockwise text-blue-500 dark:text-blue-400"></i> Histórico</h2><button onclick="document.getElementById('history-modal').classList.add('hidden'); document.getElementById('history-modal').classList.remove('flex');" class="text-gray-400 hover:text-gray-900 dark:hover:text-white touch-target"><i class="ph ph-x text-[20px]"></i></button></div><div class="flex-1 overflow-y-auto p-4 bg-gray-50 dark:bg-bg-main/30 custom-scrollbar"><div id="history-list" class="space-y-3"></div></div></div></div>
-  <div id="prompt-modal" class="hidden fixed inset-0 bg-black/70 z-[110] items-center justify-center p-4 modal-backdrop"><div class="bg-surface border border-border-subtle rounded-2xl w-full max-w-md shadow-2xl p-6 modal-box"><h3 id="prompt-message" class="text-gray-900 dark:text-white text-base font-bold mb-3 flex items-center gap-2">💬 Comentário</h3><textarea id="prompt-input" rows="4" class="w-full bg-gray-50 dark:bg-bg-main border border-border-subtle rounded-lg px-3 py-2 text-gray-900 dark:text-white text-sm mb-4 focus:ring-1 focus:ring-blue-500 resize-y shadow-inner"></textarea><div class="flex justify-end gap-3"><button id="btn-prompt-cancel" class="text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-800 touch-target">Cancelar</button><button id="btn-prompt-confirm" class="text-sm font-bold bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg shadow-md touch-target">Salvar</button></div></div></div>
 
   <script type="module" src="js/main.js"></script>
 </body>

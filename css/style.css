@@ -1,0 +1,887 @@
+/* ==========================================================================
+   KCS HUB - STYLE.CSS (VS CODE ARCHITECTURE + KCS V1 POLISH)
+   ========================================================================== */
+
+/* ==========================================================================
+   1. DESIGN TOKENS (Variáveis Globais)
+   ========================================================================== */
+:root {
+    /* TIPOGRAFIA */
+    --font-family-base: -apple-system, BlinkMacSystemFont, "Segoe UI", "Inter", "Roboto", system-ui, sans-serif;
+    --font-family-mono: "Cascadia Code", "Fira Code", "JetBrains Mono", Consolas, monospace;
+    
+    --font-size-xs: 11px;
+    --font-size-sm: 13px;
+    --font-size-md: 14px;
+    --font-size-lg: 16px;
+  
+    /* ESPAÇAMENTO */
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 20px;
+    --space-6: 24px;
+    --space-8: 32px;
+  
+    /* BORDAS E RAIOS */
+    --border-width-base: 1px;
+    --border-radius-sm: 2px;
+    --border-radius-md: 4px;
+    --border-radius-lg: 6px;
+    --border-radius-xl: 12px;
+  
+    /* SOMBRAS */
+    --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.12);
+    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.15);
+    --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.20);
+}
+  
+/* ==========================================================================
+   2. TEMAS (Light+ e Dark+)
+   ========================================================================== */
+html.dark {
+    --color-editor-background: #1e1e1e;
+    --color-sidebar-background: #252526;
+    --color-activitybar-background: #333333;
+    --color-statusbar-background: #007acc;
+    --color-panel-background: #1e1e1e;
+    --color-titlebar-background: #323233;
+  
+    --color-border: #3c3c3c;
+    --color-border-subtle: #2d2d2d;
+    --color-focus: #007fd4;
+    --color-selection: #04395e;
+    --color-hover: #2a2d2e;
+    --color-active-item: #37373d;
+  
+    --color-text-primary: #cccccc;
+    --color-text-secondary: #969696;
+    --color-text-muted: #858585;
+    --color-text-inverse: #ffffff;
+
+    --bg-canvas: #1e1e1e;
+    --bg-surface: #252526;
+}
+  
+html.light {
+    --color-editor-background: #ffffff;
+    --color-sidebar-background: #f3f3f3;
+    --color-activitybar-background: #2c2c2c;
+    --color-statusbar-background: #007acc;
+    --color-panel-background: #ffffff;
+    --color-titlebar-background: #dddddd;
+  
+    --color-border: #cccccc;
+    --color-border-subtle: #e4e4e4;
+    --color-focus: #0090f1;
+    --color-selection: #add6ff;
+    --color-hover: #e8e8e8;
+    --color-active-item: #e4e6f1;
+  
+    --color-text-primary: #3b3b3b;
+    --color-text-secondary: #616161;
+    --color-text-muted: #858585;
+    --color-text-inverse: #ffffff;
+
+    --bg-canvas: #ffffff;
+    --bg-surface: #f3f3f3;
+}
+
+body {
+    font-family: var(--font-family-base) !important;
+    font-size: var(--font-size-sm) !important;
+    background-color: var(--color-editor-background) !important;
+    color: var(--color-text-primary) !important;
+    line-height: 1.4 !important;
+    margin: 0;
+    padding: 0;
+}
+  
+/* ==========================================================================
+   3. FUNDAÇÃO DO LAYOUT (WORKBENCH GRID)
+   ========================================================================== */
+.workbench-grid {
+    display: grid !important;
+    grid-template-areas:
+        "titlebar titlebar titlebar"
+        "activitybar sidebar editor"
+        "activitybar sidebar panel"
+        "statusbar statusbar statusbar";
+    grid-template-rows: 48px 1fr auto 22px; /* Titlebar ajustada para 48px */
+    grid-template-columns: 48px 260px 1fr; /* Sidebar levemente mais larga */
+    background-color: var(--color-editor-background) !important;
+}
+  
+/* TITLE BAR (Header) */
+header.workbench-titlebar {
+    grid-area: titlebar;
+    background-color: var(--color-titlebar-background) !important;
+    border-bottom: 1px solid var(--color-border) !important;
+    height: 48px !important;
+    padding: 0 16px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    box-shadow: none !important;
+}
+header.workbench-titlebar .flex-col {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+header.workbench-titlebar input {
+    height: 28px !important;
+    background-color: var(--color-editor-background) !important;
+    border: 1px solid var(--color-border) !important;
+    border-radius: var(--border-radius-md) !important;
+    font-size: var(--font-size-xs) !important;
+    color: var(--color-text-primary) !important;
+}
+  
+/* ACTIVITY BAR */
+.workbench-activitybar {
+    grid-area: activitybar;
+    background-color: var(--color-activitybar-background) !important;
+    border-right: 1px solid var(--color-border) !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+    padding-top: 8px;
+    padding-bottom: 8px;
+}
+.activitybar-top, .activitybar-bottom {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    width: 100%;
+}
+.activitybar-btn {
+    width: 100%;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-text-muted);
+    background: transparent;
+    border: none;
+    border-left: 2px solid transparent;
+    cursor: pointer;
+    font-size: 24px;
+    transition: all 0.2s ease;
+}
+.activitybar-btn:hover {
+    color: var(--color-text-inverse);
+}
+.activitybar-btn.active {
+    color: var(--color-focus);
+    border-left: 2px solid var(--color-focus);
+}
+  
+/* SIDE BAR */
+#sidebar.workbench-sidebar {
+    grid-area: sidebar;
+    background-color: var(--color-sidebar-background) !important;
+    border-right: 1px solid var(--color-border) !important;
+    width: 100% !important;
+    max-width: none !important;
+    position: relative !important;
+    transform: none !important;
+    box-shadow: none !important;
+}
+.workbench-sidebar .p-3 {
+    padding: 16px !important;
+}
+#btn-new-article {
+    background-color: #0056D2 !important; /* Azul Vibrante */
+    border-radius: 8px !important;
+    padding: 10px 16px !important;
+    font-weight: 600 !important;
+    border: none !important;
+    color: white !important;
+}
+#btn-new-sql {
+    background-color: var(--color-hover) !important;
+    border-radius: 8px !important;
+    border: 1px solid var(--color-border-subtle) !important;
+}
+
+/* Sidebar Menu Items */
+.sidebar-section-title {
+    padding: 16px 16px 8px 16px !important;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-text-muted);
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+}
+.sidebar-item {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 8px !important;
+    padding: 8px 16px !important;
+    border-radius: 6px !important;
+    margin: 0 8px 2px 8px !important;
+    width: calc(100% - 16px) !important;
+    color: var(--color-text-secondary);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-size: var(--font-size-sm);
+    transition: background-color 0.2s, color 0.2s;
+}
+.sidebar-item-label {
+    flex: 1;
+    text-align: left;
+}
+.sidebar-item:hover {
+    background-color: var(--color-hover) !important;
+    color: var(--color-text-primary);
+}
+.sidebar-item.active {
+    background-color: rgba(0, 127, 212, 0.1) !important;
+    color: var(--color-focus) !important;
+    font-weight: 600;
+}
+.count-badge {
+    background-color: var(--color-hover);
+    padding: 2px 6px;
+    border-radius: 12px;
+    font-size: 10px;
+    font-weight: bold;
+}
+.tree-summary {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 6px !important;
+    padding: 4px 8px;
+    cursor: pointer;
+}
+#readme-menu-container {
+    margin-top: auto;
+    padding: 16px;
+    border-top: 1px solid var(--color-border-subtle);
+}
+  
+/* EDITOR AREA (Main) */
+main.workbench-editor {
+    grid-area: editor;
+    background-color: var(--color-editor-background) !important;
+    padding: var(--space-6) !important;
+    overflow-y: auto !important;
+}
+  
+/* STATUS BAR */
+.workbench-statusbar {
+    grid-area: statusbar;
+    background-color: var(--color-statusbar-background) !important;
+    color: #ffffff !important;
+    font-size: 12px !important;
+    padding: 0 10px !important;
+}
+
+/* ==========================================================================
+   4. UI COMPONENTS (O RESGATE DO ESTILO POLIDO - MIX)
+   ========================================================================== */
+
+/* DASHBOARD */
+.dash-title {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--color-text-inverse);
+}
+.dash-icon-main { color: var(--color-focus); font-size: 24px; }
+.dash-metrics {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 32px;
+}
+.metric-card {
+    background-color: var(--color-sidebar-background);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--border-radius-xl);
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    box-shadow: var(--shadow-sm);
+}
+.metric-label {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.metric-value {
+    font-size: 32px;
+    font-weight: 800;
+    color: var(--color-text-inverse);
+}
+.value-approved { color: #10B981; } /* Verde */
+.value-views { color: #3B82F6; } /* Azul */
+.value-alert { color: #EF4444; } /* Vermelho */
+
+/* TABELAS */
+.table-wrapper {
+    background-color: var(--color-sidebar-background);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--border-radius-xl);
+    overflow: hidden;
+    margin-bottom: 24px;
+}
+.table-default {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+}
+.table-default th {
+    background-color: var(--color-hover);
+    padding: 12px 16px;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom: 1px solid var(--color-border-subtle);
+}
+.table-row {
+    border-bottom: 1px solid var(--color-border-subtle);
+    transition: background-color 0.2s;
+    cursor: pointer;
+}
+.table-row:hover {
+    background-color: rgba(255, 255, 255, 0.03);
+}
+.table-row td {
+    padding: 16px;
+    vertical-align: middle;
+}
+.id-badge {
+    background-color: rgba(59, 130, 246, 0.1);
+    color: #3B82F6;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-family: var(--font-family-mono);
+    font-size: 11px;
+    font-weight: 700;
+}
+.cell-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--color-text-inverse);
+    margin-bottom: 4px;
+}
+.cell-subtitle {
+    font-size: 11px;
+    color: var(--color-text-muted);
+}
+.user-badge {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.avatar-mini {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background-color: #374151;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: bold;
+    color: #fff;
+}
+.user-name {
+    font-size: 13px;
+    font-weight: 500;
+}
+
+/* BADGES DE STATUS */
+.status-badge {
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    display: inline-block;
+}
+.status-approved, .badge-green {
+    background-color: rgba(16, 185, 129, 0.1);
+    color: #10B981;
+    border: 1px solid rgba(16, 185, 129, 0.2);
+}
+.status-review, .status-pendente_revisao, .badge-alert {
+    background-color: rgba(245, 158, 11, 0.1);
+    color: #F59E0B;
+    border: 1px solid rgba(245, 158, 11, 0.2);
+}
+.status-draft {
+    background-color: rgba(107, 114, 128, 0.1);
+    color: #9CA3AF;
+    border: 1px solid rgba(107, 114, 128, 0.2);
+}
+.badge-purple {
+    background-color: rgba(139, 92, 246, 0.1);
+    color: #8B5CF6;
+    border: 1px solid rgba(139, 92, 246, 0.2);
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 700;
+}
+.status-icon-approved { color: #10B981; font-size: 16px; }
+
+/* ==========================================================================
+   5. OVERLAY, DOCK E CHATBOT
+   ========================================================================== */
+
+/* OVERLAY ROOT (A mágica do z-index resolvido) */
+#overlay-root {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none; /* Deixa os cliques passarem quando vazio */
+    background-color: transparent;
+    transition: background-color 0.2s ease;
+}
+
+/* Quando o JS injeta a classe, o fundo escuro aparece e bloqueia cliques */
+#overlay-root.overlay-visible {
+    pointer-events: auto;
+    background-color: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(2px);
+}
+
+/* Modais no centro da tela */
+.kcs-active-overlay {
+    pointer-events: auto;
+    width: 90vw;
+    max-width: 800px;
+    height: 85vh;
+    background-color: var(--color-editor-background);
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius-xl);
+    box-shadow: var(--shadow-md);
+    display: flex;
+    flex-direction: column;
+}
+
+/* DOCK (Painel Inferior) */
+#kcs-dock {
+    grid-area: panel;
+    display: flex;
+    flex-direction: row;
+    overflow-x: auto;
+    background-color: var(--color-panel-background);
+    z-index: 40;
+    height: 0; /* Colapsado por padrão */
+    border-top: 1px solid transparent;
+    transition: height 0.1s ease-out;
+}
+
+/* Ativado via JavaScript quando houver abas */
+#kcs-dock.dock-visible {
+    height: 36px; 
+    border-top-color: var(--color-border);
+}
+
+/* Estilo das Abas (Tabs Minimizadas) */
+.dock-tab {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 180px;
+    height: 35px;
+    background-color: var(--color-editor-background);
+    border-right: 1px solid var(--color-border);
+    border-top: 1px solid transparent;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    pointer-events: auto;
+    opacity: 0.7;
+    flex-shrink: 0;
+}
+.dock-tab:hover {
+    opacity: 1;
+    background-color: var(--color-hover);
+}
+.dock-tab:last-child {
+    border-top: 1px solid var(--color-focus);
+    opacity: 1;
+    color: var(--color-text-primary);
+}
+.dock-tab-title {
+    font-size: 11px;
+    font-family: var(--font-family-mono);
+    text-transform: uppercase;
+    padding-left: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.dock-tab-actions {
+    display: flex;
+    gap: 4px;
+    padding-right: 8px;
+}
+.dock-tab-actions button {
+    background: transparent;
+    border: none;
+    color: inherit;
+    cursor: pointer;
+    font-size: 12px;
+    padding: 2px 4px;
+    border-radius: 2px;
+}
+.dock-tab-actions .btn-close:hover {
+    color: #ff5f56;
+}
+
+/* CHATBOT IA (O Esférico Azul) */
+#chatbot-container > button, 
+.btn-toggle-chatbot {
+    position: fixed !important;
+    bottom: calc(22px + 24px) !important; /* Respeita a altura da Status Bar (22px) + respiro (24px) */
+    right: 24px !important;
+    width: 56px !important;
+    height: 56px !important;
+    border-radius: 50% !important; /* Esférico */
+    background-color: #0056D2 !important; /* Azul Vibrante */
+    color: white !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    box-shadow: 0 8px 24px rgba(0, 86, 210, 0.4) !important;
+    border: none !important;
+    z-index: 90 !important;
+    cursor: pointer !important;
+    transition: transform 0.2s ease !important;
+}
+#chatbot-container > button:hover {
+    transform: translateY(-4px) !important;
+}
+#chatbot-container > button i {
+    font-size: 28px !important;
+}
+
+/* ==========================================================================
+   6. SCROLLBARS E RESPONSIVIDADE
+   ========================================================================== */
+
+::-webkit-scrollbar {
+    width: 10px !important;
+    height: 10px !important;
+}
+::-webkit-scrollbar-track {
+    background: transparent !important;
+}
+::-webkit-scrollbar-thumb {
+    background-color: rgba(121, 121, 121, 0.4) !important;
+    border: 2px solid var(--color-editor-background);
+    border-radius: 6px !important;
+}
+::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(100, 100, 100, 0.7) !important;
+}
+.workbench-sidebar ::-webkit-scrollbar-thumb {
+    border-color: var(--color-sidebar-background) !important;
+}
+
+@media screen and (max-width: 1024px) {
+    .workbench-grid {
+        grid-template-areas:
+            "titlebar titlebar"
+            "sidebar editor"
+            "sidebar panel"
+            "statusbar statusbar";
+        grid-template-columns: 220px 1fr;
+    }
+    .workbench-activitybar {
+        display: none !important;
+    }
+}
+
+@media screen and (max-width: 768px) {
+    .workbench-grid {
+        grid-template-areas:
+            "titlebar"
+            "editor"
+            "panel"
+            "statusbar";
+        grid-template-rows: 48px 1fr auto 22px;
+        grid-template-columns: 1fr;
+    }
+    #sidebar.workbench-sidebar {
+        position: fixed !important;
+        top: 48px !important;
+        left: 0 !important;
+        bottom: 22px !important;
+        width: 280px !important;
+        z-index: 100 !important;
+        border-right: 1px solid var(--color-border) !important;
+        box-shadow: var(--shadow-md) !important;
+    }
+    #kcs-dock {
+        border-top: 1px solid var(--color-border) !important;
+    }
+}
+
+/* ==========================================================================
+   7. EXCEÇÕES LEGADAS (LOGIN E TOUR)
+   ========================================================================== */
+.login-page-bg { background-color: var(--color-editor-background) !important; }
+.login-container {
+    background-color: var(--color-sidebar-background) !important;
+    border: 1px solid var(--color-border) !important;
+    border-radius: var(--border-radius-xl) !important;
+    box-shadow: var(--shadow-md) !important;
+}
+.kcs-plan-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    padding: 2px 8px;
+    border-radius: 4px;
+    border: 1px solid currentColor;
+    margin-top: 4px;
+}
+.shepherd-element {
+    background: var(--color-editor-background) !important;
+    border: 1px solid var(--color-border) !important;
+    border-radius: var(--border-radius-md) !important;
+    box-shadow: var(--shadow-md) !important;
+}
+.shepherd-arrow:before {
+    background: var(--color-editor-background) !important;
+    border: 1px solid var(--color-border) !important;
+}
+.shepherd-title { color: var(--color-text-primary) !important; }
+.shepherd-text { color: var(--color-text-secondary) !important; }
+.shepherd-header { border-bottom: 1px solid var(--color-border) !important; }
+
+/* ==========================================================================
+   EDITOR UI COMPONENTS (SEMANTIC CLASSES)
+   ========================================================================== */
+
+/* Tela de Bloqueio SRE */
+.editor-lock-screen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 64px 20px;
+    text-align: center;
+    background-color: rgba(239, 68, 68, 0.05);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    border-radius: var(--border-radius-xl);
+    color: #EF4444;
+}
+
+.lock-icon-large { font-size: 48px; margin-bottom: 16px; }
+.lock-title { font-size: 18px; font-weight: 700; }
+.lock-message { font-size: 13px; color: var(--color-text-secondary); margin-top: 4px; }
+
+/* Estados de Drag & Drop */
+.editor-drag-active {
+    outline: 2px dashed var(--color-focus) !important;
+    background-color: rgba(0, 127, 212, 0.05) !important;
+}
+
+/* Loader de IA dentro dos botões */
+.btn-ia .spinner-icon {
+    margin-right: 8px;
+    animation: spin 1s linear infinite;
+}
+
+/* Imagens em processo de Upload */
+.img-uploading {
+    border: 2px dashed var(--color-focus) !important;
+    opacity: 0.6;
+    filter: grayscale(1);
+}
+
+/* Fallback de botões e opacidade */
+.u-disabled {
+    opacity: 0.5 !important;
+    pointer-events: none !important;
+    cursor: not-allowed !important;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* ==========================================================================
+   CHATBOT UI COMPONENTS (SEMANTIC CLASSES)
+   ========================================================================== */
+
+/* Botões de Link da IA */
+.kcs-link-button {
+    display: inline-flex; align-items: center; gap: 6px; padding: 10px 16px;
+    background-color: var(--color-focus); color: #ffffff !important;
+    border-radius: var(--border-radius-md); text-decoration: none; font-weight: 600;
+    font-size: 13px; margin: 12px 0 8px 0; transition: all 0.2s ease; border: none; cursor: pointer;
+    box-shadow: var(--shadow-sm); width: fit-content;
+}
+.kcs-link-button:hover { background-color: var(--color-selection); transform: translateY(-1px); box-shadow: var(--shadow-md); }
+
+/* Saudação da IA */
+.chat-greet-title { font-size: 15px; font-weight: 700; margin-bottom: 8px; color: var(--color-text-inverse); }
+.chat-greet-subtitle { font-size: 13px; color: var(--color-text-secondary); margin-bottom: 12px; }
+.chat-greet-label { font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--color-text-muted); margin-bottom: 6px; margin-top: 12px; }
+.chat-smart-prompts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.btn-smart-prompt { background-color: var(--color-sidebar-background); color: var(--color-text-primary); font-size: 12px; font-weight: 500; padding: 6px 12px; border-radius: var(--border-radius-md); border: 1px solid var(--color-border); cursor: pointer; transition: background-color 0.2s; }
+.btn-smart-prompt:hover { background-color: var(--color-hover); }
+
+/* Balões de Mensagem */
+.chat-user-bubble-wrapper { display: flex; justify-content: flex-end; animation: fadeInChat 0.3s ease; margin-bottom: 12px; }
+.chat-user-bubble { background-color: var(--color-focus); color: #ffffff; font-size: 13px; padding: 8px 16px; border-radius: 16px 16px 2px 16px; max-width: 85%; line-height: 1.4; word-break: break-word; }
+
+.chat-bot-row { display: flex; gap: 12px; animation: fadeInChat 0.3s ease; width: 100%; margin-bottom: 12px; }
+.chat-bot-avatar { width: 32px; height: 32px; border-radius: 8px; background-color: rgba(0, 127, 212, 0.1); color: var(--color-focus); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.chat-bot-bubble-wrapper { display: flex; flex-direction: column; width: 100%; max-width: 85%; }
+.chat-bot-bubble { background-color: var(--color-sidebar-background); border: 1px solid var(--color-border); padding: 12px; border-radius: 16px 16px 16px 2px; font-size: 13px; color: var(--color-text-primary); line-height: 1.5; box-shadow: var(--shadow-xs); }
+
+/* Feedback de Resposta */
+.chat-feedback-container { display: flex; justify-content: flex-end; align-items: center; gap: 12px; margin-top: 8px; width: 100%; padding-right: 4px; }
+.btn-chat-feedback { display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 600; color: var(--color-text-muted); background: transparent; border: none; cursor: pointer; transition: color 0.2s; }
+.btn-chat-feedback.useful:hover { color: #10B981; }
+.btn-chat-feedback.not-useful:hover { color: #EF4444; }
+.chat-feedback-saved { font-size: 11px; font-weight: 700; color: var(--color-text-muted); background-color: var(--color-sidebar-background); padding: 4px 12px; border-radius: 4px; border: 1px solid var(--color-border); }
+
+/* Digitação */
+.chat-typing-indicator { display: flex; gap: 8px; padding: 8px; color: var(--color-focus); font-size: 24px; animation: pulseChat 1.5s infinite; }
+
+@keyframes fadeInChat { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes pulseChat { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+/* ==========================================================================
+   AJUSTES DE POLIMENTO FINAL (UX / UI FEEDBACK)
+   ========================================================================== */
+
+/* 1. CORREÇÃO DE OPACIDADE E DESTAQUE (Título e Plano - Imagem 1) */
+header.workbench-titlebar .text-sm.font-bold {
+    color: var(--color-text-inverse) !important;
+    font-size: 15px !important;
+    font-weight: 800 !important;
+    opacity: 1 !important;
+    letter-spacing: 0.5px !important;
+}
+
+.kcs-plan-badge {
+    opacity: 1 !important;
+    font-weight: 800 !important;
+    border-width: 1.5px !important;
+    padding: 2px 8px !important;
+    border-radius: 4px !important;
+}
+
+.kcs-plan-badge.badge-unlimited {
+    border-color: #f97316 !important; /* Laranja Sólido */
+    color: #f97316 !important;
+    background-color: rgba(249, 115, 22, 0.1) !important;
+}
+
+/* 2. MENU DE PERFIL NA ACTIVITY BAR (Imagens 2 e 3) */
+@media screen and (min-width: 1025px) {
+    /* Esconde o botão do topo (A Activity Bar fará o disparo) */
+    #btn-profile { 
+        display: none !important; 
+    }
+    
+    /* Desprende o dropdown do header e ancora ao lado da Activity Bar */
+    #profile-dropdown {
+        position: fixed !important;
+        top: auto !important;
+        bottom: 56px !important; /* Altura exata para ficar ao lado do ícone de Conta */
+        left: 56px !important;   /* Largura da Activity Bar + respiro */
+        right: auto !important;
+        width: 240px !important;
+        z-index: 9999 !important;
+        border: 1px solid var(--color-border) !important;
+        box-shadow: var(--shadow-md) !important;
+        transform-origin: bottom left !important;
+    }
+}
+
+/* 3. CABEÇALHO DE VISUALIZAÇÃO (Cards vs Tabelas - Imagens 4 e 5) */
+.view-header {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    border-bottom: 1px solid var(--color-border-subtle) !important;
+    padding-bottom: 16px !important;
+    margin-bottom: 24px !important;
+    width: 100% !important;
+}
+
+.view-title {
+    font-size: 13px !important;
+    font-weight: 800 !important;
+    text-transform: uppercase !important;
+    color: var(--color-text-inverse) !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    letter-spacing: 0.5px !important;
+}
+
+.view-title i {
+    color: var(--color-text-secondary) !important;
+    font-size: 16px !important;
+}
+
+.view-toggles {
+    display: flex !important;
+    background-color: var(--color-editor-background) !important;
+    border: 1px solid var(--color-border) !important;
+    border-radius: 6px !important;
+    padding: 3px !important;
+    gap: 4px !important;
+}
+
+.view-toggle-btn {
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    padding: 6px 14px !important;
+    border-radius: 4px !important;
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    color: var(--color-text-muted) !important;
+    background: transparent !important;
+    border: none !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+}
+
+.view-toggle-btn:hover {
+    color: var(--color-text-primary) !important;
+}
+
+.view-toggle-btn.active-view {
+    background-color: var(--color-hover) !important;
+    color: var(--color-focus) !important;
+    box-shadow: var(--shadow-xs) !important;
+}

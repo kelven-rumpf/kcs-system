@@ -7,118 +7,75 @@ import { VISIBILITY, SECTORS } from '../config.js';
 window.__kcs = window.__kcs || {};
 
 const SQL_DB_TYPES = [
-    { value: 'mysql', label: 'MySQL', color: 'bg-blue-600/30 text-blue-300' },
-    { value: 'postgres', label: 'PostgreSQL', color: 'bg-indigo-600/30 text-indigo-300' },
-    { value: 'sqlserver', label: 'SQL Server', color: 'bg-red-600/30 text-red-300' },
-    { value: 'oracle', label: 'Oracle DB', color: 'bg-orange-600/30 text-orange-300' }
+    { value: 'mysql', label: 'MySQL', color: 'db-mysql' },
+    { value: 'postgres', label: 'PostgreSQL', color: 'db-postgres' },
+    { value: 'sqlserver', label: 'SQL Server', color: 'db-sqlserver' },
+    { value: 'oracle', label: 'Oracle DB', color: 'db-oracle' }
 ];
 
 // ==========================================
-// UNIFIED DOCK MANAGER (GMAIL STYLE)
+// WORKBENCH MANAGER (OVERLAY & DOCKING)
 // ==========================================
-window.__kcs.rearrangeDocks = () => {
-    let dock = document.getElementById('kcs-dock');
-    if (!dock) {
-        dock = document.createElement('div');
-        dock.id = 'kcs-dock';
-        // Injeta o contêiner invisível para empilhar as abas da direita para a esquerda
-        dock.className = 'fixed bottom-0 right-[80px] flex flex-row-reverse items-end gap-3 z-[99999] pointer-events-none max-w-[calc(100vw-90px)] overflow-x-auto pt-4';
-        document.body.appendChild(dock);
-    }
 
-    const minimizedModals = document.querySelectorAll('.kcs-minimized:not(.hidden)');
-    minimizedModals.forEach((modal) => {
-        if (modal.parentElement !== dock) {
-            dock.appendChild(modal);
+function attachToOverlay(modal) {
+    const overlayRoot = document.getElementById('overlay-root');
+    if (!overlayRoot) {
+        console.warn('overlay-root não encontrado');
+        return;
+    }
+    
+    Array.from(overlayRoot.children).forEach(child => {
+        if (child.id !== modal.id && !child.classList.contains('lightbox-overlay')) {
+            if (window.__kcs.toggleMinimize) {
+                window.__kcs.toggleMinimize(child.id);
+            }
         }
     });
-};
+
+    overlayRoot.appendChild(modal);
+    modal.classList.remove('hidden', 'kcs-minimized');
+    modal.classList.add('kcs-active-overlay');
+}
 
 window.__kcs.toggleMinimize = (modalId) => {
-    window.__kcs.rearrangeDocks();
-    const dock = document.getElementById('kcs-dock');
     const modal = document.getElementById(modalId);
-    if (!modal) return;
+    const dock = document.getElementById('kcs-dock');
+    const overlayRoot = document.getElementById('overlay-root');
+    
+    if (!modal || !dock || !overlayRoot) return;
     
     const isMinimized = modal.classList.contains('kcs-minimized');
-    const contentBox = modal.querySelector('.modal-content-box') || modal.firstElementChild;
-    // Pega as áreas de conteúdo que devem sumir quando a aba encolher
-    const bodyElements = modal.querySelectorAll('.modal-body-box, #article-form-body, #article-form-footer');
     
     if (isMinimized) {
-        // RESTAURAR MODAL
+        Array.from(overlayRoot.children).forEach(child => {
+            if (child.id !== modalId && !child.classList.contains('lightbox-overlay')) {
+                window.__kcs.toggleMinimize(child.id);
+            }
+        });
+
+        overlayRoot.appendChild(modal);
         modal.classList.remove('kcs-minimized');
-        document.body.appendChild(modal); // Tira da Doca e volta pro centro da tela
-        
-        // Recupera o estado original salvo
-        modal.className = modal.dataset.originalClasses || '';
-        if (contentBox) {
-            contentBox.className = contentBox.dataset.originalClasses || '';
-            contentBox.style.cssText = contentBox.dataset.originalStyles || '';
-            const header = contentBox.firstElementChild;
-            if (header) header.style.cssText = header.dataset.originalStyles || '';
-        }
-        
-        bodyElements.forEach(el => { el.style.display = ''; });
+        modal.classList.add('kcs-active-overlay');
     } else {
-        // MINIMIZAR MODAL
-        if (modal.classList.contains('kcs-maximized')) window.__kcs.toggleMaximize(modalId);
-        
-        // Salva o estado atual antes de espremer o modal
-        modal.dataset.originalClasses = modal.className;
-        if (contentBox) {
-            contentBox.dataset.originalClasses = contentBox.className;
-            contentBox.dataset.originalStyles = contentBox.style.cssText;
-            const header = contentBox.firstElementChild;
-            if (header) header.dataset.originalStyles = header.style.cssText;
-        }
-        
-        // Converte o modal numa aba fixa
-        modal.className = 'kcs-minimized pointer-events-auto shrink-0 transition-transform hover:-translate-y-1 w-[220px] sm:w-[280px] h-[40px] sm:h-[48px] shadow-[0_-4px_15px_rgba(0,0,0,0.15)] rounded-t-xl overflow-hidden';
-        
-        if (contentBox) {
-            contentBox.className = 'bg-white dark:bg-[#15171b] border border-gray-300 dark:border-[#3a3b3d] w-full h-full flex flex-col overflow-hidden border-b-0';
-            contentBox.style.cssText = 'border-radius: 12px 12px 0 0 !important; margin: 0 !important; max-height: none !important;';
-            const header = contentBox.firstElementChild;
-            if (header) header.style.cssText = 'height: 100%; padding: 0 12px; border-bottom: none;';
-        }
-        
-        bodyElements.forEach(el => { el.style.display = 'none'; });
         dock.appendChild(modal);
+        modal.classList.remove('kcs-active-overlay');
+        modal.classList.add('kcs-minimized');
     }
-    window.__kcs.rearrangeDocks();
 };
 
 window.__kcs.toggleMaximize = (modalId) => {
     const modal = document.getElementById(modalId);
     if (!modal) return;
     
-    // Se tentar maximizar enquanto estiver minimizado, restaura primeiro
     if (modal.classList.contains('kcs-minimized')) window.__kcs.toggleMinimize(modalId);
     
-    const contentBox = modal.querySelector('.modal-content-box') || modal.firstElementChild;
     const maxBtnIcon = modal.querySelector('.btn-max i') || document.getElementById(`icon-max-${modalId}`);
     
     if (modal.classList.contains('kcs-maximized')) {
-        // DESMAXIMIZAR
         modal.classList.remove('kcs-maximized');
-        modal.classList.add('p-2', 'sm:p-6');
-        if (contentBox) {
-            contentBox.className = contentBox.dataset.preMaxClasses || contentBox.className;
-            contentBox.style.cssText = contentBox.dataset.preMaxStyles || '';
-        }
         if (maxBtnIcon) maxBtnIcon.className = 'ph-bold ph-arrows-out-simple';
     } else {
-        // MAXIMIZAR TELA CHEIA
         modal.classList.add('kcs-maximized');
-        modal.classList.remove('p-2', 'sm:p-6');
-        
-        if (contentBox) {
-            contentBox.dataset.preMaxClasses = contentBox.className;
-            contentBox.dataset.preMaxStyles = contentBox.style.cssText;
-            contentBox.className = 'modal-content-box bg-white dark:bg-[#15171b] border-0 flex flex-col w-full h-[100dvh] shadow-none transition-all duration-300';
-            contentBox.style.cssText = 'max-width: 100vw !important; border-radius: 0 !important; max-height: 100dvh !important; margin: 0 !important;';
-        }
         if (maxBtnIcon) maxBtnIcon.className = 'ph-bold ph-arrows-in-simple';
     }
 };
@@ -127,60 +84,64 @@ window.__kcs.closeModal = (modalId, isDynamic = false) => {
     const modal = document.getElementById(modalId);
     if (!modal) return;
     
-    // Se for fechado via "X" enquanto estiver no rodapé, ele restaura os dados estruturais silenciosamente antes de sumir
-    if (modal.classList.contains('kcs-minimized')) window.__kcs.toggleMinimize(modalId);
-    if (modal.classList.contains('kcs-maximized')) window.__kcs.toggleMaximize(modalId);
+    modal.classList.remove('kcs-active-overlay', 'kcs-minimized', 'kcs-maximized');
     
     if (isDynamic) {
-        modal.remove(); // Destrói procedimetos dinâmicos do DOM
+        modal.remove();
     } else {
-        modal.classList.add('hidden'); // Oculta formulários fixos (Novo KCS, etc)
-        modal.classList.remove('flex');
+        modal.classList.add('hidden');
+        const overlayRoot = document.getElementById('overlay-root');
+        if (overlayRoot && modal.parentElement !== overlayRoot) {
+            overlayRoot.appendChild(modal);
+        }
     }
-    window.__kcs.rearrangeDocks();
 };
 
-// Mapeamento legado para garantir que botões antigos não quebrem
-window.toggleMinimizeArticle = () => window.__kcs.toggleMinimize('article-modal');
-window.toggleMaximizeArticle = () => window.__kcs.toggleMaximize('article-modal');
-window.toggleMinimizeView = (id) => window.__kcs.toggleMinimize(id);
-window.toggleMaximizeView = (id) => window.__kcs.toggleMaximize(id);
-window.__kcs.closeDynamicView = (id) => window.__kcs.closeModal(id, true);
-
-
-// ==========================================
-// FUNÇÃO AUXILIAR: COPIAR CONTEÚDO DOS BLOCOS
-// ==========================================
 window.copyFieldText = function(btn) {
-    const container = btn.closest('.group');
+    const container = btn.closest('.field-group');
     const contentDiv = container.querySelector('.field-content');
     if (!contentDiv) return;
 
     let textToCopy = contentDiv.innerText.trim();
     navigator.clipboard.writeText(textToCopy).then(() => {
         const originalIcon = btn.innerHTML;
-        btn.innerHTML = '<i class="ph-fill ph-check-circle text-green-500 text-[16px]"></i>';
+        btn.innerHTML = '<i class="ph-fill ph-check-circle icon-success"></i>';
         if (window.__kcs && window.__kcs.showToast) window.__kcs.showToast('Texto copiado!', 'success');
         setTimeout(() => { btn.innerHTML = originalIcon; }, 2000);
     }).catch(err => console.error('Erro ao copiar', err));
 };
 
-// ==========================================
-// MÓDULO: LIGHTBOX (ZOOM DE IMAGENS)
-// ==========================================
+// Singleton para o evento do Lightbox
 if (!window.__kcsZoomInit) {
     document.addEventListener('click', (e) => {
         if (e.target.tagName === 'IMG' && e.target.closest('.modal-zoomable')) {
             const src = e.target.src;
             const lb = document.createElement('div');
-            lb.className = 'fixed inset-0 z-[99999] bg-black/90 flex items-center justify-center p-4 animate-fade-in cursor-zoom-out backdrop-blur-sm';
-            lb.innerHTML = `<img src="${src}" class="max-w-full max-h-full object-contain rounded-xl shadow-[0_0_40px_rgba(0,0,0,0.5)] transition-transform transform scale-95 hover:scale-100 duration-300">
-                            <button class="absolute top-6 right-6 text-white/50 hover:text-white bg-black/50 hover:bg-black p-2 rounded-full transition-colors"><i class="ph-bold ph-x text-2xl"></i></button>`;
-            lb.onclick = () => lb.remove();
-            document.body.appendChild(lb);
+            lb.className = 'lightbox-overlay';
+            lb.innerHTML = `
+                <img src="${src}" class="lightbox-image">
+                <button class="btn-icon btn-lightbox-close"><i class="ph-bold ph-x"></i></button>`;
+            
+            lb.addEventListener('click', () => lb.remove());
+            
+            const overlayRoot = document.getElementById('overlay-root');
+            if (overlayRoot) {
+                overlayRoot.appendChild(lb);
+            }
         }
     });
     window.__kcsZoomInit = true;
+}
+
+// Utilitário interno para vincular eventos sem duplicar (Singletons)
+function safeBindEvent(element, eventType, handler) {
+    if (!element) return;
+    const propName = `_${eventType}Handler`;
+    if (element[propName]) {
+        element.removeEventListener(eventType, element[propName]);
+    }
+    element[propName] = handler;
+    element.addEventListener(eventType, handler);
 }
 
 // ==========================================
@@ -195,53 +156,46 @@ export function openArticleModal(article = null, onSave, rebindToolbar) {
     
     if (!modal || !form || !formBody) return;
 
-    // Hard Reset via unificação
-    if (modal.classList.contains('kcs-minimized')) window.__kcs.toggleMinimize('article-modal');
-    if (modal.classList.contains('kcs-maximized')) window.__kcs.toggleMaximize('article-modal');
-
-    const innerBox = modal.firstElementChild;
-    if (innerBox && !innerBox.classList.contains('modal-content-box')) {
-        innerBox.classList.add('modal-content-box');
-    }
+    attachToOverlay(modal);
 
     if (title && !document.getElementById('btn-controls-article')) {
         const headerDiv = title.parentElement;
         if (headerDiv) {
-            headerDiv.className = 'flex items-center justify-between px-4 sm:px-6 py-4 border-b border-gray-300 dark:border-[#3a3b3d] shrink-0 bg-gray-50 dark:bg-[#1e1f20] cursor-pointer hover:bg-gray-100 dark:hover:bg-[#2a2b2f] transition-colors w-full select-none'; 
-            headerDiv.onclick = (e) => {
+            headerDiv.className = 'modal-header';
+            safeBindEvent(headerDiv, 'click', (e) => {
                 if (e.target.closest('button')) return;
                 if (modal.classList.contains('kcs-minimized')) window.__kcs.toggleMinimize('article-modal');
-            };
+            });
 
-            title.className = 'text-sm font-bold text-gray-900 dark:text-white truncate flex-1 pr-2 sm:pr-4 flex items-center gap-2';
+            title.className = 'modal-title';
             if (!title.querySelector('i')) {
                 const originalText = title.textContent || 'Nova Documentação KCS';
-                title.innerHTML = `<i class="ph-fill ph-pencil-simple text-blue-500 text-lg"></i> <span class="truncate">${originalText}</span>`;
+                title.innerHTML = `<i class="ph-fill ph-pencil-simple text-blue-500"></i> <span>${originalText}</span>`;
             }
 
             const closeBtn = headerDiv.querySelector('button'); 
             const controlsDiv = document.createElement('div');
             controlsDiv.id = 'btn-controls-article';
-            controlsDiv.className = 'flex items-center gap-2 sm:gap-3 shrink-0 ml-auto';
+            controlsDiv.className = 'modal-controls';
 
             const minBtn = document.createElement('button');
             minBtn.innerHTML = '<i class="ph-bold ph-minus"></i>';
-            minBtn.className = 'text-gray-500 hover:text-gray-900 dark:hover:text-white text-lg transition-colors p-1';
+            minBtn.className = 'btn-icon';
             minBtn.title = "Minimizar";
             minBtn.type = 'button';
-            minBtn.onclick = (e) => { e.stopPropagation(); window.__kcs.toggleMinimize('article-modal'); };
+            minBtn.addEventListener('click', (e) => { e.stopPropagation(); window.__kcs.toggleMinimize('article-modal'); });
             
             const maxBtn = document.createElement('button');
             maxBtn.innerHTML = '<i class="ph-bold ph-arrows-out-simple"></i>';
-            maxBtn.className = 'btn-max text-gray-500 hover:text-gray-900 dark:hover:text-white text-lg transition-colors p-1 hidden sm:block';
+            maxBtn.className = 'btn-icon btn-max';
             maxBtn.title = "Expandir";
             maxBtn.type = 'button';
-            maxBtn.onclick = (e) => { e.stopPropagation(); window.__kcs.toggleMaximize('article-modal'); };
+            maxBtn.addEventListener('click', (e) => { e.stopPropagation(); window.__kcs.toggleMaximize('article-modal'); });
 
             if (closeBtn) {
-                closeBtn.className = 'text-gray-500 hover:text-red-500 dark:hover:text-red-400 text-lg transition-colors p-1';
+                closeBtn.className = 'btn-icon btn-close';
                 closeBtn.innerHTML = '<i class="ph-bold ph-x"></i>';
-                closeBtn.onclick = (e) => { e.stopPropagation(); window.__kcs.closeModal('article-modal', false); };
+                closeBtn.addEventListener('click', (e) => { e.stopPropagation(); window.__kcs.closeModal('article-modal', false); });
                 
                 controlsDiv.appendChild(minBtn);
                 controlsDiv.appendChild(maxBtn);
@@ -260,91 +214,93 @@ export function openArticleModal(article = null, onSave, rebindToolbar) {
         `<option value="${c.id}" ${article?.categoryId === c.id || article?.category === c.id ? 'selected' : ''}>${c.path}</option>`
     ).join('');
 
+    modal.dataset.title = article?.title ? `Edit: ${article.title}` : 'Novo Procedimento';
+
    formBody.innerHTML = `
-        <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4 bg-gray-50 dark:bg-[#131314] p-3 rounded-lg border border-gray-300 dark:border-[#3a3b3d]">
-            <div class="flex-1">
-                <p class="text-[10px] text-gray-500 uppercase">Número do Procedimento</p>
-                <p class="text-sm font-bold text-blue-500 dark:text-blue-400">${kcsNum}</p>
+        <div class="form-row-metadata">
+            <div class="form-group meta-block">
+                <p class="meta-label">Número do Procedimento</p>
+                <p class="meta-value id-highlight">${kcsNum}</p>
             </div>
-            <div class="flex-1 sm:border-l border-t sm:border-t-0 border-gray-300 dark:border-[#3a3b3d] pt-2 sm:pt-0 sm:pl-4 w-full">
-                <p class="text-[10px] text-gray-500 uppercase">Autor Original</p>
-                <p class="text-sm text-gray-700 dark:text-gray-300 truncate">${authorName}</p>
+            <div class="form-group meta-block meta-divider">
+                <p class="meta-label">Autor Original</p>
+                <p class="meta-value">${authorName}</p>
             </div>
         </div>
 
-        <div class="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 p-3 rounded-lg flex items-start gap-3 shadow-sm mt-3">
-            <div class="mt-0.5 text-indigo-600 dark:text-indigo-400 text-lg"><i class="ph-fill ph-magic-wand"></i></div>
-            <div>
-                <h4 class="text-xs font-bold text-indigo-800 dark:text-indigo-300 uppercase tracking-wider mb-1">Piloto Automático KCS</h4>
-                <p class="text-[11px] sm:text-xs text-indigo-700 dark:text-indigo-400 leading-relaxed">Não perca tempo preenchendo caixas. Descreva o problema, a causa, a solução e as imagens na caixa de <strong>Passo a Passo</strong> e clique em <strong class="bg-indigo-100 dark:bg-indigo-900/50 px-1 py-0.5 rounded text-indigo-800 dark:text-indigo-200">✨ Refinar Conteúdo</strong>.</p>
+        <div class="alert-box alert-indigo">
+            <div class="alert-icon"><i class="ph-fill ph-magic-wand"></i></div>
+            <div class="alert-content">
+                <h4 class="alert-title">Piloto Automático KCS</h4>
+                <p class="alert-text">Não perca tempo preenchendo caixas. Descreva o problema, a causa, a solução e as imagens na caixa de <strong>Passo a Passo</strong> e clique em <strong class="badge-indigo">✨ Refinar Conteúdo</strong>.</p>
             </div>
         </div>
         
-        <div class="mt-3">
-            <label class="flex items-center gap-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Título *</label>
-            <input type="text" id="article-title" placeholder="Deixe em branco e a IA deduzirá para você..." class="w-full bg-white dark:bg-[#1e1f20] border border-gray-300 dark:border-[#3a3b3d] rounded-lg px-3 py-2 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" value="${article?.title || ''}" />
+        <div class="form-group">
+            <label class="form-label">Título *</label>
+            <input type="text" id="article-title" placeholder="Deixe em branco e a IA deduzirá para você..." class="form-input" value="${article?.title || ''}" />
         </div>
         
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
-            <div>
-                <label class="flex items-center gap-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Sintoma / Problema</label>
-                <textarea id="article-symptom" rows="2" placeholder="Auto-preenchido via IA..." class="w-full bg-white dark:bg-[#1e1f20] border border-gray-300 dark:border-[#3a3b3d] rounded-lg px-3 py-2 text-gray-900 dark:text-white text-sm resize-y focus:ring-2 focus:ring-blue-500 focus:outline-none">${article?.symptom || ''}</textarea>
+        <div class="form-row-split">
+            <div class="form-group">
+                <label class="form-label">Sintoma / Problema</label>
+                <textarea id="article-symptom" rows="2" placeholder="Auto-preenchido via IA..." class="form-textarea">${article?.symptom || ''}</textarea>
             </div>
-            <div>
-                <label class="flex items-center gap-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Ambiente</label>
-                <textarea id="article-environment" rows="2" placeholder="Auto-preenchido via IA..." class="w-full bg-white dark:bg-[#1e1f20] border border-gray-300 dark:border-[#3a3b3d] rounded-lg px-3 py-2 text-gray-900 dark:text-white text-sm resize-y focus:ring-2 focus:ring-blue-500 focus:outline-none">${article?.environment || ''}</textarea>
+            <div class="form-group">
+                <label class="form-label">Ambiente</label>
+                <textarea id="article-environment" rows="2" placeholder="Auto-preenchido via IA..." class="form-textarea">${article?.environment || ''}</textarea>
             </div>
         </div>
         
-        <div class="mt-3">
-            <label class="flex items-center gap-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Causa</label>
-            <textarea id="article-cause" rows="2" placeholder="Auto-preenchido via IA..." class="w-full bg-white dark:bg-[#1e1f20] border border-gray-300 dark:border-[#3a3b3d] rounded-lg px-3 py-2 text-gray-900 dark:text-white text-sm resize-y focus:ring-2 focus:ring-blue-500 focus:outline-none">${article?.cause || ''}</textarea>
+        <div class="form-group">
+            <label class="form-label">Causa</label>
+            <textarea id="article-cause" rows="2" placeholder="Auto-preenchido via IA..." class="form-textarea">${article?.cause || ''}</textarea>
         </div>
-        <div class="mt-3">
-            <label class="flex items-center gap-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Solução</label>
-            <textarea id="article-solution" rows="2" placeholder="Auto-preenchido via IA..." class="w-full bg-white dark:bg-[#1e1f20] border border-gray-300 dark:border-[#3a3b3d] rounded-lg px-3 py-2 text-gray-900 dark:text-white text-sm resize-y focus:ring-2 focus:ring-blue-500 focus:outline-none">${article?.solution || ''}</textarea>
+        <div class="form-group">
+            <label class="form-label">Solução</label>
+            <textarea id="article-solution" rows="2" placeholder="Auto-preenchido via IA..." class="form-textarea">${article?.solution || ''}</textarea>
         </div>
         
-        <div class="mt-4">
-            <label class="flex items-center gap-1.5 text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">Procedimento Detalhado / Captura de Rascunho</label>
-            <div class="flex flex-wrap items-center justify-between bg-gray-50 dark:bg-[#1e1f20] border border-gray-300 dark:border-[#3a3b3d] rounded-t-lg px-3 py-1.5 w-full gap-y-2 border-b-0">
-                <div class="flex flex-wrap items-center gap-1">
-                    <button type="button" data-format="undo" class="text-gray-500 hover:text-gray-900 dark:hover:text-white p-1.5 rounded transition-colors"><i class="ph ph-arrow-u-up-left text-lg"></i></button>
-                    <button type="button" data-format="redo" class="text-gray-500 hover:text-gray-900 dark:hover:text-white p-1.5 rounded transition-colors"><i class="ph ph-arrow-u-up-right text-lg"></i></button>
-                    <div class="w-px h-5 bg-gray-300 dark:bg-[#3a3b3d] mx-1 hidden sm:block"></div>
-                    <button type="button" data-format="bold" class="text-gray-600 dark:text-gray-400 px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-[#131314] font-bold">B</button>
-                    <button type="button" data-format="italic" class="text-gray-600 dark:text-gray-400 px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-[#131314] italic">I</button>
-                    <button type="button" data-format="underline" class="text-gray-600 dark:text-gray-400 px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-[#131314] underline">U</button>
-                    <div class="w-px h-5 bg-gray-300 dark:bg-[#3a3b3d] mx-1 hidden sm:block"></div>
-                    <button type="button" data-format="h3" class="text-xs text-gray-600 dark:text-gray-400 px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-[#131314] font-semibold">H3</button>
-                    <button type="button" data-format="insertUnorderedList" class="text-gray-600 dark:text-gray-400 p-1 rounded hover:bg-gray-100 dark:hover:bg-[#131314]"><i class="ph ph-list-bullets text-lg"></i></button>
-                    <button type="button" data-format="insertOrderedList" class="text-gray-600 dark:text-gray-400 p-1 rounded hover:bg-gray-100 dark:hover:bg-[#131314]"><i class="ph ph-list-numbers text-lg"></i></button>
-                    <div class="w-px h-5 bg-gray-300 dark:bg-[#3a3b3d] mx-1"></div>
-                    <button type="button" data-format="image" class="text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 p-1.5 rounded hover:bg-gray-200 dark:hover:bg-[#2a2b2f] transition-colors" title="Anexar Imagem"><i class="ph ph-camera text-lg"></i></button>
+        <div class="form-group editor-container">
+            <label class="form-label">Procedimento Detalhado / Captura de Rascunho</label>
+            <div class="editor-toolbar">
+                <div class="toolbar-actions-left">
+                    <button type="button" data-format="undo" class="btn-tool"><i class="ph ph-arrow-u-up-left"></i></button>
+                    <button type="button" data-format="redo" class="btn-tool"><i class="ph ph-arrow-u-up-right"></i></button>
+                    <div class="toolbar-divider"></div>
+                    <button type="button" data-format="bold" class="btn-tool tool-bold">B</button>
+                    <button type="button" data-format="italic" class="btn-tool tool-italic">I</button>
+                    <button type="button" data-format="underline" class="btn-tool tool-underline">U</button>
+                    <div class="toolbar-divider"></div>
+                    <button type="button" data-format="h3" class="btn-tool tool-h3">H3</button>
+                    <button type="button" data-format="insertUnorderedList" class="btn-tool"><i class="ph ph-list-bullets"></i></button>
+                    <button type="button" data-format="insertOrderedList" class="btn-tool"><i class="ph ph-list-numbers"></i></button>
+                    <div class="toolbar-divider"></div>
+                    <button type="button" data-format="image" class="btn-tool tool-image" title="Anexar Imagem"><i class="ph ph-camera"></i></button>
                 </div>
-                <div class="flex flex-wrap items-center gap-2 justify-end">
+                <div class="toolbar-actions-right">
                     <button id="btn-ia-reescrever" type="button" class="btn-ia btn-ia-reescrever"><i class="ph-fill ph-magic-wand"></i> Refinar</button>
-                    <button id="btn-ia-corrigir" type="button" class="btn-ia btn-ia-corrigir hidden sm:flex"><i class="ph-fill ph-text-aa"></i> Gramática</button>
+                    <button id="btn-ia-corrigir" type="button" class="btn-ia btn-ia-corrigir"><i class="ph-fill ph-text-aa"></i> Gramática</button>
                 </div>
             </div>
-            <div id="article-body" contenteditable="true" class="modal-zoomable w-full bg-white dark:bg-[#15171b] border border-gray-300 dark:border-[#3a3b3d] rounded-b-lg px-3 sm:px-5 py-4 text-gray-900 dark:text-gray-200 text-sm resize-y focus:ring-2 focus:ring-blue-500 focus:outline-none min-h-[300px] max-h-[60vh] overflow-y-auto leading-relaxed shadow-inner"></div>
+            <div id="article-body" contenteditable="true" class="editor-content modal-zoomable"></div>
         </div>
         
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4 pt-4 border-t border-gray-200 dark:border-[#3a3b3d]">
-            <div>
-                <label class="flex items-center gap-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Categoria</label>
-                <select id="article-category" class="w-full bg-white dark:bg-[#1e1f20] border border-gray-300 dark:border-[#3a3b3d] rounded-lg px-3 py-2 text-sm">${categoryOptions}</select>
+        <div class="form-row-multi">
+            <div class="form-group">
+                <label class="form-label">Categoria</label>
+                <select id="article-category" class="form-select">${categoryOptions}</select>
             </div>
-            <div>
-                <label class="flex items-center gap-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Visibilidade</label>
-                <select id="article-visibility" class="w-full bg-white dark:bg-[#1e1f20] border border-gray-300 dark:border-[#3a3b3d] rounded-lg px-3 py-2 text-sm">
+            <div class="form-group">
+                <label class="form-label">Visibilidade</label>
+                <select id="article-visibility" class="form-select">
                     <option value="${VISIBILITY.PUBLIC}" ${article?.visibility === VISIBILITY.PUBLIC ? 'selected' : ''}>🌍 Público</option>
                     <option value="${VISIBILITY.PRIVATE}" ${article?.visibility === VISIBILITY.PRIVATE ? 'selected' : ''}>🔒 Privado</option>
                 </select>
             </div>
-            <div>
-                <label class="flex items-center gap-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Tags (Vírgula)</label>
-                <input type="text" id="article-tags" class="w-full bg-white dark:bg-[#1e1f20] border border-gray-300 dark:border-[#3a3b3d] rounded-lg px-3 py-2 text-sm" value="${(article?.tags || []).join(', ')}" />
+            <div class="form-group">
+                <label class="form-label">Tags (Vírgula)</label>
+                <input type="text" id="article-tags" class="form-input" value="${(article?.tags || []).join(', ')}" />
             </div>
         </div>
     `;
@@ -355,7 +311,7 @@ export function openArticleModal(article = null, onSave, rebindToolbar) {
         if (Array.isArray(htmlParaCarregar)) {
             htmlParaCarregar = htmlParaCarregar.map(step => {
                 let txt = step.description ? `<p>${step.description}</p>` : '';
-                if(step.images) txt += step.images.map(img => `<br><img src="${img}" style="max-height: 240px; border-radius: 6px;" /><br>`).join('');
+                if(step.images) txt += step.images.map(img => `<br><img src="${img}" class="editor-image-preview" /><br>`).join('');
                 return txt;
             }).join('');
         }
@@ -366,16 +322,16 @@ export function openArticleModal(article = null, onSave, rebindToolbar) {
 
     const canPublish = hasPermission('validate_article');
     footer.innerHTML = `
-        <button type="button" id="btn-cancel-article-footer" class="text-sm text-gray-500 hover:text-gray-900 px-4 py-2 border border-gray-300 rounded-lg w-full sm:w-auto">Cancelar</button>
-        <button type="submit" id="btn-draft-direct" class="text-sm bg-gray-500 hover:bg-gray-600 text-white font-medium px-4 py-2 rounded-lg w-full sm:w-auto">Salvar Rascunho</button>
-        ${canPublish ? `<button type="submit" id="btn-publish-direct" class="text-sm bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2 rounded-lg w-full sm:w-auto mt-2 sm:mt-0">Salvar e Aprovar</button>` : ''}
+        <button type="button" id="btn-cancel-article-footer" class="btn-secondary">Cancelar</button>
+        <button type="submit" id="btn-draft-direct" class="btn-neutral">Salvar Rascunho</button>
+        ${canPublish ? `<button type="submit" id="btn-publish-direct" class="btn-primary">Salvar e Aprovar</button>` : ''}
     `;
 
     let submitAction = 'draft';
-    document.getElementById('btn-draft-direct').onclick = () => { submitAction = 'draft'; };
-    if (canPublish) document.getElementById('btn-publish-direct').onclick = () => { submitAction = 'approved'; };
+    safeBindEvent(document.getElementById('btn-draft-direct'), 'click', () => { submitAction = 'draft'; });
+    if (canPublish) safeBindEvent(document.getElementById('btn-publish-direct'), 'click', () => { submitAction = 'approved'; });
 
-    form.onsubmit = (e) => {
+    safeBindEvent(form, 'submit', (e) => {
         e.preventDefault();
         const titleValue = document.getElementById('article-title')?.value?.trim();
         if (!titleValue) return alert("Por favor, preencha o Título."); 
@@ -392,20 +348,13 @@ export function openArticleModal(article = null, onSave, rebindToolbar) {
             tags: (document.getElementById('article-tags')?.value || '').split(',').map(t => t.trim()).filter(Boolean), 
             statusRequest: submitAction 
         }, article?.id || null);
-        closeArticleModal();
-    };
+        window.__kcs.closeModal('article-modal', false);
+    });
 
-    modal.classList.remove('hidden'); 
-    modal.classList.add('flex');
     if (rebindToolbar) rebindToolbar();
-    document.getElementById('btn-cancel-article').onclick = closeArticleModal;
-    document.getElementById('btn-cancel-article-footer').onclick = closeArticleModal;
+    safeBindEvent(document.getElementById('btn-cancel-article'), 'click', () => window.__kcs.closeModal('article-modal', false));
+    safeBindEvent(document.getElementById('btn-cancel-article-footer'), 'click', () => window.__kcs.closeModal('article-modal', false));
 }
-
-export function closeArticleModal() { 
-    window.__kcs.closeModal('article-modal', false);
-}
-
 
 // ==========================================
 // MODAL: VISUALIZADOR MULTI-JANELAS
@@ -431,121 +380,120 @@ export function openViewModal(article, currentUser) {
 
     modal = document.createElement('div');
     modal.id = modalId;
-    // PACTH AQUI: Backdrop blur e cor de fundo transparente aprimorada
-    modal.className = 'dynamic-view-modal fixed inset-0 bg-black/60 backdrop-blur-md z-[300] flex items-center justify-center p-2 sm:p-6 animate-fade-in transition-all duration-300';
-    
+    modal.className = 'modal-container';
+    modal.dataset.title = article.articleNumber ? `#${article.articleNumber}` : article.title;
+
     modal.innerHTML = `
-        <div class="modal-content-box bg-surface border border-border-strong rounded-2xl w-full max-w-[95vw] xl:max-w-5xl flex flex-col shadow-float relative max-h-[95vh]" style="animation: slideUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;">
-            
-            <div class="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-gray-300 dark:border-[#3a3b3d] shrink-0 bg-gray-50 dark:bg-[#1e1f20] rounded-t-2xl cursor-pointer hover:bg-gray-100 dark:hover:bg-[#2a2b2f] transition-colors w-full select-none" onclick="window.__kcs.toggleMinimize('${modalId}')">
-                <h2 class="text-sm font-bold text-gray-900 dark:text-white truncate flex-1 pr-2 sm:pr-4 flex items-center gap-2">
-                    <i class="ph-fill ph-file-text text-blue-500 text-lg"></i>
-                    ${article.articleNumber ? `<span class="text-blue-500 hidden sm:inline">#${article.articleNumber}</span>` : ''} 
-                    <span class="truncate text-xs sm:text-sm font-semibold">${safeText(article.title)}</span>
+        <div class="modal-content-box">
+            <div class="modal-header" data-action="header-min">
+                <h2 class="modal-title">
+                    <i class="ph-fill ph-file-text icon-blue"></i>
+                    ${article.articleNumber ? `<span class="id-badge">#${article.articleNumber}</span>` : ''} 
+                    <span class="title-text">${safeText(article.title)}</span>
                 </h2>
                 
-                <div class="flex items-center gap-2 sm:gap-3 shrink-0 ml-auto">
-                    <button onclick="event.stopPropagation(); window.__kcs.toggleMinimize('${modalId}')" class="text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors text-lg p-1" title="Minimizar"><i class="ph-bold ph-minus"></i></button>
-                    <button onclick="event.stopPropagation(); window.__kcs.toggleMaximize('${modalId}')" class="btn-max text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors text-lg p-1 hidden sm:block" title="Expandir/Restaurar"><i id="icon-max-${modalId}" class="ph-bold ph-arrows-out-simple"></i></button>
-                    <button onclick="event.stopPropagation(); window.__kcs.closeModal('${modalId}', true)" class="text-gray-500 hover:text-red-500 dark:hover:text-red-400 transition-colors text-lg p-1" title="Fechar"><i class="ph-bold ph-x"></i></button>
+                <div class="modal-controls">
+                    <button class="btn-icon" title="Minimizar" data-action="minimize"><i class="ph-bold ph-minus"></i></button>
+                    <button class="btn-icon btn-max" title="Expandir/Restaurar" data-action="maximize"><i id="icon-max-${modalId}" class="ph-bold ph-arrows-out-simple"></i></button>
+                    <button class="btn-icon btn-close" title="Fechar" data-action="close"><i class="ph-bold ph-x"></i></button>
                 </div>
             </div>
 
-            <div class="modal-body-box flex-1 overflow-y-auto p-4 sm:p-8 custom-scrollbar modal-zoomable">
+            <div class="modal-body modal-zoomable">
                 
                 ${article.status === 'review' || article.status === 'pendente_revisao' ? `
-                <div class="bg-yellow-100 dark:bg-yellow-900/30 border border-yellow-300 dark:border-yellow-500/50 text-yellow-700 dark:text-yellow-400 px-4 py-3 rounded-xl mb-6 flex items-start gap-3 shadow-sm" data-html2pdf-ignore>
-                    <i class="ph-fill ph-warning-circle text-[24px]"></i>
-                    <span class="text-sm font-medium mt-0.5"><strong>Atenção:</strong> Este procedimento está em revisão.</span>
+                <div class="alert-box alert-warning" data-html2pdf-ignore>
+                    <i class="ph-fill ph-warning-circle alert-icon"></i>
+                    <span class="alert-text"><strong>Atenção:</strong> Este procedimento está em revisão.</span>
                 </div>` : ''}
 
-                <div id="kcs-print-area-${article.id}" class="pb-2">
-                    <div class="mb-6">
-                        <h2 class="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-3 leading-tight">${safeText(article.title)}</h2>
-                        <div class="flex flex-wrap gap-2">
-                            ${article.tags ? article.tags.map(t => `<span class="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs px-2.5 py-1 rounded-full font-medium">${safeText(t)}</span>`).join('') : ''}
-                            ${article.categoryId || article.category ? `<span class="bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 text-xs px-2.5 py-1 rounded-full font-medium">${safeText(article.categoryId || article.category)}</span>` : ''}
-                            ${article.visibility === VISIBILITY.PRIVATE ? `<span class="bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 text-xs px-2.5 py-1 rounded-full flex items-center gap-1 font-medium"><i class="ph-bold ph-lock"></i> Privado</span>` : `<span class="bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 text-xs px-2.5 py-1 rounded-full flex items-center gap-1 font-medium"><i class="ph-bold ph-globe"></i> Público</span>`}
+                <div id="kcs-print-area-${article.id}" class="print-area">
+                    <div class="view-header-meta">
+                        <h2 class="view-main-title">${safeText(article.title)}</h2>
+                        <div class="view-tags">
+                            ${article.tags ? article.tags.map(t => `<span class="tag-badge">${safeText(t)}</span>`).join('') : ''}
+                            ${article.categoryId || article.category ? `<span class="tag-badge tag-category">${safeText(article.categoryId || article.category)}</span>` : ''}
+                            ${article.visibility === VISIBILITY.PRIVATE ? `<span class="tag-badge tag-private"><i class="ph-bold ph-lock"></i> Privado</span>` : `<span class="tag-badge tag-public"><i class="ph-bold ph-globe"></i> Público</span>`}
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+                    <div class="view-content-grid">
                         ${article.symptom ? `
-                        <div class="bg-gray-50 dark:bg-[#1e1f20] p-4 sm:p-5 rounded-xl border border-gray-200 dark:border-[#3a3b3d] shadow-sm relative group">
-                            <div class="flex items-center justify-between mb-2">
-                                <h4 class="text-[11px] font-bold text-gray-500 uppercase tracking-wider flex items-center gap-2"><i class="ph-fill ph-warning-circle text-red-400 text-lg"></i> Sintoma</h4>
-                                <button onclick="window.copyFieldText(this)" class="text-gray-400 hover:text-blue-500 transition-colors opacity-0 group-hover:opacity-100" title="Copiar conteúdo"><i class="ph ph-copy text-[16px]"></i></button>
+                        <div class="field-group">
+                            <div class="field-header">
+                                <h4 class="field-title"><i class="ph-fill ph-warning-circle icon-red"></i> Sintoma</h4>
+                                <button class="btn-icon btn-copy" title="Copiar conteúdo" data-action="copy-field"><i class="ph ph-copy"></i></button>
                             </div>
-                            <div class="field-content text-sm text-gray-700 dark:text-gray-300 leading-relaxed">${safeText(article.symptom)}</div>
+                            <div class="field-content">${safeText(article.symptom)}</div>
                         </div>` : ''}
                         
                         ${article.environment ? `
-                        <div class="bg-gray-50 dark:bg-[#1e1f20] p-4 sm:p-5 rounded-xl border border-gray-200 dark:border-[#3a3b3d] shadow-sm relative group">
-                            <div class="flex items-center justify-between mb-2">
-                                <h4 class="text-[11px] font-bold text-gray-500 uppercase tracking-wider flex items-center gap-2"><i class="ph-fill ph-desktop text-blue-400 text-lg"></i> Ambiente</h4>
-                                <button onclick="window.copyFieldText(this)" class="text-gray-400 hover:text-blue-500 transition-colors opacity-0 group-hover:opacity-100" title="Copiar conteúdo"><i class="ph ph-copy text-[16px]"></i></button>
+                        <div class="field-group">
+                            <div class="field-header">
+                                <h4 class="field-title"><i class="ph-fill ph-desktop icon-blue"></i> Ambiente</h4>
+                                <button class="btn-icon btn-copy" title="Copiar conteúdo" data-action="copy-field"><i class="ph ph-copy"></i></button>
                             </div>
-                            <div class="field-content text-sm text-gray-700 dark:text-gray-300 leading-relaxed">${safeText(article.environment)}</div>
+                            <div class="field-content">${safeText(article.environment)}</div>
                         </div>` : ''}
                         
                         ${article.cause ? `
-                        <div class="bg-gray-50 dark:bg-[#1e1f20] p-4 sm:p-5 rounded-xl border border-gray-200 dark:border-[#3a3b3d] shadow-sm relative group">
-                            <div class="flex items-center justify-between mb-2">
-                                <h4 class="text-[11px] font-bold text-gray-500 uppercase tracking-wider flex items-center gap-2"><i class="ph-fill ph-magnifying-glass text-yellow-500 text-lg"></i> Causa</h4>
-                                <button onclick="window.copyFieldText(this)" class="text-gray-400 hover:text-blue-500 transition-colors opacity-0 group-hover:opacity-100" title="Copiar conteúdo"><i class="ph ph-copy text-[16px]"></i></button>
+                        <div class="field-group">
+                            <div class="field-header">
+                                <h4 class="field-title"><i class="ph-fill ph-magnifying-glass icon-yellow"></i> Causa</h4>
+                                <button class="btn-icon btn-copy" title="Copiar conteúdo" data-action="copy-field"><i class="ph ph-copy"></i></button>
                             </div>
-                            <div class="field-content text-sm text-gray-700 dark:text-gray-300 leading-relaxed">${safeText(article.cause)}</div>
+                            <div class="field-content">${safeText(article.cause)}</div>
                         </div>` : ''}
                         
                         ${article.solution ? `
-                        <div class="bg-gray-50 dark:bg-[#1e1f20] p-4 sm:p-5 rounded-xl border border-gray-200 dark:border-[#3a3b3d] shadow-sm relative group">
-                            <div class="flex items-center justify-between mb-2">
-                                <h4 class="text-[11px] font-bold text-gray-500 uppercase tracking-wider flex items-center gap-2"><i class="ph-fill ph-check-circle text-green-500 text-lg"></i> Solução</h4>
-                                <button onclick="window.copyFieldText(this)" class="text-gray-400 hover:text-blue-500 transition-colors opacity-0 group-hover:opacity-100" title="Copiar conteúdo"><i class="ph ph-copy text-[16px]"></i></button>
+                        <div class="field-group">
+                            <div class="field-header">
+                                <h4 class="field-title"><i class="ph-fill ph-check-circle icon-green"></i> Solução</h4>
+                                <button class="btn-icon btn-copy" title="Copiar conteúdo" data-action="copy-field"><i class="ph ph-copy"></i></button>
                             </div>
-                            <div class="field-content text-sm text-gray-700 dark:text-gray-300 leading-relaxed">${safeText(article.solution)}</div>
+                            <div class="field-content">${safeText(article.solution)}</div>
                         </div>` : ''}
                     </div>
 
-                    ${article.steps || article.body ? `<div class="mb-4"><h4 class="text-[11px] font-bold text-gray-500 uppercase mb-3 tracking-wider flex items-center gap-2"><i class="ph-fill ph-list-numbers text-gray-400 text-lg"></i> Procedimento Detalhado</h4><div class="text-sm text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-[#131314] border border-gray-200 dark:border-[#3a3b3d] p-4 sm:p-6 rounded-xl shadow-inner overflow-x-auto markdown-body">${formatContentForView(article.steps || article.body)}</div></div>` : ''}
+                    ${article.steps || article.body ? `<div class="view-steps-container"><h4 class="field-title steps-title"><i class="ph-fill ph-list-numbers icon-gray"></i> Procedimento Detalhado</h4><div class="markdown-body">${formatContentForView(article.steps || article.body)}</div></div>` : ''}
                 </div>
 
-                <div class="mt-8 pt-6 border-t border-gray-200 dark:border-[#3a3b3d] flex flex-wrap items-center justify-between gap-4" data-html2pdf-ignore>
-                    <div class="flex flex-wrap items-center gap-2">
-                        <button onclick="window.__kcs.toggleLike('${article.id}')" class="text-pink-600 dark:text-pink-400 hover:text-pink-700 dark:hover:text-pink-300 flex items-center justify-center gap-1.5 text-xs bg-pink-100 dark:bg-pink-900/20 px-3 py-2 rounded-lg border border-pink-200 dark:border-pink-900/50 font-bold transition-colors">
-                            <i class="ph-fill ph-heart text-[18px]"></i> Curtiu (${(article.likes || []).length})
+                <div class="view-footer-actions" data-html2pdf-ignore>
+                    <div class="action-group">
+                        <button class="btn-interaction btn-like" data-action="toggle-like">
+                            <i class="ph-fill ph-heart"></i> Curtiu (${(article.likes || []).length})
                         </button>
-                        <button onclick="window.__kcs.promptComment('${article.id}')" class="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 flex items-center justify-center gap-1.5 text-xs bg-blue-100 dark:bg-blue-900/20 px-3 py-2 rounded-lg border border-blue-200 dark:border-blue-900/50 font-bold transition-colors">
-                            <i class="ph-fill ph-chat-circle text-[18px]"></i> Comentar (${(article.comments || []).length})
+                        <button class="btn-interaction btn-comment" data-action="prompt-comment">
+                            <i class="ph-fill ph-chat-circle"></i> Comentar (${(article.comments || []).length})
                         </button>
-                        <button onclick="window.__kcs.toggleFavorite('${article.id}')" class="text-yellow-600 dark:text-yellow-500 hover:text-yellow-700 dark:hover:text-yellow-400 flex items-center justify-center gap-1.5 text-xs bg-yellow-100 dark:bg-yellow-900/20 px-3 py-2 rounded-lg border border-yellow-200 dark:border-yellow-900/50 font-bold transition-colors">
-                            <i class="${isFav ? 'ph-fill' : 'ph'} ph-star text-[18px]"></i> ${isFav ? 'Desfavoritar' : 'Favoritar'}
+                        <button class="btn-interaction btn-fav" data-action="toggle-fav">
+                            <i class="${isFav ? 'ph-fill' : 'ph'} ph-star"></i> ${isFav ? 'Desfavoritar' : 'Favoritar'}
                         </button>
-                        <button onclick="window.exportArticleToPDF('${article.articleNumber || 'DOC'}', '${safeText(article.title).replace(/'/g, "\\'")}', this, '${article.id}')" class="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white flex items-center justify-center gap-1.5 text-xs bg-gray-100 dark:bg-gray-800 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 font-bold transition-colors">
-                            <i class="ph-fill ph-download-simple text-[18px]"></i> PDF
+                        <button class="btn-interaction btn-export" data-action="export-pdf" data-num="${article.articleNumber || 'DOC'}" data-title="${safeText(article.title).replace(/"/g, '&quot;')}">
+                            <i class="ph-fill ph-download-simple"></i> PDF
                         </button>
                     </div>
 
-                    <div class="flex flex-wrap items-center gap-2">
-                        <button onclick="window.__kcs.openHistory('${article.id}', 'articles')" class="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white flex items-center justify-center gap-1.5 text-xs bg-white dark:bg-[#1e1f20] px-3 py-2 rounded-lg border border-gray-300 dark:border-[#3a3b3d] font-bold transition-colors">
-                            <i class="ph-bold ph-clock-counter-clockwise text-[18px]"></i> Histórico
+                    <div class="action-group">
+                        <button class="btn-secondary" data-action="open-history">
+                            <i class="ph-bold ph-clock-counter-clockwise"></i> Histórico
                         </button>
-                        <button onclick="window.__kcs.flagArticle('${article.id}')" class="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 flex items-center justify-center gap-1.5 text-xs bg-red-50 dark:bg-red-900/10 px-3 py-2 rounded-lg border border-red-200 dark:border-red-900/30 font-bold transition-colors">
-                            <i class="ph-bold ph-warning-circle text-[18px]"></i> Reportar
+                        <button class="btn-danger" data-action="flag-article">
+                            <i class="ph-bold ph-warning-circle"></i> Reportar
                         </button>
                     </div>
                 </div>
 
                 ${article.comments && article.comments.length > 0 ? `
-                <div class="space-y-3 mt-8 pt-6 border-t border-gray-200 dark:border-[#3a3b3d]" data-html2pdf-ignore>
-                    <h4 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-4"><i class="ph-fill ph-chats mr-1"></i> Comentários da Equipe</h4>
+                <div class="comments-section" data-html2pdf-ignore>
+                    <h4 class="comments-title"><i class="ph-fill ph-chats"></i> Comentários da Equipe</h4>
                     ${article.comments.map(c => `
-                        <div class="bg-gray-50 dark:bg-[#1e1f20] p-4 rounded-xl border border-gray-200 dark:border-[#3a3b3d] shadow-sm">
-                            <div class="flex justify-between items-center mb-2">
-                                <span class="text-xs font-bold text-gray-800 dark:text-gray-200">${safeText(c.userName)}</span>
-                                <span class="text-[10px] text-gray-500 font-medium">${new Date(c.date).toLocaleDateString()}</span>
+                        <div class="comment-card">
+                            <div class="comment-header">
+                                <span class="comment-author">${safeText(c.userName)}</span>
+                                <span class="comment-date">${new Date(c.date).toLocaleDateString()}</span>
                             </div>
-                            <p class="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">${safeText(c.text)}</p>
+                            <p class="comment-text">${safeText(c.text)}</p>
                         </div>
                     `).join('')}
                 </div>` : ''}
@@ -553,12 +501,27 @@ export function openViewModal(article, currentUser) {
         </div>
     `;
     
-    document.body.appendChild(modal);
-}
+    modal.querySelector('[data-action="header-min"]').addEventListener('click', (e) => {
+        if (!e.target.closest('button')) window.__kcs.toggleMinimize(modalId);
+    });
+    modal.querySelector('[data-action="minimize"]').addEventListener('click', (e) => { e.stopPropagation(); window.__kcs.toggleMinimize(modalId); });
+    modal.querySelector('[data-action="maximize"]').addEventListener('click', (e) => { e.stopPropagation(); window.__kcs.toggleMaximize(modalId); });
+    modal.querySelector('[data-action="close"]').addEventListener('click', (e) => { e.stopPropagation(); window.__kcs.closeModal(modalId, true); });
 
-export function closeViewModal() { 
-    const modals = document.querySelectorAll('.dynamic-view-modal');
-    modals.forEach(m => window.__kcs.closeModal(m.id, true));
+    modal.querySelectorAll('[data-action="copy-field"]').forEach(btn => btn.addEventListener('click', (e) => window.copyFieldText(e.currentTarget)));
+    
+    modal.querySelector('[data-action="toggle-like"]').addEventListener('click', () => window.__kcs.toggleLike(article.id));
+    modal.querySelector('[data-action="prompt-comment"]').addEventListener('click', () => window.__kcs.promptComment(article.id));
+    modal.querySelector('[data-action="toggle-fav"]').addEventListener('click', () => window.__kcs.toggleFavorite(article.id));
+    modal.querySelector('[data-action="export-pdf"]').addEventListener('click', (e) => {
+        const ds = e.currentTarget.dataset;
+        window.exportArticleToPDF(ds.num, ds.title, e.currentTarget, article.id);
+    });
+
+    modal.querySelector('[data-action="open-history"]').addEventListener('click', () => window.__kcs.openHistory(article.id, 'articles'));
+    modal.querySelector('[data-action="flag-article"]').addEventListener('click', () => window.__kcs.flagArticle(article.id));
+
+    attachToOverlay(modal);
 }
 
 // ==========================================
@@ -566,7 +529,7 @@ export function closeViewModal() {
 // ==========================================
 window.exportArticleToPDF = async function(articleNumber, title, btnElement, articleId = '') {
     const originalHtml = btnElement.innerHTML;
-    btnElement.innerHTML = '<i class="ph ph-spinner animate-spin text-[18px]"></i> Exportando...';
+    btnElement.innerHTML = '<i class="ph ph-spinner spinner-icon"></i> Exportando...';
     btnElement.disabled = true;
 
     if (!window.html2pdf) {
@@ -600,49 +563,63 @@ window.exportArticleToPDF = async function(articleNumber, title, btnElement, art
 };
 
 export function openDuplicityModal(dupArticle, onContinue) {
-    const modalHtml = `
-    <div id="duplicity-modal" class="fixed inset-0 bg-black/80 z-[500] flex items-center justify-center p-4 animate-fade-in">
-        <div class="bg-white dark:bg-[#1e1f20] border border-yellow-500/50 rounded-2xl max-w-md p-6 shadow-2xl text-center">
-            <div class="text-4xl mb-3">⚠️</div>
-            <h2 class="text-xl font-bold text-yellow-600 dark:text-yellow-400 mb-2">Aviso de Governança</h2>
-            <p class="text-sm text-gray-600 dark:text-gray-300 mb-6">Já existe um artigo similar a este (ID: <strong>#${dupArticle.articleNumber}</strong>). Por favor, verifique se não é melhor editar o existente.</p>
-            <div class="flex justify-center gap-3">
-                <button id="btn-dup-view" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">[Ver Existente]</button>
-                <button id="btn-dup-continue" class="bg-gray-100 dark:bg-[#1e1f20] border border-gray-300 dark:border-[#3a3b3d] hover:bg-gray-200 text-gray-700 dark:text-white px-4 py-2 rounded-lg text-sm transition-colors">[Continuar Criando]</button>
+    const modal = document.createElement('div');
+    modal.id = 'duplicity-modal';
+    modal.className = 'modal-container';
+    modal.dataset.title = 'Aviso de Governança';
+
+    modal.innerHTML = `
+        <div class="modal-content-box alert-box">
+            <div class="alert-icon-large">⚠️</div>
+            <h2 class="alert-title">Aviso de Governança</h2>
+            <p class="alert-text">Já existe um artigo similar a este (ID: <strong>#${dupArticle.articleNumber}</strong>). Por favor, verifique se não é melhor editar o existente.</p>
+            <div class="alert-actions">
+                <button id="btn-dup-view" class="btn-primary">[Ver Existente]</button>
+                <button id="btn-dup-continue" class="btn-secondary">[Continuar Criando]</button>
             </div>
         </div>
-    </div>`;
+    `;
     
-    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    attachToOverlay(modal);
     
-    document.getElementById('btn-dup-view').onclick = () => { 
-        document.getElementById('duplicity-modal').remove(); 
-        closeArticleModal(); 
+    document.getElementById('btn-dup-view').addEventListener('click', () => { 
+        window.__kcs.closeModal('duplicity-modal', true);
+        window.__kcs.closeModal('article-modal', false); 
         if(window.__kcs) window.__kcs.viewArticle(dupArticle.id); 
-    };
+    });
     
-    document.getElementById('btn-dup-continue').onclick = () => { 
-        document.getElementById('duplicity-modal').remove(); 
+    document.getElementById('btn-dup-continue').addEventListener('click', () => { 
+        window.__kcs.closeModal('duplicity-modal', true);
         if(onContinue) onContinue(); 
-    };
+    });
 }
 
 export function openReadmeModal(readmeMarkdown) {
-    const modalHtml = `
-    <div id="readme-modal" class="fixed inset-0 bg-black/80 z-[200] flex items-center justify-center p-4">
-        <div class="bg-white dark:bg-[#1e1f20] border border-gray-300 dark:border-[#3a3b3d] rounded-2xl w-full max-w-4xl max-h-[85vh] flex flex-col shadow-2xl relative">
-            <div class="flex items-center justify-between px-6 py-4 border-b border-gray-300 dark:border-[#3a3b3d] shrink-0">
-                <h2 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">📖 Documentação (README)</h2>
-                <button onclick="document.getElementById('readme-modal').remove()" class="text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white text-2xl font-bold transition-colors leading-none"><i class="ph ph-x"></i></button>
+    const modal = document.createElement('div');
+    modal.id = 'readme-modal';
+    modal.className = 'modal-container document-box';
+    modal.dataset.title = 'README';
+
+    modal.innerHTML = `
+        <div class="modal-content-box">
+            <div class="modal-header">
+                <h2 class="modal-title">📖 Documentação (README)</h2>
+                <div class="modal-controls">
+                    <button id="btn-readme-close" class="btn-icon btn-close"><i class="ph ph-x"></i></button>
+                </div>
             </div>
-            <div class="flex-1 overflow-y-auto p-6 bg-gray-50 dark:bg-[#131314] text-gray-700 dark:text-gray-300 text-sm leading-relaxed whitespace-pre-wrap font-mono">${readmeMarkdown}</div>
+            <div class="modal-body markdown-body">
+                ${readmeMarkdown}
+            </div>
         </div>
-    </div>`;
-    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    `;
+    
+    attachToOverlay(modal);
+    document.getElementById('btn-readme-close').addEventListener('click', () => window.__kcs.closeModal('readme-modal', true));
 }
 
 // ==========================================
-// FUNÇÕES LEGADAS INTACTAS
+// MÓDULOS DE SQL
 // ==========================================
 
 export function openSqlModal(script = null, onSave) {
@@ -650,28 +627,31 @@ export function openSqlModal(script = null, onSave) {
     const form = document.getElementById('sql-form');
     const title = document.getElementById('sql-modal-title');
     const formBody = document.getElementById('sql-form-body');
+    const footer = document.getElementById('sql-form-footer');
     
     if (!modal || !form || !formBody) return;
     
+    attachToOverlay(modal);
+    
     title.textContent = script ? 'Editar Script SQL' : 'Novo Script SQL';
+    modal.dataset.title = script ? `SQL: ${script.name}` : 'Novo Script SQL';
+
     const typeOptions = SQL_DB_TYPES.map(t => `<option value="${t.value}" ${script?.dbType === t.value ? 'selected' : ''}>${t.label}</option>`).join('');
 
     formBody.innerHTML = `
-        <div>
-            <label class="flex items-center gap-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
-                Nome do Script *
-            </label>
-            <input type="text" id="sql-name" placeholder="Ex: Corrige CFOP Nulo na Tabela Produtos" class="w-full bg-white dark:bg-[#1e1f20] border border-gray-300 dark:border-[#3a3b3d] rounded-lg px-3 py-2 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" required value="${script?.name || ''}" />
+        <div class="form-group">
+            <label class="form-label">Nome do Script *</label>
+            <input type="text" id="sql-name" placeholder="Ex: Corrige CFOP Nulo na Tabela Produtos" class="form-input" required value="${script?.name || ''}" />
         </div>
         
-        <div class="grid grid-cols-2 gap-4 mt-3">
-            <div>
-                <label class="flex items-center gap-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Banco de Dados</label>
-                <select id="sql-db-type" class="w-full bg-white dark:bg-[#1e1f20] border border-gray-300 dark:border-[#3a3b3d] rounded-lg px-3 py-2 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">${typeOptions}</select>
+        <div class="form-row-split">
+            <div class="form-group">
+                <label class="form-label">Banco de Dados</label>
+                <select id="sql-db-type" class="form-select">${typeOptions}</select>
             </div>
-            <div>
-                <label class="flex items-center gap-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Operação</label>
-                <select id="sql-category" class="w-full bg-white dark:bg-[#1e1f20] border border-gray-300 dark:border-[#3a3b3d] rounded-lg px-3 py-2 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+            <div class="form-group">
+                <label class="form-label">Operação</label>
+                <select id="sql-category" class="form-select">
                     <option value="SELECT" ${script?.sqlCategory === 'SELECT'?'selected':''}>Consulta (SELECT)</option>
                     <option value="UPDATE" ${script?.sqlCategory === 'UPDATE'?'selected':''}>Alteração (UPDATE/INSERT)</option>
                     <option value="DELETE" ${script?.sqlCategory === 'DELETE'?'selected':''}>Exclusão (DELETE/DROP)</option>
@@ -679,37 +659,36 @@ export function openSqlModal(script = null, onSave) {
             </div>
         </div>
         
-        <div class="mt-3">
-            <label class="flex items-center gap-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Descrição</label>
-            <input type="text" id="sql-desc" placeholder="O que esse script resolve na prática?" class="w-full bg-white dark:bg-[#1e1f20] border border-gray-300 dark:border-[#3a3b3d] rounded-lg px-3 py-2 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" value="${script?.description || ''}" />
+        <div class="form-group">
+            <label class="form-label">Descrição</label>
+            <input type="text" id="sql-desc" placeholder="O que esse script resolve na prática?" class="form-input" value="${script?.description || ''}" />
         </div>
         
-        <div class="mt-3">
-            <label class="flex items-center gap-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Código SQL *</label>
-            <textarea id="sql-code" rows="6" placeholder="SELECT * FROM table..." class="w-full bg-white dark:bg-[#1e1f20] border border-gray-300 dark:border-[#3a3b3d] rounded-lg px-3 py-2 text-green-600 dark:text-green-400 font-mono text-sm resize-y focus:ring-2 focus:ring-blue-500 focus:outline-none" required>${script?.code || ''}</textarea>
+        <div class="form-group">
+            <label class="form-label">Código SQL *</label>
+            <textarea id="sql-code" rows="6" placeholder="SELECT * FROM table..." class="form-textarea code-editor" required>${script?.code || ''}</textarea>
         </div>
         
-        <div class="mt-3">
-            <label class="flex items-center gap-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Visibilidade</label>
-            <select id="sql-visibility" class="w-full bg-white dark:bg-[#1e1f20] border border-gray-300 dark:border-[#3a3b3d] rounded-lg px-3 py-2 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+        <div class="form-group">
+            <label class="form-label">Visibilidade</label>
+            <select id="sql-visibility" class="form-select">
                 <option value="${VISIBILITY.PUBLIC}" ${script?.visibility === VISIBILITY.PUBLIC ? 'selected' : ''}>🌍 Público (Empresa)</option>
                 <option value="${VISIBILITY.PRIVATE}" ${script?.visibility === VISIBILITY.PRIVATE ? 'selected' : ''}>🔒 Privado (Setor)</option>
             </select>
         </div>
     `;
 
-    const footer = document.getElementById('sql-form-footer');
     if(footer) {
         footer.innerHTML = `
-            <button type="button" id="btn-cancel-sql-footer" class="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white px-4 py-2 rounded-lg border border-gray-300 dark:border-[#3a3b3d] hover:bg-gray-100 dark:hover:bg-[#131314]">Cancelar</button>
-            <button type="submit" class="text-sm bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-lg shadow-sm">Salvar Script</button>
+            <button type="button" id="btn-cancel-sql-footer" class="btn-secondary">Cancelar</button>
+            <button type="submit" class="btn-primary">Salvar Script</button>
         `;
-        document.getElementById('btn-cancel-sql-footer').onclick = closeSqlModal;
+        safeBindEvent(document.getElementById('btn-cancel-sql-footer'), 'click', () => window.__kcs.closeModal('sql-modal', false));
     }
     
-    document.getElementById('btn-cancel-sql').onclick = closeSqlModal;
+    safeBindEvent(document.getElementById('btn-cancel-sql'), 'click', () => window.__kcs.closeModal('sql-modal', false));
     
-    form.onsubmit = (e) => { 
+    safeBindEvent(form, 'submit', (e) => { 
         e.preventDefault(); 
         onSave({ 
             name: document.getElementById('sql-name').value, 
@@ -720,22 +699,21 @@ export function openSqlModal(script = null, onSave) {
             visibility: document.getElementById('sql-visibility').value, 
             statusRequest: 'approved' 
         }); 
-        closeSqlModal(); 
-    };
-    
-    modal.classList.remove('hidden'); 
-    modal.classList.add('flex');
-}
-
-export function closeSqlModal() { 
-    window.__kcs.closeModal('sql-modal', false); 
+        window.__kcs.closeModal('sql-modal', false); 
+    });
 }
 
 export function openSqlViewModal(script) {
-    const modal = document.getElementById('view-modal');
-    if (!modal) return;
+    const modalId = `sql-view-${script.id}`;
+    let modal = document.getElementById(modalId);
     
-    const content = document.getElementById('view-modal-content');
+    if (modal) {
+        if (modal.classList.contains('kcs-minimized')) {
+            window.__kcs.toggleMinimize(modalId);
+        }
+        return;
+    }
+    
     const safeText = (str) => { 
         if(!str) return ''; 
         return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>'); 
@@ -745,61 +723,94 @@ export function openSqlViewModal(script) {
     const userId = currentUser?.uid || currentUser?.id;
     const isFav = (script.favorites || []).includes(userId);
 
-    if (content) {
-        content.classList.add('relative');
-        content.innerHTML = `
-            <button onclick="window.__kcs.closeModal('view-modal', false)" title="Fechar" class="absolute top-2 right-2 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white text-2xl font-bold z-50 leading-none transition-colors"><i class="ph ph-x"></i></button>
-            
-            ${script.status === 'review' || script.status === 'pendente_revisao' ? `
-            <div class="bg-yellow-100 dark:bg-yellow-900/30 border border-yellow-300 dark:border-yellow-500/50 text-yellow-700 dark:text-yellow-400 px-4 py-3 rounded-xl mb-4 flex items-start gap-3 shadow-sm mr-8">
-                <i class="ph-fill ph-warning-circle text-[24px]"></i>
-                <span class="text-sm font-medium mt-0.5"><strong>Atenção:</strong> Este script foi sinalizado ou está em revisão.</span>
-            </div>` : ''}
+    modal = document.createElement('div');
+    modal.id = modalId;
+    modal.className = 'modal-container';
+    modal.dataset.title = script.scriptNumber ? `SQL-${script.scriptNumber}` : script.name;
 
-            <div class="mb-4 pr-8">
-                ${script.scriptNumber ? `<div class="text-purple-600 dark:text-purple-500 text-sm font-extrabold tracking-widest mb-1 uppercase">#SQL-${script.scriptNumber}</div>` : ''}
-                <div class="flex items-center justify-between">
-                    <h2 class="text-xl font-bold text-gray-900 dark:text-white">${safeText(script.name)}</h2>
-                    <button onclick="window.__kcs.explainSql('${script.id}')" class="bg-yellow-100 dark:bg-yellow-600/20 text-yellow-600 dark:text-yellow-400 px-3 py-1 rounded text-xs font-bold hover:bg-yellow-200 dark:hover:bg-yellow-600/40"><i class="ph-fill ph-lightbulb mr-1"></i>Explicar IA</button>
+    modal.innerHTML = `
+        <div class="modal-content-box">
+            <div class="modal-header" data-action="header-min">
+                <h2 class="modal-title">
+                    <i class="ph-fill ph-database icon-purple"></i>
+                    ${script.scriptNumber ? `<span class="id-badge">#SQL-${script.scriptNumber}</span>` : ''} 
+                    <span class="title-text">${safeText(script.name)}</span>
+                </h2>
+                
+                <div class="modal-controls">
+                    <button class="btn-icon" title="Minimizar" data-action="minimize"><i class="ph-bold ph-minus"></i></button>
+                    <button class="btn-icon btn-max" title="Expandir/Restaurar" data-action="maximize"><i class="ph-bold ph-arrows-out-simple"></i></button>
+                    <button class="btn-icon btn-close" title="Fechar" data-action="close"><i class="ph-bold ph-x"></i></button>
                 </div>
-                <div class="mt-2">
-                    ${script.visibility === VISIBILITY.PRIVATE ? `<span class="bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 text-xs px-2 py-0.5 rounded-full flex w-max items-center gap-1"><i class="ph ph-lock"></i> Setor: ${safeText(script.sectorId)}</span>` : `<span class="bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 text-xs px-2 py-0.5 rounded-full flex w-max items-center gap-1"><i class="ph ph-globe"></i> Público</span>`}
-                </div>
             </div>
-            
-            <p class="text-sm text-gray-600 dark:text-gray-300 mb-4">${safeText(script.description)}</p>
-            
-            <div class="relative mt-2">
-                <button onclick="window.__kcs.copyCode(this)" class="absolute top-2 right-2 bg-white dark:bg-[#1e1f20] border border-gray-300 dark:border-[#3a3b3d] hover:bg-gray-100 dark:hover:bg-[#131314] text-gray-700 dark:text-white text-xs px-2 py-1 rounded shadow transition-colors">Copiar</button>
-                <pre class="bg-gray-50 dark:bg-[#131314] border border-gray-200 dark:border-[#3a3b3d] rounded-lg p-4 text-green-600 dark:text-green-400 font-mono text-sm overflow-x-auto shadow-inner"><code>${script.code.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</code></pre>
-            </div>
-            
-            <div class="mt-6 pt-4 border-t border-gray-200 dark:border-[#3a3b3d] flex flex-col sm:flex-row gap-3 flex-wrap">
-                <button onclick="window.__kcs.toggleSqlLike('${script.id}')" class="text-pink-600 dark:text-pink-400 hover:text-pink-700 dark:hover:text-pink-300 flex items-center justify-center gap-2 text-sm bg-pink-100 dark:bg-pink-900/20 px-4 py-2 rounded-lg border border-pink-200 dark:border-pink-900/50 font-medium"><i class="ph-fill ph-heart text-[18px]"></i> Curtiu (${(script.likes || []).length})</button>
-                <button onclick="window.__kcs.promptSqlComment('${script.id}')" class="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 flex items-center justify-center gap-2 text-sm bg-blue-100 dark:bg-blue-900/20 px-4 py-2 rounded-lg border border-blue-200 dark:border-blue-900/50 font-medium"><i class="ph-fill ph-chat-circle text-[18px]"></i> Comentar (${(script.comments || []).length})</button>
-                <button onclick="window.__kcs.toggleSqlFavorite('${script.id}')" class="text-yellow-600 dark:text-yellow-500 hover:text-yellow-700 dark:hover:text-yellow-400 flex items-center justify-center gap-2 text-sm bg-yellow-100 dark:bg-yellow-900/20 px-4 py-2 rounded-lg border border-yellow-200 dark:border-yellow-900/50 font-medium"><i class="${isFav ? 'ph-fill' : 'ph'} ph-star text-[18px]"></i> ${isFav ? 'Desfavoritar' : 'Favoritar'}</button>
-                <button onclick="window.__kcs.openHistory('${script.id}', 'sql')" class="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white flex items-center justify-center gap-2 text-sm bg-white dark:bg-[#1e1f20] px-4 py-2 rounded-lg border border-gray-300 dark:border-[#3a3b3d] font-medium sm:ml-auto"><i class="ph-fill ph-clock-counter-clockwise text-[18px]"></i> Histórico</button>
-                <button onclick="window.__kcs.flagSqlScript('${script.id}')" class="text-yellow-600 dark:text-yellow-500 hover:text-yellow-700 dark:hover:text-yellow-400 flex items-center justify-center gap-2 text-sm bg-yellow-100 dark:bg-yellow-900/20 px-4 py-2 rounded-lg border border-yellow-200 dark:border-yellow-900/50 font-medium"><i class="ph-fill ph-warning-circle text-[18px]"></i> Reportar Erro</button>
-            </div>
-            
-            ${script.comments && script.comments.length > 0 ? `
-            <div class="space-y-3 mt-4">
-                <h4 class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Comentários da Comunidade</h4>
-                ${script.comments.map(c => `
-                    <div class="bg-gray-50 dark:bg-[#131314] p-4 rounded-xl border border-gray-200 dark:border-[#3a3b3d] shadow-sm">
-                        <div class="flex justify-between items-center mb-2">
-                            <span class="text-xs font-bold text-gray-800 dark:text-gray-300">${safeText(c.userName)}</span>
-                            <span class="text-[10px] text-gray-500">${new Date(c.date).toLocaleDateString()}</span>
-                        </div>
-                        <p class="text-sm text-gray-600 dark:text-gray-400">${safeText(c.text)}</p>
+
+            <div class="modal-body">
+                ${script.status === 'review' || script.status === 'pendente_revisao' ? `
+                <div class="alert-box alert-warning">
+                    <i class="ph-fill ph-warning-circle alert-icon"></i>
+                    <span class="alert-text"><strong>Atenção:</strong> Este script foi sinalizado ou está em revisão.</span>
+                </div>` : ''}
+                
+                <div class="view-header-meta">
+                    <div class="view-tags">
+                        ${script.visibility === VISIBILITY.PRIVATE ? `<span class="tag-badge tag-private"><i class="ph ph-lock"></i> Setor: ${safeText(script.sectorId)}</span>` : `<span class="tag-badge tag-public"><i class="ph ph-globe"></i> Público</span>`}
+                        <button class="btn-interaction btn-explain" data-action="explain-sql"><i class="ph-fill ph-lightbulb"></i>Explicar IA</button>
                     </div>
-                `).join('')}
-            </div>` : '<p class="text-xs text-gray-500 mt-4 italic">Seja o primeiro a adicionar uma observação!</p>'}
-        `;
-    }
+                    <p class="view-description">${safeText(script.description)}</p>
+                </div>
+                
+                <div class="code-container">
+                    <button class="btn-secondary btn-copy-code" data-action="copy-code">Copiar</button>
+                    <pre class="code-preview"><code>${script.code.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</code></pre>
+                </div>
+                
+                <div class="view-footer-actions">
+                    <div class="action-group">
+                        <button class="btn-interaction btn-like" data-action="toggle-sql-like"><i class="ph-fill ph-heart"></i> Curtiu (${(script.likes || []).length})</button>
+                        <button class="btn-interaction btn-comment" data-action="prompt-sql-comment"><i class="ph-fill ph-chat-circle"></i> Comentar (${(script.comments || []).length})</button>
+                        <button class="btn-interaction btn-fav" data-action="toggle-sql-fav"><i class="${isFav ? 'ph-fill' : 'ph'} ph-star"></i> ${isFav ? 'Desfavoritar' : 'Favoritar'}</button>
+                    </div>
+                    <div class="action-group">
+                        <button class="btn-secondary" data-action="open-sql-history"><i class="ph-fill ph-clock-counter-clockwise"></i> Histórico</button>
+                        <button class="btn-danger" data-action="flag-sql"><i class="ph-fill ph-warning-circle"></i> Reportar Erro</button>
+                    </div>
+                </div>
+                
+                ${script.comments && script.comments.length > 0 ? `
+                <div class="comments-section">
+                    <h4 class="comments-title">Comentários da Comunidade</h4>
+                    ${script.comments.map(c => `
+                        <div class="comment-card">
+                            <div class="comment-header">
+                                <span class="comment-author">${safeText(c.userName)}</span>
+                                <span class="comment-date">${new Date(c.date).toLocaleDateString()}</span>
+                            </div>
+                            <p class="comment-text">${safeText(c.text)}</p>
+                        </div>
+                    `).join('')}
+                </div>` : '<p class="empty-state-text">Seja o primeiro a adicionar uma observação!</p>'}
+            </div>
+        </div>
+    `;
+
+    modal.querySelector('[data-action="header-min"]').addEventListener('click', (e) => {
+        if (!e.target.closest('button')) window.__kcs.toggleMinimize(modalId);
+    });
+    modal.querySelector('[data-action="minimize"]').addEventListener('click', (e) => { e.stopPropagation(); window.__kcs.toggleMinimize(modalId); });
+    modal.querySelector('[data-action="maximize"]').addEventListener('click', (e) => { e.stopPropagation(); window.__kcs.toggleMaximize(modalId); });
+    modal.querySelector('[data-action="close"]').addEventListener('click', (e) => { e.stopPropagation(); window.__kcs.closeModal(modalId, true); });
+
+    modal.querySelector('[data-action="explain-sql"]').addEventListener('click', () => window.__kcs.explainSql(script.id));
+    modal.querySelector('[data-action="copy-code"]').addEventListener('click', (e) => window.__kcs.copyCode(e.currentTarget));
     
-    modal.classList.remove('hidden'); 
-    modal.classList.add('flex');
+    modal.querySelector('[data-action="toggle-sql-like"]').addEventListener('click', () => window.__kcs.toggleSqlLike(script.id));
+    modal.querySelector('[data-action="prompt-sql-comment"]').addEventListener('click', () => window.__kcs.promptSqlComment(script.id));
+    modal.querySelector('[data-action="toggle-sql-fav"]').addEventListener('click', () => window.__kcs.toggleSqlFavorite(script.id));
+    
+    modal.querySelector('[data-action="open-sql-history"]').addEventListener('click', () => window.__kcs.openHistory(script.id, 'sql'));
+    modal.querySelector('[data-action="flag-sql"]').addEventListener('click', () => window.__kcs.flagSqlScript(script.id));
+
+    attachToOverlay(modal);
 }
 
 export function openHistoryModal(item, type) {
@@ -807,13 +818,16 @@ export function openHistoryModal(item, type) {
     const content = document.getElementById('history-list');
     if (!modal || !content) return;
     
+    attachToOverlay(modal);
+    modal.dataset.title = 'Histórico de Versões';
+
     const safeText = (str) => { 
         if(!str) return ''; 
         return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>'); 
     };
     
     if (!item.history || item.history.length === 0) {
-        content.innerHTML = '<p class="text-gray-400 text-sm italic text-center mt-10">Nenhum histórico de versões disponível.</p>';
+        content.innerHTML = '<p class="empty-state-text">Nenhum histórico de versões disponível.</p>';
     } else {
         const reversedHistory = [...item.history].reverse();
         const totalVersions = item.history.length;
@@ -821,35 +835,39 @@ export function openHistoryModal(item, type) {
         content.innerHTML = reversedHistory.map((h, reversedIndex) => {
             const originalIndex = totalVersions - 1 - reversedIndex;
             return `
-            <details class="bg-white dark:bg-[#1e1f20] border border-gray-200 dark:border-[#3a3b3d] rounded-xl mb-3 shadow-sm group overflow-hidden">
-                <summary class="p-4 flex justify-between items-center cursor-pointer list-none hover:bg-gray-50 dark:hover:bg-[#131314] transition-colors select-none focus:outline-none">
-                    <div class="flex items-center gap-3">
-                        <i class="ph ph-caret-right text-gray-500 transition-transform group-open:rotate-90"></i>
+            <details class="history-item">
+                <summary class="history-summary">
+                    <div class="history-meta">
+                        <i class="ph ph-caret-right history-caret"></i>
                         <div>
-                            <p class="text-sm font-bold text-gray-800 dark:text-white">Versão ${originalIndex + 1}</p>
-                            <p class="text-[10px] text-gray-500 mt-0.5">Salvo por <span class="font-medium">${safeText(h.updatedBy || 'Sistema')}</span> em ${new Date(h.updatedAt).toLocaleString()}</p>
+                            <p class="history-version-title">Versão ${originalIndex + 1}</p>
+                            <p class="history-author">Salvo por <span>${safeText(h.updatedBy || 'Sistema')}</span> em ${new Date(h.updatedAt).toLocaleString()}</p>
                         </div>
                     </div>
-                    <button onclick="window.__kcs.restoreVersion('${item.id}', '${type}', ${originalIndex})" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-md text-xs font-bold transition-colors shadow-sm">Restaurar</button>
+                    <button class="btn-primary btn-restore" data-action="restore-history" data-index="${originalIndex}">Restaurar</button>
                 </summary>
-                <div class="p-5 border-t border-gray-200 dark:border-[#3a3b3d] bg-gray-50 dark:bg-[#131314] text-sm">
-                    <div class="mb-4">
-                        <span class="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Título Registrado:</span>
-                        <p class="mt-1 font-semibold text-gray-800 dark:text-white">${safeText(h.title || h.name)}</p>
+                <div class="history-body">
+                    <div class="history-field">
+                        <span class="history-label">Título Registrado:</span>
+                        <p class="history-value">${safeText(h.title || h.name)}</p>
                     </div>
-                    <div>
-                        <span class="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Conteúdo Principal:</span>
-                        <div class="mt-2 bg-white dark:bg-[#1e1f20] border border-gray-200 dark:border-[#3a3b3d] p-4 rounded-lg markdown-body overflow-x-auto text-xs text-gray-700 dark:text-gray-300 shadow-inner">
+                    <div class="history-field">
+                        <span class="history-label">Conteúdo Principal:</span>
+                        <div class="history-content markdown-body">
                             ${formatContentForView(h.steps || h.body || h.code)}
                         </div>
                     </div>
                 </div>
             </details>
         `}).join('');
+
+        content.querySelectorAll('[data-action="restore-history"]').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                window.__kcs.restoreVersion(item.id, type, btn.dataset.index);
+            });
+        });
     }
-    
-    modal.classList.remove('hidden'); 
-    modal.classList.add('flex');
 }
 
 export function openCategoryModal(refreshCallback) {
@@ -861,19 +879,29 @@ export function openCategoryModal(refreshCallback) {
     
     if (!modal || !list || !form) return;
 
+    attachToOverlay(modal);
+    modal.dataset.title = 'Gerenciar Categorias';
+
     function renderList() {
         const categories = getFlatCategories();
         select.innerHTML = '<option value="">Raiz (Sem Pai)</option>' + categories.map(c => `<option value="${c.id}">${c.path}</option>`).join('');
         
         list.innerHTML = categories.map(c => `
-            <div class="flex items-center justify-between bg-gray-50 dark:bg-[#131314] p-2 rounded border border-gray-200 dark:border-[#3a3b3d] mb-1">
-                <span class="text-sm text-gray-800 dark:text-gray-300 font-medium"><i class="ph ${c.icon || 'ph-folder'} text-[16px] mr-1 align-text-bottom"></i> ${c.path}</span>
-                <div class="flex gap-2">
-                    <button onclick="window.__kcs.editCategory('${c.id}', '${c.name}', '${c.icon || ''}')" class="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 text-xs px-2 py-1 bg-blue-100 dark:bg-blue-900/20 rounded font-medium">Editar</button>
-                    <button onclick="window.__kcs.deleteCategory('${c.id}')" class="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 text-xs px-2 py-1 bg-red-100 dark:bg-red-900/20 rounded font-medium">Excluir</button>
+            <div class="category-list-item">
+                <span class="category-name"><i class="ph ${c.icon || 'ph-folder'}"></i> ${c.path}</span>
+                <div class="category-actions">
+                    <button class="btn-secondary btn-small" data-action="edit-category" data-id="${c.id}" data-name="${c.name}" data-icon="${c.icon || ''}">Editar</button>
+                    <button class="btn-danger btn-small" data-action="delete-category" data-id="${c.id}">Excluir</button>
                 </div>
             </div>
-        `).join('') || '<p class="text-xs text-gray-500">Nenhuma categoria cadastrada.</p>';
+        `).join('') || '<p class="empty-state-text">Nenhuma categoria cadastrada.</p>';
+
+        list.querySelectorAll('[data-action="edit-category"]').forEach(btn => {
+            btn.addEventListener('click', () => window.__kcs.editCategory(btn.dataset.id, btn.dataset.name, btn.dataset.icon));
+        });
+        list.querySelectorAll('[data-action="delete-category"]').forEach(btn => {
+            btn.addEventListener('click', () => window.__kcs.deleteCategory(btn.dataset.id));
+        });
     }
 
     window.__kcs.deleteCategory = (id) => { 
@@ -893,7 +921,7 @@ export function openCategoryModal(refreshCallback) {
 
     renderList();
 
-    form.onsubmit = (e) => { 
+    safeBindEvent(form, 'submit', (e) => { 
         e.preventDefault(); 
         const name = document.getElementById('cat-name').value; 
         const icon = document.getElementById('cat-icon').value; 
@@ -907,16 +935,11 @@ export function openCategoryModal(refreshCallback) {
         } else { 
             asyncAlert(res.message); 
         } 
-    };
+    });
     
     if (btnClose) {
-        btnClose.onclick = () => { 
-            window.__kcs.closeModal('category-modal', false); 
-        };
+        safeBindEvent(btnClose, 'click', () => window.__kcs.closeModal('category-modal', false));
     }
-
-    modal.classList.remove('hidden'); 
-    modal.classList.add('flex');
 }
 
 export async function openSettingsModal() {
@@ -926,9 +949,10 @@ export async function openSettingsModal() {
     
     if (!modal || !usersList) return;
     
-    usersList.innerHTML = '<div class="flex justify-center p-10"><div class="w-8 h-8 border-[3px] border-blue-500 border-t-transparent rounded-full animate-spin"></div></div>';
-    modal.classList.remove('hidden');
-    modal.classList.add('flex');
+    attachToOverlay(modal);
+    modal.dataset.title = 'Administração';
+
+    usersList.innerHTML = '<div class="loader-container"><div class="spinner-icon-large"></div></div>';
 
     const safeText = (str) => { 
         if(!str) return ''; 
@@ -958,43 +982,43 @@ export async function openSettingsModal() {
         let companiesHtml = '';
         if (isSuperAdmin) {
             companiesHtml = `
-            <div class="mb-6 bg-surface border border-border-strong rounded-2xl p-5 sm:p-6 shadow-card transition-all">
-                <h3 class="text-sm font-bold text-purple-600 dark:text-purple-400 uppercase tracking-wider mb-4 flex items-center gap-2">
-                    <i class="ph-fill ph-buildings text-[18px]"></i> Painel Master (Empresas Clientes)
+            <div class="settings-section">
+                <h3 class="settings-title color-purple">
+                    <i class="ph-fill ph-buildings"></i> Painel Master (Empresas Clientes)
                 </h3>
                 
-                <div class="flex flex-col sm:flex-row gap-3 mb-6">
-                    <input type="text" id="new-company-name" placeholder="Nome da Empresa" class="flex-[2] bg-bg-canvas border border-border-strong rounded-xl px-4 py-2.5 text-sm text-text-primary outline-none focus:border-purple-500 transition-colors" />
-                    <input type="text" id="new-company-domain" placeholder="Domínios (ex: nissei.com)" class="flex-[2] bg-bg-canvas border border-border-strong rounded-xl px-4 py-2.5 text-sm text-text-primary outline-none font-mono focus:border-purple-500 transition-colors" />
-                    <button onclick="window.__kcs.createNewCompany()" class="bg-purple-600 hover:bg-purple-700 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-all shadow-md shrink-0">Cadastrar Cliente</button>
+                <div class="form-row">
+                    <input type="text" id="new-company-name" placeholder="Nome da Empresa" class="form-input flex-2" />
+                    <input type="text" id="new-company-domain" placeholder="Domínios (ex: nissei.com)" class="form-input flex-2 font-mono" />
+                    <button class="btn-primary" data-action="create-company">Cadastrar Cliente</button>
                 </div>
                 
-                <div class="table-responsive custom-scrollbar">
-                    <table class="w-full text-left border-collapse whitespace-nowrap">
+                <div class="table-wrapper">
+                    <table class="table-default">
                         <thead>
-                            <tr class="bg-bg-canvas/50 border-b border-border-subtle text-[10px] font-bold text-text-muted uppercase tracking-wider">
-                                <th class="px-4 py-3">Empresa / Tenant</th>
-                                <th class="px-4 py-3">Domínios</th>
-                                <th class="px-4 py-3 text-right">Ações</th>
+                            <tr>
+                                <th>Empresa / Tenant</th>
+                                <th>Domínios</th>
+                                <th>Ações</th>
                             </tr>
                         </thead>
-                        <tbody class="divide-y divide-border-subtle text-sm">
+                        <tbody>
                             ${companies.map(c => {
                                 const domainsArray = Array.isArray(c.domains) ? c.domains : (c.domains ? String(c.domains).split(',') : []);
                                 const domainsLabel = domainsArray.join(', ') || 'Nenhum';
                                 return `
-                                <tr class="hover:bg-bg-canvas transition-colors group">
-                                    <td class="px-4 py-3">
-                                        <div class="font-bold text-text-primary">${safeText(c.companyName)} <span class="ml-2 text-[9px] px-1.5 py-0.5 rounded bg-purple-100 dark:bg-purple-900/40 text-purple-600 dark:text-purple-400 border border-purple-200 dark:border-purple-800/50 uppercase tracking-tighter">${c.plan || 'Starter'}</span></div>
-                                        <div class="text-[11px] text-text-muted font-mono mt-0.5">ID: ${c.companyId.toUpperCase()}</div>
+                                <tr class="table-row">
+                                    <td>
+                                        <div class="cell-title">${safeText(c.companyName)} <span class="badge-purple">${c.plan || 'Starter'}</span></div>
+                                        <div class="cell-subtitle font-mono">ID: ${c.companyId.toUpperCase()}</div>
                                     </td>
-                                    <td class="px-4 py-3 text-text-secondary"><i class="ph ph-globe mr-1"></i>${safeText(domainsLabel)}</td>
-                                    <td class="px-4 py-3 text-right">
-                                        <button onclick="window.__kcs.promptEditCompany('${c.companyId}', '${safeText(c.companyName)}', '${safeText(domainsLabel)}', '${c.plan || 'Starter'}')" class="text-xs font-bold text-text-secondary hover:text-purple-500 bg-bg-canvas border border-border-strong px-3 py-1.5 rounded-lg mr-2 transition-colors">Editar</button>
-                                        <button onclick="window.__kcs.deleteCompany('${c.companyId}')" class="text-xs text-red-500 hover:text-red-700 bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-900/30 px-2.5 py-1.5 rounded-lg transition-colors"><i class="ph ph-trash"></i></button>
+                                    <td><i class="ph ph-globe"></i> ${safeText(domainsLabel)}</td>
+                                    <td class="actions-cell">
+                                        <button class="btn-secondary btn-small" data-action="edit-company" data-id="${c.companyId}" data-name="${safeText(c.companyName)}" data-domains="${safeText(domainsLabel)}" data-plan="${c.plan || 'Starter'}">Editar</button>
+                                        <button class="btn-danger btn-icon" data-action="delete-company" data-id="${c.companyId}"><i class="ph ph-trash"></i></button>
                                     </td>
                                 </tr>`;
-                            }).join('') || '<tr><td colspan="3" class="p-4 text-xs text-text-muted text-center italic">Nenhuma empresa cadastrada.</td></tr>'}
+                            }).join('') || '<tr><td colspan="3" class="empty-cell">Nenhuma empresa cadastrada.</td></tr>'}
                         </tbody>
                     </table>
                 </div>
@@ -1002,128 +1026,138 @@ export async function openSettingsModal() {
         }
 
         const invitesHtml = `
-        <div class="mb-6 bg-surface border border-border-strong rounded-2xl p-5 sm:p-6 shadow-card transition-all">
-            <h3 class="text-sm font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider mb-4 flex items-center gap-2">
-                <i class="ph-fill ph-envelope-simple text-[18px]"></i> Whitelist de Exceção (Convites)
+        <div class="settings-section">
+            <h3 class="settings-title color-blue">
+                <i class="ph-fill ph-envelope-simple"></i> Whitelist de Exceção (Convites)
             </h3>
             
-            <form id="form-invite-user" class="flex flex-col lg:flex-row gap-3 mb-6">
-                <input type="email" id="invite-email" placeholder="E-mail (ex: nome@gmail.com)" class="flex-[2] bg-bg-canvas border border-border-strong rounded-xl px-4 py-2.5 text-sm text-text-primary outline-none focus:border-blue-500 transition-colors" required />
-                ${isSuperAdmin ? `<select id="invite-company" class="flex-1 bg-bg-canvas border border-border-strong rounded-xl px-3 py-2.5 text-sm text-text-primary outline-none cursor-pointer focus:border-blue-500 transition-colors">${companiesSelectOptions}</select>` : `<input type="hidden" id="invite-company" value="${currentUser.companyId}" />`}
-                <select id="invite-sector" class="flex-1 bg-bg-canvas border border-border-strong rounded-xl px-3 py-2.5 text-sm text-text-primary outline-none cursor-pointer focus:border-blue-500 transition-colors">${sectorsOptionsHtml('')}</select>
-                <select id="invite-role" class="flex-1 bg-bg-canvas border border-border-strong rounded-xl px-3 py-2.5 text-sm text-text-primary outline-none cursor-pointer focus:border-blue-500 transition-colors">
+            <form id="form-invite-user" class="form-row">
+                <input type="email" id="invite-email" placeholder="E-mail (ex: nome@gmail.com)" class="form-input flex-2" required />
+                ${isSuperAdmin ? `<select id="invite-company" class="form-select flex-1">${companiesSelectOptions}</select>` : `<input type="hidden" id="invite-company" value="${currentUser.companyId}" />`}
+                <select id="invite-sector" class="form-select flex-1">${sectorsOptionsHtml('')}</select>
+                <select id="invite-role" class="form-select flex-1">
                     ${isSuperAdmin ? `<option value="super_admin">Super Admin</option>` : ''}
                     <option value="admin">Admin</option>
                     <option value="analyst">Analista KCS</option>
                     <option value="user" selected>Usuário Base</option>
                 </select>
-                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-colors shadow-md">Autorizar</button>
+                <button type="submit" class="btn-primary">Autorizar</button>
             </form>
             
-            <div class="table-responsive custom-scrollbar">
-                <table class="w-full text-left border-collapse whitespace-nowrap">
-                    <tbody class="divide-y divide-border-subtle text-sm">
+            <div class="table-wrapper">
+                <table class="table-default">
+                    <tbody>
                         ${invites.map(inv => `
-                            <tr class="hover:bg-bg-canvas transition-colors group">
-                                <td class="px-4 py-3 flex items-center gap-3">
-                                    <div class="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center"><i class="ph-fill ph-envelope"></i></div>
+                            <tr class="table-row">
+                                <td class="user-cell">
+                                    <div class="avatar-mini"><i class="ph-fill ph-envelope"></i></div>
                                     <div>
-                                        <p class="font-bold text-text-primary">${safeText(inv.email)}</p>
-                                        <p class="text-[10px] text-text-muted uppercase font-bold tracking-tight">${inv.role} | Setor: ${inv.sectorId}</p>
+                                        <p class="user-name">${safeText(inv.email)}</p>
+                                        <p class="user-role">${inv.role} | Setor: ${inv.sectorId}</p>
                                     </div>
                                 </td>
-                                <td class="px-4 py-3 text-right">
-                                    <button onclick="window.__kcs.removeInvite('${inv.email}')" class="text-xs font-bold text-red-500 hover:text-red-700 bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-900/30 px-3 py-1.5 rounded-lg transition-colors">Revogar</button>
+                                <td class="actions-cell">
+                                    <button class="btn-danger btn-small" data-action="remove-invite" data-email="${inv.email}">Revogar</button>
                                 </td>
                             </tr>
-                        `).join('') || '<tr><td class="p-4 text-xs text-text-muted text-center italic">Nenhum convite pendente.</td></tr>'}
+                        `).join('') || '<tr><td class="empty-cell">Nenhum convite pendente.</td></tr>'}
                     </tbody>
                 </table>
             </div>
         </div>`;
 
         const activeUsersHtml = `
-        <div class="mb-6 bg-surface border border-border-strong rounded-2xl p-5 sm:p-6 shadow-card transition-all">
-            <h3 class="text-sm font-bold text-text-primary uppercase tracking-wider mb-4 flex items-center gap-2">
-                <i class="ph-fill ph-users text-[18px]"></i> Usuários Registrados
+        <div class="settings-section">
+            <h3 class="settings-title">
+                <i class="ph-fill ph-users"></i> Usuários Registrados
             </h3>
-            <div class="table-responsive custom-scrollbar">
-                <table class="w-full text-left border-collapse whitespace-nowrap">
-                    <tbody class="divide-y divide-border-subtle text-sm">
+            <div class="table-wrapper">
+                <table class="table-default">
+                    <tbody>
                         ${users.map(u => {
                             const safeName = (u.displayName && String(u.displayName) !== 'undefined') ? u.displayName : 'Usuário KCS';
                             const safeEmail = (u.email && String(u.email) !== 'undefined') ? u.email : 'Sem e-mail';
                             return `
-                            <tr class="hover:bg-bg-canvas transition-colors group">
-                                <td class="px-4 py-3 flex items-center gap-3">
-                                    <img src="${u.photoURL || 'https://via.placeholder.com/40'}" class="w-9 h-9 rounded-full object-cover border border-border-strong" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\\'http://www.w3.org/2000/svg\\' viewBox=\\'0 0 100 100\\'><circle cx=\\'50\\' cy=\\'50\\' r=\\'50\\' fill=\\'%23CBD5E1\\'/></svg>'">
+                            <tr class="table-row">
+                                <td class="user-cell">
+                                    <img src="${u.photoURL || 'https://via.placeholder.com/40'}" class="avatar-img" onerror="this.style.display='none'">
                                     <div>
-                                        <p class="font-bold text-text-primary">${safeText(safeName)}</p>
-                                        <p class="text-[11px] text-text-muted font-mono">${safeText(safeEmail)}</p>
+                                        <p class="user-name">${safeText(safeName)}</p>
+                                        <p class="user-email">${safeText(safeEmail)}</p>
                                     </div>
                                 </td>
-                                <td class="px-4 py-3">
-                                    <div class="flex items-center gap-2 justify-end">
+                                <td class="actions-cell">
+                                    <div class="table-actions">
                                         ${isSuperAdmin ? `
-                                        <select onchange="window.__kcs.updateUserCompany('${u.id}', this.value)" class="bg-bg-canvas border border-border-strong rounded-lg px-2 py-1.5 text-xs text-purple-600 dark:text-purple-400 font-bold cursor-pointer outline-none">
+                                        <select class="form-select select-small" data-action="update-company" data-id="${u.id}">
                                             <option value="LIMBO_TENANT" ${u.companyId === 'LIMBO_TENANT' ? 'selected' : ''}>⚠️ Pendente</option>
                                             ${companiesSelectOptions.replace(`value="${u.companyId}"`, `value="${u.companyId}" selected`)}
                                         </select>` : ''}
-                                        <select onchange="window.__kcs.updateUserSector('${u.id}', this.value)" class="bg-bg-canvas border border-border-strong rounded-lg px-2 py-1.5 text-xs text-green-600 dark:text-green-400 font-bold cursor-pointer outline-none">
+                                        <select class="form-select select-small" data-action="update-sector" data-id="${u.id}">
                                             ${sectorsOptionsHtml(u.sectorId || 'TI')}
                                         </select>
-                                        <select onchange="window.__kcs.updateUserRole('${u.id}', this.value)" class="bg-bg-canvas border border-border-strong rounded-lg px-2 py-1.5 text-xs text-blue-600 dark:text-blue-400 font-bold cursor-pointer outline-none">
+                                        <select class="form-select select-small" data-action="update-role" data-id="${u.id}">
                                             ${isSuperAdmin ? `<option value="super_admin" ${u.role === 'super_admin' ? 'selected' : ''}>Super Admin</option>` : ''}
                                             <option value="admin" ${u.role === 'admin' ? 'selected' : ''}>Admin</option>
                                             <option value="analyst" ${u.role === 'analyst' ? 'selected' : ''}>Analista</option>
                                             <option value="user" ${u.role === 'user' ? 'selected' : ''}>Usuário</option>
                                         </select>
-                                        <button onclick="window.__kcs.deleteUser('${u.id}')" class="text-red-500 hover:text-red-700 bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-900/30 px-2.5 py-1.5 rounded-lg transition-colors"><i class="ph ph-trash"></i></button>
+                                        <button class="btn-danger btn-icon" data-action="delete-user" data-id="${u.id}"><i class="ph ph-trash"></i></button>
                                     </div>
                                 </td>
                             </tr>`;
-                        }).join('') || '<tr><td colspan="2" class="p-4 text-xs text-text-muted text-center italic">Nenhum usuário ativo.</td></tr>'}
+                        }).join('') || '<tr><td colspan="2" class="empty-cell">Nenhum usuário ativo.</td></tr>'}
                     </tbody>
                 </table>
             </div>
         </div>`;
 
         const backupHtml = isSuperAdmin ? `
-        <div class="mb-4 bg-surface border border-green-500/30 rounded-2xl p-5 sm:p-6 shadow-card transition-all relative overflow-hidden">
-            <div class="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-green-500 to-emerald-500 opacity-80"></div>
-            <h3 class="text-sm font-bold text-green-600 dark:text-green-400 uppercase tracking-wider mb-2 flex items-center gap-2">
-                <i class="ph-fill ph-hard-drives text-[18px]"></i> Proteção de Dados e Backup
+        <div class="settings-section section-success">
+            <h3 class="settings-title color-green">
+                <i class="ph-fill ph-hard-drives"></i> Proteção de Dados e Backup
             </h3>
-            <p class="text-xs text-text-secondary mb-4 leading-relaxed max-w-2xl">
-                O backup exporta toda a base (Firestore) para o Bucket: <strong class="font-mono text-[11px] bg-green-50 dark:bg-green-900/20 px-1.5 py-0.5 rounded text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800">gs://kcs-system-180db-backups</strong>.
+            <p class="settings-text">
+                O backup exporta toda a base para o Bucket: <strong class="badge-neutral">gs://kcs-system-180db-backups</strong>.
             </p>
-            <button onclick="window.__kcs.triggerManualBackup()" class="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-all shadow-md hover:shadow-lg active:scale-95 w-max">
-                <i class="ph-bold ph-cloud-arrow-down text-lg"></i> Disparar Backup
+            <button class="btn-success" data-action="trigger-backup">
+                <i class="ph-bold ph-cloud-arrow-down"></i> Disparar Backup
             </button>
         </div>` : '';
 
         usersList.innerHTML = companiesHtml + invitesHtml + activeUsersHtml + backupHtml;
 
+        usersList.querySelectorAll('[data-action="create-company"]').forEach(btn => btn.addEventListener('click', () => window.__kcs.createNewCompany()));
+        usersList.querySelectorAll('[data-action="edit-company"]').forEach(btn => btn.addEventListener('click', (e) => {
+            const ds = e.currentTarget.dataset;
+            window.__kcs.promptEditCompany(ds.id, ds.name, ds.domains, ds.plan);
+        }));
+        usersList.querySelectorAll('[data-action="delete-company"]').forEach(btn => btn.addEventListener('click', (e) => window.__kcs.deleteCompany(e.currentTarget.dataset.id)));
+        usersList.querySelectorAll('[data-action="remove-invite"]').forEach(btn => btn.addEventListener('click', (e) => window.__kcs.removeInvite(e.currentTarget.dataset.email)));
+        usersList.querySelectorAll('[data-action="update-company"]').forEach(sel => sel.addEventListener('change', (e) => window.__kcs.updateUserCompany(e.currentTarget.dataset.id, e.target.value)));
+        usersList.querySelectorAll('[data-action="update-sector"]').forEach(sel => sel.addEventListener('change', (e) => window.__kcs.updateUserSector(e.currentTarget.dataset.id, e.target.value)));
+        usersList.querySelectorAll('[data-action="update-role"]').forEach(sel => sel.addEventListener('change', (e) => window.__kcs.updateUserRole(e.currentTarget.dataset.id, e.target.value)));
+        usersList.querySelectorAll('[data-action="delete-user"]').forEach(btn => btn.addEventListener('click', (e) => window.__kcs.deleteUser(e.currentTarget.dataset.id)));
+        usersList.querySelectorAll('[data-action="trigger-backup"]').forEach(btn => btn.addEventListener('click', () => window.__kcs.triggerManualBackup()));
+
         const formInvite = document.getElementById('form-invite-user');
         if (formInvite) {
-            formInvite.onsubmit = async (e) => {
+            safeBindEvent(formInvite, 'submit', async (e) => {
                 e.preventDefault();
                 const em = document.getElementById('invite-email').value;
                 const cp = document.getElementById('invite-company')?.value || currentUser.companyId;
                 const sc = document.getElementById('invite-sector').value;
                 const rl = document.getElementById('invite-role').value;
                 await window.__kcs.inviteUser(em, rl, cp, sc);
-            };
+            });
         }
 
     } catch (e) { 
-        usersList.innerHTML = `<p class="text-xs text-red-600 dark:text-red-400">Erro: ${e.message}</p>`; 
+        usersList.innerHTML = `<p class="alert-text color-red">Erro: ${e.message}</p>`; 
     }
     
     if (btnClose) {
-        btnClose.onclick = () => { 
-            window.__kcs.closeModal('settings-modal', false); 
-        };
+        safeBindEvent(btnClose, 'click', () => window.__kcs.closeModal('settings-modal', false));
     }
 }
 
@@ -1137,14 +1171,12 @@ export function asyncAlert(message) {
         return; 
     }
     
-    msgEl.innerHTML = message;
-    modal.classList.remove('hidden'); 
-    modal.classList.add('flex');
+    attachToOverlay(modal);
+    modal.dataset.title = 'Alerta';
     
-    btnOk.onclick = () => { 
-        modal.classList.add('hidden'); 
-        modal.classList.remove('flex'); 
-    };
+    msgEl.innerHTML = message;
+    
+    safeBindEvent(btnOk, 'click', () => window.__kcs.closeModal('alert-modal', false));
 }
 
 export function asyncPrompt(message, defaultVal = '') {
@@ -1160,26 +1192,17 @@ export function asyncPrompt(message, defaultVal = '') {
             return; 
         }
         
+        attachToOverlay(modal);
+        modal.dataset.title = 'Entrada Necessária';
+
         msgEl.textContent = message; 
         inputEl.value = defaultVal;
-        modal.classList.remove('hidden'); 
-        modal.classList.add('flex'); 
         inputEl.focus();
         
-        const cleanup = () => { 
-            modal.classList.add('hidden'); 
-            modal.classList.remove('flex'); 
-        };
+        const cleanup = () => window.__kcs.closeModal('prompt-modal', false);
         
-        btnCancel.onclick = () => { 
-            cleanup(); 
-            resolve(null); 
-        };
-        
-        btnConfirm.onclick = () => { 
-            cleanup(); 
-            resolve(inputEl.value); 
-        };
+        safeBindEvent(btnCancel, 'click', () => { cleanup(); resolve(null); });
+        safeBindEvent(btnConfirm, 'click', () => { cleanup(); resolve(inputEl.value); });
     });
 }
 
@@ -1194,18 +1217,39 @@ export function openConfirmModal(msg, onConfirm) {
         return; 
     }
     
+    attachToOverlay(modal);
+    modal.dataset.title = 'Confirmação';
+
     msgEl.textContent = msg; 
-    modal.classList.remove('hidden'); 
-    modal.classList.add('flex');
     
-    const cleanup = () => { 
-        modal.classList.add('hidden'); 
-        modal.classList.remove('flex'); 
-    };
+    const cleanup = () => window.__kcs.closeModal('confirm-modal', false);
     
-    btnNo.onclick = () => cleanup();
-    btnYes.onclick = async () => { 
-        cleanup(); 
-        await onConfirm(); 
-    };
+    safeBindEvent(btnNo, 'click', () => cleanup());
+    safeBindEvent(btnYes, 'click', async () => { cleanup(); await onConfirm(); });
+}
+
+
+// ==========================================
+// BRIDGES DE COMPATIBILIDADE (ES MODULES)
+// Garante que o main.js consiga importar as funções de fechamento
+// redirecionando-as para a nova API unificada do Overlay-root.
+// ==========================================
+
+export function closeArticleModal() {
+    if (window.__kcs && window.__kcs.closeModal) {
+        window.__kcs.closeModal('article-modal', false);
+    }
+}
+
+export function closeSqlModal() {
+    if (window.__kcs && window.__kcs.closeModal) {
+        window.__kcs.closeModal('sql-modal', false);
+    }
+}
+
+export function closeViewModal(modalId = 'view-modal') {
+    if (window.__kcs && window.__kcs.closeModal) {
+        // Se o modal for dinâmico, ele repassará o ID, senão tenta fechar o estático antigo
+        window.__kcs.closeModal(modalId, modalId !== 'view-modal');
+    }
 }

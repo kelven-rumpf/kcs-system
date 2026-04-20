@@ -1,6 +1,7 @@
 /**
  * ui/chatbot.js — Motor do Chatbot IA (SaaS Premium)
  * Assistente Nissei Sensei: Especialista KCS Hub
+ * Refatorado para Design System Semântico (Workbench)
  */
 
 import { CONFIG, TENANT_KEYS } from '../config.js';
@@ -13,39 +14,6 @@ let isChatbotInitialized = false;
 const responseCache = new Map();
 
 const SMART_PROMPTS = ['Resetar Senha', 'Erro de Impressora', 'Configurar Pinpad'];
-
-// =========================================================
-// CSS INJETADO (BOTÃO DE LINK MARKDOWN - UX SAAS)
-// =========================================================
-const style = document.createElement('style');
-style.innerHTML = `
-.kcs-link-button {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.375rem;
-  padding: 10px 16px;
-  background-color: #2563eb; 
-  color: #ffffff !important;
-  border-radius: 8px;
-  text-decoration: none;
-  font-weight: 600;
-  font-size: 0.85rem;
-  margin-top: 0.75rem;
-  margin-bottom: 0.5rem;
-  transition: all 0.2s ease;
-  border: none;
-  cursor: pointer;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-  width: fit-content;
-}
-.kcs-link-button:hover { 
-  background-color: #1d4ed8; 
-  transform: translateY(-1px); 
-  box-shadow: 0 4px 6px rgba(0,0,0,0.15);
-}
-.kcs-link-button:active { transform: translateY(0); }
-`;
-document.head.appendChild(style);
 
 // =========================================================
 // INTELIGÊNCIA DE PERSONA (NISSEI SENSEI) E SAUDAÇÃO
@@ -77,12 +45,12 @@ function getGreetingHTML() {
     sessionStorage.setItem("hasGreeted", "true");
 
     return `
-        <div class="saudacao-inicial animate-fade-in">
-            <p class="mb-2 text-gray-800 dark:text-gray-100 text-[15px]"><strong>${greeting}! Sou o ${botName}.</strong></p>
-            <p class="mb-3 text-gray-600 dark:text-gray-400 text-sm">Como posso otimizar seus processos no KCS Hub hoje?</p>
-            <p class="text-[11px] text-gray-500 font-bold uppercase tracking-wider mb-1.5 mt-3">Pesquisas Frequentes:</p>
-            <div class="flex flex-wrap gap-2 mt-2">
-                ${SMART_PROMPTS.map(p => `<button type="button" class="btn-smart-prompt bg-white dark:bg-[#1e1f20] hover:bg-gray-50 dark:hover:bg-[#131314] text-gray-700 dark:text-gray-300 text-xs font-medium px-3 py-1.5 rounded-md border border-gray-200 dark:border-[#3a3b3d] shadow-sm transition-colors">${p}</button>`).join('')}
+        <div class="saudacao-inicial">
+            <p class="chat-greet-title">${greeting}! Sou o ${botName}.</p>
+            <p class="chat-greet-subtitle">Como posso otimizar seus processos no KCS Hub hoje?</p>
+            <p class="chat-greet-label">Pesquisas Frequentes:</p>
+            <div class="chat-smart-prompts">
+                ${SMART_PROMPTS.map(p => `<button type="button" class="btn-smart-prompt">${p}</button>`).join('')}
             </div>
         </div>
     `;
@@ -177,7 +145,7 @@ export function initChatbot() {
     if (isPopout) {
         document.querySelectorAll('.sidebar-desktop, .sidebar-mobile-toggle, header, main:not(#chatbot-container)')
             .forEach(el => { if(el) el.style.display = 'none'; });
-        document.body.style.background = 'var(--bg-main, #ffffff)';
+        document.body.style.background = 'var(--color-editor-background)';
     }
 
     const container = document.getElementById('chatbot-container');
@@ -208,20 +176,20 @@ export function initChatbot() {
 
     const toggleButton = isPopout
         ? ''
-        : `<button id="btn-toggle-chatbot" class="absolute bottom-4 right-4 sm:bottom-0 sm:right-0 w-14 h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-[0_0_20px_rgba(37,99,235,0.4)] flex items-center justify-center text-3xl transition-transform hover:scale-105 pointer-events-auto">
+        : `<button id="btn-toggle-chatbot" class="btn-toggle-chatbot pointer-events-auto">
                <i class="ph-fill ph-chat-teardrop-dots"></i>
            </button>`;
 
     container.innerHTML = `
         <div id="chatbot-window" class="${windowClasses}">
-            <header id="kcs-chat-header" class="bg-gray-50 dark:bg-surface border-b border-gray-200 dark:border-border-subtle p-4 flex items-center justify-between shrink-0 select-none relative pt-[env(safe-area-inset-top,1rem)] sm:pt-4 transition-colors">
+            <header id="kcs-chat-header">
                 <div id="chatbot-header-name" class="flex items-center gap-2 font-bold text-gray-800 dark:text-gray-100 pr-32">
-                    <div class="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white shadow-sm shrink-0"><i class="ph-fill ph-robot text-lg"></i></div>
-                    <span class="truncate pointer-events-none">${botName}</span>
+                    <div class="chat-bot-avatar shadow-sm shrink-0"><i class="ph-fill ph-robot text-lg"></i></div>
+                    <span class="truncate pointer-events-none text-sm">${botName}</span>
                 </div>
                 ${headerButtons}
             </header>
-            <div id="chatbot-messages" class="flex-1 overflow-y-auto p-4 space-y-4 bg-white dark:bg-bg-main custom-scrollbar"></div>
+            <div id="chatbot-messages" class="flex-1 overflow-y-auto p-4 custom-scrollbar"></div>
             <div class="bg-gray-50 dark:bg-surface border-t border-gray-200 dark:border-border-subtle flex flex-col shrink-0">
                 <form id="chatbot-form" class="p-3">
                     <div class="flex items-end bg-white dark:bg-bg-main border border-gray-300 dark:border-border-subtle rounded-2xl px-2 py-1.5 focus-within:border-blue-500 transition-all shadow-inner pb-[env(safe-area-inset-bottom,0.5rem)] sm:pb-1.5">
@@ -523,8 +491,8 @@ async function saveAuditLogAsync(logId, userQuestion, fullResponse) {
 }
 
 window.__kcs_rateChat = async function(logId, isUseful, btnElement) {
-    const parentDiv = btnElement.closest('.feedback-container');
-    parentDiv.innerHTML = `<span class="text-[11px] font-bold text-gray-500 bg-gray-50 dark:bg-[#131314] px-3 py-1 rounded border border-gray-200 dark:border-[#3a3b3d]">✓ Avaliação registrada</span>`;
+    const parentDiv = btnElement.closest('.chat-feedback-container');
+    parentDiv.innerHTML = `<span class="chat-feedback-saved">✓ Avaliação registrada</span>`;
     
     const messagesEl = document.getElementById('chatbot-messages');
     if (messagesEl) syncChatState(messagesEl);
@@ -570,9 +538,6 @@ async function processPromptWithRAGAndStream(userQuestion, botName, messagesEl, 
         });
     }
 
-    // =========================================================
-    // INJEÇÃO DA PERSONA E REGRAS ESTRITAS DE RESPOSTA
-    // =========================================================
     initPersona();
     const currentPlanet = sessionStorage.getItem("bot_planet");
     const currentTime = new Date().toLocaleString('pt-BR');
@@ -604,7 +569,6 @@ async function processPromptWithRAGAndStream(userQuestion, botName, messagesEl, 
     5. CONTEXTO DE CONHECIMENTO
     Baseie-se ESTRITAMENTE no contexto fornecido abaixo.`;
 
-    // UNIFICANDO AS INSTRUÇÕES DIRETAMENTE NO PAYLOAD PARA EVITAR ERRO 400
     const promptText = `${systemPrompt}\n\n---\n\nCONTEXTO DE CONHECIMENTO:\n${contextString || 'Vazio.'}\n\nPERGUNTA DO USUÁRIO:\n"${userQuestion}"`;
 
     const model = 'gemini-2.5-flash';
@@ -634,9 +598,6 @@ async function processPromptWithRAGAndStream(userQuestion, botName, messagesEl, 
 
     const fullResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || "Desculpe, não consegui processar sua resposta.";
     
-    // =========================================================
-    // PARSER SEGURO DE LINK (BLINDADO CONTRA ALUCINAÇÕES)
-    // =========================================================
     let parsedHTML = parseMarkdownForChat(fullResponse);
     
     const tempDiv = document.createElement('div');
@@ -646,11 +607,9 @@ async function processPromptWithRAGAndStream(userQuestion, botName, messagesEl, 
         let href = a.getAttribute('href');
         if(!href) return;
         
-        // Limpa possíveis barras e caracteres extras adicionados pelo Markdown
         let cleanId = href.split('/').pop().replace(/^(ID_SISTEMA:|ID:|KCS:)\s*/i, '').trim();
         let targetId = cleanId;
         
-        // Se a IA devolver o número KCS em vez do ID longo do Firebase, forçamos a busca reversa
         if (cleanId.length < 15 && topArticles.length > 0) {
             const realArticle = topArticles.find(art => String(art.articleNumber) === cleanId);
             if (realArticle) {
@@ -659,15 +618,13 @@ async function processPromptWithRAGAndStream(userQuestion, botName, messagesEl, 
                 targetId = topArticles[0].id; 
             }
         } else if (topArticles.length > 0 && !topArticles.find(art => art.id === cleanId)) {
-             // Fallback total se a IA inventar uma string aleatória
              targetId = topArticles[0].id;
         }
         
-        // Remove qualquer emoji de página antigo caso exista, para padronizar
         let cleanText = a.innerHTML.replace('📄', '').trim();
 
         a.outerHTML = `<button type="button" class="btn-open-kcs kcs-link-button" data-kcs-id="${targetId}">
-                    <i class="ph-bold ph-book-open text-base"></i> ${cleanText}
+                    <i class="ph-bold ph-book-open"></i> ${cleanText}
                 </button>`;
     });
     
@@ -676,7 +633,7 @@ async function processPromptWithRAGAndStream(userQuestion, botName, messagesEl, 
     appendBotHTMLMessage(parsedHTML, messagesEl);
 
     const targetLogId = logId._realFirebaseId || logId;
-    const lastMessageWrapper = messagesEl.querySelector('.bot-message-wrapper:last-of-type');
+    const lastMessageWrapper = messagesEl.querySelector('.chat-bot-bubble-wrapper:last-of-type');
     if (lastMessageWrapper) {
         appendFeedbackButtons(lastMessageWrapper, targetLogId);
         syncChatState(messagesEl); 
@@ -690,8 +647,8 @@ async function processPromptWithRAGAndStream(userQuestion, botName, messagesEl, 
 
 function appendUserMessage(text, container) {
     container.insertAdjacentHTML('beforeend', `
-        <div class="flex justify-end animate-fade-in">
-            <div class="bg-blue-600 text-white text-sm px-4 py-2 rounded-2xl rounded-tr-sm max-w-[85%]">${text.replace(/</g, '&lt;')}</div>
+        <div class="chat-user-bubble-wrapper">
+            <div class="chat-user-bubble">${text.replace(/</g, '&lt;')}</div>
         </div>
     `);
     syncChatState(container);
@@ -699,10 +656,10 @@ function appendUserMessage(text, container) {
 
 function appendBotHTMLMessage(htmlContent, container) {
     container.insertAdjacentHTML('beforeend', `
-        <div class="flex gap-3 animate-fade-in w-full">
-            <div class="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600 shrink-0 shadow-sm"><i class="ph-fill ph-robot"></i></div>
-            <div class="flex flex-col w-full max-w-[85%] bot-message-wrapper">
-                <div class="bg-gray-50 dark:bg-surface border border-border-subtle p-3 rounded-2xl rounded-tl-sm text-sm prose dark:prose-invert overflow-hidden break-words shadow-sm">
+        <div class="chat-bot-row">
+            <div class="chat-bot-avatar"><i class="ph-fill ph-robot"></i></div>
+            <div class="chat-bot-bubble-wrapper">
+                <div class="chat-bot-bubble prose dark:prose-invert">
                     ${htmlContent}
                 </div>
             </div>
@@ -713,13 +670,12 @@ function appendBotHTMLMessage(htmlContent, container) {
 }
 
 function appendFeedbackButtons(messageWrapper, logId) {
-    // Alinhamento forçado usando INLINE STYLES para garantir espaçamento à prova de CSS externo
     const feedbackHtml = `
-        <div class="feedback-container" style="display: flex; justify-content: flex-end; align-items: center; gap: 12px; margin-top: 8px; width: 100%; padding-right: 4px;">
-            <button type="button" onclick="window.__kcs_rateChat('${logId}', true, this)" style="display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 600; color: #6b7280; background: transparent; border: none; cursor: pointer; transition: color 0.2s;" onmouseover="this.style.color='#16a34a'" onmouseout="this.style.color='#6b7280'">
+        <div class="chat-feedback-container">
+            <button type="button" onclick="window.__kcs_rateChat('${logId}', true, this)" class="btn-chat-feedback useful">
                 <i class="ph-bold ph-thumbs-up"></i> Útil
             </button>
-            <button type="button" onclick="window.__kcs_rateChat('${logId}', false, this)" style="display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 600; color: #6b7280; background: transparent; border: none; cursor: pointer; transition: color 0.2s;" onmouseover="this.style.color='#dc2626'" onmouseout="this.style.color='#6b7280'">
+            <button type="button" onclick="window.__kcs_rateChat('${logId}', false, this)" class="btn-chat-feedback not-useful">
                 <i class="ph-bold ph-thumbs-down"></i> Não Útil
             </button>
         </div>
@@ -730,8 +686,8 @@ function appendFeedbackButtons(messageWrapper, logId) {
 function appendTypingIndicator(container) {
     const id = `typing-${Date.now()}`;
     container.insertAdjacentHTML('beforeend', `
-        <div id="${id}" class="flex gap-2 p-2 animate-pulse text-blue-500">
-            <i class="ph ph-dots-three-circle text-2xl"></i>
+        <div id="${id}" class="chat-typing-indicator">
+            <i class="ph ph-dots-three-circle"></i>
         </div>
     `);
     return id;

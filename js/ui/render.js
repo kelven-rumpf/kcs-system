@@ -1,5 +1,6 @@
 /**
  * ui/render.js — Renderização da Interface
+ * Refatorado para Arquitetura Semântica Baseada no Design System e Sincronismo de Overlay/Dock
  */
 
 import { STATUS_LABELS, STATUS_COLORS, ARTICLE_STATUS } from '../config.js';
@@ -7,11 +8,11 @@ import { getCurrentUser, hasPermission, hasRole } from '../auth.js';
 import { getCategoryName } from '../services/categories.js';
 
 const SQL_DB_TYPES = [
-    { value: 'mysql', label: 'MySQL', color: 'bg-blue-100 dark:bg-blue-600/30 text-blue-700 dark:text-blue-300' },
-    { value: 'postgres', label: 'PostgreSQL', color: 'bg-indigo-100 dark:bg-indigo-600/30 text-indigo-700 dark:text-indigo-300' },
-    { value: 'sqlserver', label: 'SQL Server', color: 'bg-red-100 dark:bg-red-600/30 text-red-700 dark:text-red-300' },
-    { value: 'oracle', label: 'Oracle DB', color: 'bg-orange-100 dark:bg-orange-600/30 text-orange-700 dark:text-orange-300' },
-    { value: 'sqlite', label: 'SQLite', color: 'bg-cyan-100 dark:bg-cyan-600/30 text-cyan-700 dark:text-cyan-300' }
+    { value: 'mysql', label: 'MySQL', color: 'db-mysql' },
+    { value: 'postgres', label: 'PostgreSQL', color: 'db-postgres' },
+    { value: 'sqlserver', label: 'SQL Server', color: 'db-sqlserver' },
+    { value: 'oracle', label: 'Oracle DB', color: 'db-oracle' },
+    { value: 'sqlite', label: 'SQLite', color: 'db-sqlite' }
 ];
 
 export function renderHeader() {
@@ -41,31 +42,23 @@ export function renderHeader() {
         roleDisplay.textContent = roleLabels[user.role] || user.role;
     }
 
-    // RBAC: Lógica dura que revela o botão de Administração SE E SOMENTE SE o usuário for super_admin
     const btnAdminPanel = document.getElementById('btn-admin-panel');
     if (btnAdminPanel) {
         if (user.role === 'super_admin') {
             btnAdminPanel.classList.remove('hidden');
-            btnAdminPanel.classList.add('flex'); // Volta o display: flex exigido pelo Tailwind
         } else {
             btnAdminPanel.classList.add('hidden');
-            btnAdminPanel.classList.remove('flex');
-            // Medida extrema: Se alguém tentar forçar o display no DOM, destrói o nó.
             btnAdminPanel.remove(); 
         }
     }
 
-  // RBAC: Controle para o botão de Planos e Limites (Exclusivo Super Admin)
     const btnCompanySettings = document.getElementById('btn-company-settings');
     if (btnCompanySettings) {
         if (user.role === 'super_admin') {
             btnCompanySettings.classList.remove('hidden');
-            btnCompanySettings.classList.add('flex');
-            
             btnCompanySettings.onclick = () => window.__kcs.openMasterPlanManager();
         } else {
             btnCompanySettings.classList.add('hidden');
-            btnCompanySettings.classList.remove('flex');
             btnCompanySettings.remove(); 
         }
     }
@@ -109,20 +102,19 @@ export function addNotificationUI(title, subtitle, articleId) {
 
     if (badge) badge.classList.remove('hidden');
     
-    // Pequeno pulso de atenção no ícone quando a notificação chega via Firestore Real-Time
     if (btnNotif) {
         btnNotif.classList.add('animate-pulse');
         setTimeout(() => btnNotif.classList.remove('animate-pulse'), 3000);
     }
     
     const notificationHtml = `
-        <div onclick="window.__kcs.viewArticle('${articleId}')" class="p-3 border-b border-border-subtle hover:bg-gray-50 dark:hover:bg-bg-main cursor-pointer transition-colors flex gap-3 animate-fade-in">
-            <div class="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center shrink-0">
-                <i class="ph-fill ph-sparkle text-blue-600 dark:text-blue-400"></i>
+        <div onclick="window.__kcs.viewArticle('${articleId}')" class="notif-item animate-fade-in">
+            <div class="notif-icon-wrapper">
+                <i class="ph ph-sparkle notif-icon"></i>
             </div>
-            <div class="flex-1 min-w-0">
-                <p class="text-xs font-bold text-gray-900 dark:text-white truncate">${title}</p>
-                <p class="text-[10px] text-gray-500 truncate">${subtitle}</p>
+            <div class="notif-content">
+                <p class="notif-title">${title}</p>
+                <p class="notif-subtitle">${subtitle}</p>
             </div>
         </div>
     `;
@@ -142,28 +134,28 @@ export function renderArticleGrid(articles, paginationConfig = null) {
     const currentViewMode = localStorage.getItem('kcs_view_mode') || 'grid';
 
     let html = `
-        <div class="col-span-full flex items-center justify-between mb-4 pb-4 border-b border-gray-200 dark:border-[#3a3b3d]">
-            <h2 class="text-sm font-bold text-gray-800 dark:text-gray-200 uppercase tracking-wider flex items-center gap-2">
-                <i class="ph-fill ph-files"></i> Procedimentos
+        <div class="view-header">
+            <h2 class="view-title">
+                <i class="ph ph-files"></i> Procedimentos
             </h2>
-            <div class="flex items-center bg-gray-100 dark:bg-[#131314] p-1 rounded-lg border border-gray-200 dark:border-[#3a3b3d] shadow-inner">
-                <button onclick="window.__kcs.setViewMode('grid')" class="px-3 py-1.5 rounded-md text-xs font-semibold transition-all flex items-center gap-1.5 ${currentViewMode === 'grid' ? 'bg-white dark:bg-[#1e1f20] text-blue-600 dark:text-blue-400 shadow-sm border border-gray-200 dark:border-gray-700' : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-300'}">
-                    <i class="ph-fill ph-squares-four text-lg"></i> <span class="hidden sm:inline">Cards</span>
+            <div class="view-toggles">
+                <button onclick="window.__kcs.setViewMode('grid')" class="view-toggle-btn ${currentViewMode === 'grid' ? 'active-view' : ''}">
+                    <i class="ph ph-squares-four"></i> <span>Cards</span>
                 </button>
-                <button onclick="window.__kcs.setViewMode('table')" class="px-3 py-1.5 rounded-md text-xs font-semibold transition-all flex items-center gap-1.5 ${currentViewMode === 'table' ? 'bg-white dark:bg-[#1e1f20] text-blue-600 dark:text-blue-400 shadow-sm border border-gray-200 dark:border-gray-700' : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-300'}">
-                    <i class="ph-fill ph-list-dashes text-lg"></i> <span class="hidden sm:inline">Tabela</span>
+                <button onclick="window.__kcs.setViewMode('table')" class="view-toggle-btn ${currentViewMode === 'table' ? 'active-view' : ''}">
+                    <i class="ph ph-list-dashes"></i> <span>Tabela</span>
                 </button>
             </div>
         </div>
     `;
 
     if (!articles || articles.length === 0) {
-        container.innerHTML = html + `<div class="col-span-full flex flex-col items-center justify-center py-20 text-gray-500"><i class="ph ph-folder-open text-4xl mb-3 opacity-50"></i><p class="text-base font-medium">Nenhum procedimento encontrado</p></div>`; 
+        container.innerHTML = html + `<div class="empty-state"><i class="ph ph-folder-open empty-icon"></i><p>Nenhum procedimento encontrado</p></div>`; 
         return;
     }
 
     if (currentViewMode === 'grid') {
-        html += `<div class="col-span-full grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 w-full">`;
+        html += `<div class="content-grid">`;
         html += articles.map((article) => renderArticleCard(article)).join('');
         html += `</div>`;
     } else {
@@ -172,16 +164,16 @@ export function renderArticleGrid(articles, paginationConfig = null) {
 
     if (paginationConfig) {
         html += `
-            <div class="col-span-full flex flex-col sm:flex-row items-center justify-between mt-6 pt-4 border-t border-gray-200 dark:border-[#3a3b3d] gap-4">
-                <span class="text-xs text-gray-500 dark:text-gray-400 font-medium">
-                    Mostrando <strong class="text-gray-900 dark:text-white">${articles.length}</strong> de <strong class="text-gray-900 dark:text-white">${paginationConfig.totalItems}</strong> procedimentos &mdash; Página ${paginationConfig.currentPage} de ${paginationConfig.totalPages}
+            <div class="pagination-footer">
+                <span class="pagination-info">
+                    Mostrando <strong>${articles.length}</strong> de <strong>${paginationConfig.totalItems}</strong> procedimentos &mdash; Página ${paginationConfig.currentPage} de ${paginationConfig.totalPages}
                 </span>
-                <div class="flex gap-2">
-                    <button onclick="window.__kcs.loadPage('prev')" class="px-4 py-2 bg-white dark:bg-[#1e1f20] border border-gray-300 dark:border-[#3a3b3d] text-gray-700 dark:text-gray-300 rounded-lg text-xs font-bold hover:bg-gray-50 dark:hover:bg-[#131314] transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1" ${!paginationConfig.hasPrev ? 'disabled' : ''}>
-                        <i class="ph-bold ph-caret-left"></i> Anterior
+                <div class="pagination-controls">
+                    <button onclick="window.__kcs.loadPage('prev')" class="btn-pagination" ${!paginationConfig.hasPrev ? 'disabled' : ''}>
+                        <i class="ph ph-caret-left"></i> Anterior
                     </button>
-                    <button onclick="window.__kcs.loadPage('next')" class="px-4 py-2 bg-white dark:bg-[#1e1f20] border border-gray-300 dark:border-[#3a3b3d] text-gray-700 dark:text-gray-300 rounded-lg text-xs font-bold hover:bg-gray-50 dark:hover:bg-[#131314] transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1" ${!paginationConfig.hasNext ? 'disabled' : ''}>
-                        Próxima <i class="ph-bold ph-caret-right"></i>
+                    <button onclick="window.__kcs.loadPage('next')" class="btn-pagination" ${!paginationConfig.hasNext ? 'disabled' : ''}>
+                        Próxima <i class="ph ph-caret-right"></i>
                     </button>
                 </div>
             </div>
@@ -196,65 +188,58 @@ function renderArticleTable(articles) {
     const canDelete = hasPermission('delete_article');
 
     let tableHtml = `
-    <div class="col-span-full w-full overflow-x-auto bg-surface border border-border-strong rounded-2xl shadow-card">
-        <table class="w-full text-left border-collapse whitespace-nowrap">
+    <div class="table-wrapper">
+        <table class="table-default">
             <thead>
-                <tr class="border-b-2 border-border-subtle bg-bg-canvas/50">
-                    <th class="px-5 py-4 text-[11px] font-semibold text-text-muted uppercase tracking-wide">ID / Ref</th>
-                    <th class="px-5 py-4 text-[11px] font-semibold text-text-muted uppercase tracking-wide w-full">Título e Categoria</th>
-                    <th class="px-5 py-4 text-[11px] font-semibold text-text-muted uppercase tracking-wide">Autor</th>
-                    <th class="px-5 py-4 text-[11px] font-semibold text-text-muted uppercase tracking-wide">Revisão</th>
-                    <th class="px-5 py-4 text-[11px] font-semibold text-text-muted uppercase tracking-wide">Status</th>
-                    <th class="px-5 py-4 text-[11px] font-semibold text-text-muted uppercase tracking-wide text-right">Ações</th>
+                <tr>
+                    <th>ID / Ref</th>
+                    <th>Título e Categoria</th>
+                    <th>Autor</th>
+                    <th>Revisão</th>
+                    <th>Status</th>
+                    <th>Ações</th>
                 </tr>
             </thead>
-            <tbody class="divide-y divide-border-subtle bg-surface">
+            <tbody>
     `;
 
     tableHtml += articles.map(article => {
-        const statusLabel = STATUS_LABELS[article.status] || article.status;
-        const statusColor = STATUS_COLORS[article.status] || 'bg-gray-600 text-gray-100';
         const categoryDisplayName = getCategoryName(article.categoryId || article.category);
         const kcsNum = article.articleNumber ? `#KCS-${article.articleNumber}` : '---';
-        
-        // Formatação de Nome e Captura de Revisor
         const authorName = formatFullName(article.createdBy);
         const reviewerName = article.approvedBy || article.validatedBy || article.reviewedBy || (article.status === 'approved' ? article.updatedBy : null);
 
         return `
-            <tr class="hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors group cursor-pointer" onclick="window.__kcs.viewArticle('${article.id}')">
-                <td class="px-5 py-4">
-                    <span class="text-[11px] font-mono font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded">${kcsNum}</span>
+            <tr class="table-row" onclick="window.__kcs.viewArticle('${article.id}')">
+                <td>
+                    <span class="id-badge">${kcsNum}</span>
                 </td>
-                <td class="px-5 py-4 max-w-[300px]">
-                    <p class="text-sm font-semibold text-gray-900 dark:text-white truncate" title="${escapeHtml(article.title)}">${escapeHtml(article.title)}</p>
-                    <p class="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5 truncate">${categoryDisplayName !== 'Sem categoria' ? escapeHtml(categoryDisplayName) : 'Sem categoria'}</p>
+                <td class="title-cell">
+                    <p class="cell-title" title="${escapeHtml(article.title)}">${escapeHtml(article.title)}</p>
+                    <p class="cell-subtitle">${categoryDisplayName !== 'Sem categoria' ? escapeHtml(categoryDisplayName) : 'Sem categoria'}</p>
                 </td>
-                
-                <td class="px-5 py-4">
-                    <div class="flex items-center gap-1.5" title="Autor original">
-                        <div class="w-5 h-5 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-[9px] font-bold text-gray-600 dark:text-gray-300">${authorName.charAt(0).toUpperCase()}</div>
-                        <span class="text-xs text-gray-700 dark:text-gray-300 font-medium">${escapeHtml(authorName)}</span>
+                <td>
+                    <div class="user-badge" title="Autor original">
+                        <div class="avatar-mini">${authorName.charAt(0).toUpperCase()}</div>
+                        <span class="user-name">${escapeHtml(authorName)}</span>
                     </div>
                 </td>
-
-                <td class="px-5 py-4">
+                <td>
                     ${reviewerName && article.status === 'approved' 
-                        ? `<div class="flex items-center gap-1.5" title="Revisado por">
-                               <i class="ph-fill ph-check-circle text-green-500 dark:text-green-400 text-sm"></i>
-                               <span class="text-xs text-gray-700 dark:text-gray-300 font-medium">${escapeHtml(formatFullName(reviewerName))}</span>
+                        ? `<div class="user-badge" title="Revisado por">
+                               <i class="ph ph-check-circle status-icon-approved"></i>
+                               <span class="user-name">${escapeHtml(formatFullName(reviewerName))}</span>
                            </div>` 
-                        : `<span class="text-[10px] text-gray-400 dark:text-gray-500 italic flex items-center gap-1"><i class="ph ph-clock text-sm"></i> Pendente</span>`
+                        : `<span class="status-pending"><i class="ph ph-clock"></i> Pendente</span>`
                     }
                 </td>
-
-                <td class="px-5 py-4">
-                    <span class="text-[10px] font-bold px-2.5 py-1 rounded-full ${statusColor}">${statusLabel}</span>
+                <td>
+                    <span class="status-badge status-${article.status}">${article.status}</span>
                 </td>
-                <td class="px-5 py-4 text-right">
-                    <div class="flex items-center justify-end gap-2 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity" onclick="event.stopPropagation()">
-                        ${canEdit ? `<button onclick="window.__kcs.editArticle('${article.id}')" class="p-1.5 text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 bg-gray-100 hover:bg-blue-50 dark:bg-[#1e1f20] dark:hover:bg-blue-900/30 rounded transition-colors" title="Editar"><i class="ph-fill ph-pencil-simple text-sm"></i></button>` : ''}
-                        ${canDelete ? `<button onclick="window.__kcs.deleteArticle('${article.id}')" class="p-1.5 text-gray-500 hover:text-red-600 dark:hover:text-red-400 bg-gray-100 hover:bg-red-50 dark:bg-[#1e1f20] dark:hover:bg-red-900/30 rounded transition-colors" title="Excluir"><i class="ph-fill ph-trash text-sm"></i></button>` : ''}
+                <td class="actions-cell">
+                    <div class="table-actions" onclick="event.stopPropagation()">
+                        ${canEdit ? `<button onclick="window.__kcs.editArticle('${article.id}')" class="btn-icon" title="Editar"><i class="ph ph-pencil-simple"></i></button>` : ''}
+                        ${canDelete ? `<button onclick="window.__kcs.deleteArticle('${article.id}')" class="btn-icon btn-delete" title="Excluir"><i class="ph ph-trash"></i></button>` : ''}
                     </div>
                 </td>
             </tr>
@@ -264,70 +249,61 @@ function renderArticleTable(articles) {
     tableHtml += `</tbody></table></div>`;
     return tableHtml;
 }
-
 function renderArticleCard(article) {
-  const statusLabel = STATUS_LABELS[article.status] || article.status;
-  const statusColor = STATUS_COLORS[article.status] || 'bg-gray-600 text-gray-100';
   const categoryDisplayName = getCategoryName(article.categoryId || article.category);
-  
   const stepsPreviewText = Array.isArray(article.steps) ? article.steps.map(s => s.description).join(' ') : article.steps;
   const previewText = truncate(stripHtml(article.symptom || article.body || stepsPreviewText || ''), 120);
-  
-  const kcsNumHtml = article.articleNumber ? `<div class="text-blue-600 dark:text-blue-500 text-[11px] font-bold mb-1.5 tracking-wider uppercase">#KCS-${article.articleNumber}</div>` : '';
+  const kcsNumHtml = article.articleNumber ? `<div class="id-badge">#KCS-${article.articleNumber}</div>` : '';
 
   const user = getCurrentUser();
   const userId = user?.uid || user?.id;
   const isFav = (article.favorites || []).includes(userId);
-  const starClass = isFav ? 'ph-fill ph-star text-yellow-500 dark:text-yellow-400' : 'ph ph-star text-gray-400 dark:text-gray-500 hover:text-yellow-500 dark:hover:text-yellow-400';
+  const starClass = isFav ? 'ph-fill ph-star fav-active' : 'ph ph-star';
   const isLiked = (article.likes || []).includes(userId);
-  const heartClass = isLiked ? 'ph-fill ph-heart text-pink-500 dark:text-pink-400' : 'ph ph-heart text-gray-400 hover:text-pink-500 dark:hover:text-pink-400';
+  const heartClass = isLiked ? 'ph-fill ph-heart like-active' : 'ph ph-heart';
 
-  // NOVO: Formatação de Nome e Captura de Revisor
   const authorFullName = formatFullName(article.createdBy);
   const reviewerName = article.approvedBy || article.validatedBy || article.reviewedBy || (article.status === 'approved' ? article.updatedBy : null);
 
   return `
-    <div class="article-card bg-surface border border-border-subtle rounded-xl p-5 hover:border-gray-400 dark:hover:border-gray-500 transition-colors cursor-pointer flex flex-col gap-3 shadow-sm h-full" onclick="window.__kcs.viewArticle('${article.id}')">
-      <div>
+    <div class="article-card" onclick="window.__kcs.viewArticle('${article.id}')">
+      <div class="card-header">
           ${kcsNumHtml}
-          <div class="flex items-start justify-between gap-2">
-            <h3 class="text-gray-900 dark:text-white font-semibold text-base leading-snug flex-1 line-clamp-2">${escapeHtml(article.title)}</h3>
-            <span class="shrink-0 text-[10px] font-medium px-2 py-0.5 rounded-full ${statusColor}">${statusLabel}</span>
+          <div class="card-title-row">
+            <h3 class="card-title" title="${escapeHtml(article.title)}">${escapeHtml(article.title)}</h3>
+            <span class="status-badge status-${article.status}">${article.status}</span>
           </div>
       </div>
-      <p class="text-gray-500 dark:text-gray-400 text-sm leading-relaxed line-clamp-3">${escapeHtml(previewText)}</p>
-      <div class="flex flex-wrap gap-1.5 mt-auto">
-        ${(article.tags || []).map(t => `<span class="inline-block bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs px-2 py-0.5 rounded-full">${escapeHtml(t)}</span>`).join(' ')}
-        ${categoryDisplayName && categoryDisplayName !== 'Sem categoria' ? `<span class="inline-block bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 text-[10px] px-2 py-0.5 rounded-full">${escapeHtml(categoryDisplayName)}</span>` : ''}
+      <p class="card-preview">${escapeHtml(previewText)}</p>
+      <div class="card-tags">
+        ${(article.tags || []).map(t => `<span class="tag-badge">${escapeHtml(t)}</span>`).join(' ')}
+        ${categoryDisplayName && categoryDisplayName !== 'Sem categoria' ? `<span class="tag-badge tag-category">${escapeHtml(categoryDisplayName)}</span>` : ''}
       </div>
       
-      <div class="flex flex-col gap-1.5 pt-3 mt-1 border-t border-border-subtle">
-        <div class="flex items-center justify-between text-xs text-gray-500">
-            <span><i class="ph ph-user mr-1 text-[14px] align-text-bottom"></i>${escapeHtml(authorFullName)} · ${formatDate(article.updatedAt)}</span>
-            <div class="flex items-center gap-2 sm:gap-3 touch-target">
-                <button onclick="event.stopPropagation(); window.__kcs.toggleLike('${article.id}')" class="transition-transform hover:scale-110 touch-target flex items-center gap-1 group">
-                    <i class="${heartClass} text-[18px] align-text-bottom"></i>
-                    <span class="text-[11px] font-medium group-hover:text-pink-500">${(article.likes || []).length}</span>
+      <div class="card-footer">
+        <div class="card-meta">
+            <span><i class="ph ph-user"></i> ${escapeHtml(authorFullName)} · ${formatDate(article.updatedAt)}</span>
+            <div class="card-interactions">
+                <button onclick="event.stopPropagation(); window.__kcs.toggleLike('${article.id}')" class="btn-interaction">
+                    <i class="${heartClass}"></i>
+                    <span class="interaction-count">${(article.likes || []).length}</span>
                 </button>
-                <span class="text-blue-500 dark:text-blue-400"><i class="ph-fill ph-chat-circle mr-1 align-text-bottom"></i>${(article.comments || []).length}</span>
-                <button onclick="event.stopPropagation(); window.__kcs.toggleFavorite('${article.id}')" class="transition-transform hover:scale-110 ml-1 touch-target" title="Favoritar"><i class="${starClass} text-[18px] align-text-bottom"></i></button>
+                <span class="interaction-stat"><i class="ph ph-chat-circle"></i> ${(article.comments || []).length}</span>
+                <button onclick="event.stopPropagation(); window.__kcs.toggleFavorite('${article.id}')" class="btn-interaction" title="Favoritar"><i class="${starClass}"></i></button>
             </div>
         </div>
-        ${reviewerName && article.status === 'approved' ? `<span class="text-[10px] text-green-600 dark:text-green-400 font-medium bg-green-50 dark:bg-green-900/10 px-2 py-0.5 rounded w-max border border-green-200/50 dark:border-green-800/30"><i class="ph-bold ph-check-circle mr-1 align-text-bottom"></i>Aprovado por ${escapeHtml(formatFullName(reviewerName))}</span>` : ''}
+        ${reviewerName && article.status === 'approved' ? `<span class="approval-badge"><i class="ph ph-check-circle"></i> Aprovado por ${escapeHtml(formatFullName(reviewerName))}</span>` : ''}
       </div>
 
       ${hasPermission('edit_article') ? `
-      <div class="flex flex-col sm:flex-row gap-2 pt-1" onclick="event.stopPropagation()">
-        <button onclick="window.__kcs.editArticle('${article.id}')" class="flex-1 text-xs bg-blue-50 dark:bg-blue-600/20 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-600/40 py-2.5 sm:py-1.5 rounded-lg transition-colors font-medium">Editar</button>
-        ${hasPermission('delete_article') ? `<button onclick="window.__kcs.deleteArticle('${article.id}')" class="flex-1 sm:flex-none text-xs bg-red-50 dark:bg-red-600/20 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-600/40 px-3 py-2.5 sm:py-1.5 rounded-lg transition-colors font-medium">Excluir</button>` : ''}
+      <div class="card-buttons" onclick="event.stopPropagation()">
+        <button onclick="window.__kcs.editArticle('${article.id}')" class="btn-card-action">Editar</button>
+        ${hasPermission('delete_article') ? `<button onclick="window.__kcs.deleteArticle('${article.id}')" class="btn-card-action btn-delete">Excluir</button>` : ''}
       </div>` : ''}
     </div>
   `;
 }
 
-// ==========================================
-// RENDERIZAÇÃO DA BIBLIOTECA SQL (GRID VS TABELA)
-// ==========================================
 export function renderSqlGrid(scripts, paginationConfig = null) {
   const container = document.getElementById('articles-grid');
   if (!container) return;
@@ -335,28 +311,28 @@ export function renderSqlGrid(scripts, paginationConfig = null) {
   const currentViewMode = localStorage.getItem('kcs_sql_view_mode') || 'grid';
 
   let html = `
-    <div class="col-span-full flex items-center justify-between mb-4 pb-4 border-b border-gray-200 dark:border-[#3a3b3d]">
-        <h2 class="text-sm font-bold text-gray-800 dark:text-gray-200 uppercase tracking-wider flex items-center gap-2">
-            <i class="ph-fill ph-database"></i> Biblioteca SQL
+    <div class="view-header">
+        <h2 class="view-title">
+            <i class="ph ph-database"></i> Biblioteca SQL
         </h2>
-        <div class="flex items-center bg-gray-100 dark:bg-[#131314] p-1 rounded-lg border border-gray-200 dark:border-[#3a3b3d] shadow-inner">
-            <button onclick="window.__kcs.setSqlViewMode('grid')" class="px-3 py-1.5 rounded-md text-xs font-semibold transition-all flex items-center gap-1.5 ${currentViewMode === 'grid' ? 'bg-white dark:bg-[#1e1f20] text-purple-600 dark:text-purple-400 shadow-sm border border-gray-200 dark:border-gray-700' : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-300'}">
-                <i class="ph-fill ph-squares-four text-lg"></i> <span class="hidden sm:inline">Cards</span>
+        <div class="view-toggles">
+            <button onclick="window.__kcs.setSqlViewMode('grid')" class="view-toggle-btn ${currentViewMode === 'grid' ? 'active-view' : ''}">
+                <i class="ph ph-squares-four"></i> <span>Cards</span>
             </button>
-            <button onclick="window.__kcs.setSqlViewMode('table')" class="px-3 py-1.5 rounded-md text-xs font-semibold transition-all flex items-center gap-1.5 ${currentViewMode === 'table' ? 'bg-white dark:bg-[#1e1f20] text-purple-600 dark:text-purple-400 shadow-sm border border-gray-200 dark:border-gray-700' : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-300'}">
-                <i class="ph-fill ph-list-dashes text-lg"></i> <span class="hidden sm:inline">Tabela</span>
+            <button onclick="window.__kcs.setSqlViewMode('table')" class="view-toggle-btn ${currentViewMode === 'table' ? 'active-view' : ''}">
+                <i class="ph ph-list-dashes"></i> <span>Tabela</span>
             </button>
         </div>
     </div>
   `;
 
   if (!scripts || scripts.length === 0) {
-    container.innerHTML = html + `<div class="col-span-full flex flex-col items-center justify-center py-20 text-gray-500"><i class="ph ph-database text-4xl mb-3 opacity-50"></i><p class="text-base font-medium">Nenhum script SQL encontrado</p></div>`; 
+    container.innerHTML = html + `<div class="empty-state"><i class="ph ph-database empty-icon"></i><p>Nenhum script SQL encontrado</p></div>`; 
     return;
   }
 
   if (currentViewMode === 'grid') {
-    html += `<div class="col-span-full grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 w-full">`;
+    html += `<div class="content-grid">`;
     html += scripts.map((script) => renderSqlCard(script)).join('');
     html += `</div>`;
   } else {
@@ -365,16 +341,16 @@ export function renderSqlGrid(scripts, paginationConfig = null) {
 
   if (paginationConfig) {
     html += `
-        <div class="col-span-full flex flex-col sm:flex-row items-center justify-between mt-6 pt-4 border-t border-gray-200 dark:border-[#3a3b3d] gap-4">
-            <span class="text-xs text-gray-500 dark:text-gray-400 font-medium">
-                Mostrando <strong class="text-gray-900 dark:text-white">${scripts.length}</strong> de <strong class="text-gray-900 dark:text-white">${paginationConfig.totalItems}</strong> scripts &mdash; Página ${paginationConfig.currentPage} de ${paginationConfig.totalPages}
+        <div class="pagination-footer">
+            <span class="pagination-info">
+                Mostrando <strong>${scripts.length}</strong> de <strong>${paginationConfig.totalItems}</strong> scripts &mdash; Página ${paginationConfig.currentPage} de ${paginationConfig.totalPages}
             </span>
-            <div class="flex gap-2">
-                <button onclick="window.__kcs.loadPage('prev')" class="px-4 py-2 bg-white dark:bg-[#1e1f20] border border-gray-300 dark:border-[#3a3b3d] text-gray-700 dark:text-gray-300 rounded-lg text-xs font-bold hover:bg-gray-50 dark:hover:bg-[#131314] transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1" ${!paginationConfig.hasPrev ? 'disabled' : ''}>
-                    <i class="ph-bold ph-caret-left"></i> Anterior
+            <div class="pagination-controls">
+                <button onclick="window.__kcs.loadPage('prev')" class="btn-pagination" ${!paginationConfig.hasPrev ? 'disabled' : ''}>
+                    <i class="ph ph-caret-left"></i> Anterior
                 </button>
-                <button onclick="window.__kcs.loadPage('next')" class="px-4 py-2 bg-white dark:bg-[#1e1f20] border border-gray-300 dark:border-[#3a3b3d] text-gray-700 dark:text-gray-300 rounded-lg text-xs font-bold hover:bg-gray-50 dark:hover:bg-[#131314] transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1" ${!paginationConfig.hasNext ? 'disabled' : ''}>
-                    Próxima <i class="ph-bold ph-caret-right"></i>
+                <button onclick="window.__kcs.loadPage('next')" class="btn-pagination" ${!paginationConfig.hasNext ? 'disabled' : ''}>
+                    Próxima <i class="ph ph-caret-right"></i>
                 </button>
             </div>
         </div>
@@ -384,59 +360,52 @@ export function renderSqlGrid(scripts, paginationConfig = null) {
   container.innerHTML = html;
 }
 
-// ==========================================
-// COMPONENTE: TABELA ENTERPRISE (SQL)
-// ==========================================
 function renderSqlTable(scripts) {
   const user = getCurrentUser();
   
   let tableHtml = `
-    <div class="col-span-full w-full overflow-x-auto bg-surface border border-border-strong rounded-2xl shadow-card">
-        <table class="w-full text-left border-collapse whitespace-nowrap">
+    <div class="table-wrapper">
+        <table class="table-default">
             <thead>
-                <tr class="border-b-2 border-border-subtle bg-bg-canvas/50">
-                    <th class="px-5 py-4 text-[11px] font-semibold text-text-muted uppercase tracking-wide">Ref</th>
-                    <th class="px-5 py-4 text-[11px] font-semibold text-text-muted uppercase tracking-wide w-full">Nome do Script</th>
-                    <th class="px-5 py-4 text-[11px] font-semibold text-text-muted uppercase tracking-wide">Banco</th>
-                    <th class="px-5 py-4 text-[11px] font-semibold text-text-muted uppercase tracking-wide">Operação</th>
-                    <th class="px-5 py-4 text-[11px] font-semibold text-text-muted uppercase tracking-wide text-right">Ações</th>
+                <tr>
+                    <th>Ref</th>
+                    <th>Nome do Script</th>
+                    <th>Banco</th>
+                    <th>Operação</th>
+                    <th>Ações</th>
                 </tr>
             </thead>
-            <tbody class="divide-y divide-border-subtle bg-surface">
+            <tbody>
   `;
 
   tableHtml += scripts.map(s => {
-      const dbInfo = SQL_DB_TYPES.find((t) => t.value === s.dbType) || { label: s.dbType, color: 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300' };
+      const dbInfo = SQL_DB_TYPES.find((t) => t.value === s.dbType) || { label: s.dbType, color: '' };
       const opType = s.sqlCategory || 'SELECT';
       const canManage = hasPermission('manage_sql') || (user && s.createdById === user.id);
-
-      let badgeHtml = '<span class="shrink-0 bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-700/50 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider">🟢 Consulta</span>';
-      if (opType === 'UPDATE') badgeHtml = '<span class="shrink-0 bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-400 border border-yellow-200 dark:border-yellow-700/50 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider">🟡 Alteração</span>';
-      else if (opType === 'DELETE') badgeHtml = '<span class="shrink-0 bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-700/50 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider">🔴 Exclusão</span>';
 
       const authorName = s.createdBy ? s.createdBy.split(' ')[0] : 'Sistema';
       const sqlNum = s.scriptNumber ? `#SQL-${s.scriptNumber}` : '---';
 
       return `
-      <tr class="hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors group cursor-pointer" onclick="window.__kcs.viewSqlScript('${s.id}')">
-          <td class="px-5 py-4">
-              <span class="text-[10px] font-mono font-bold text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20 px-2 py-1 rounded">${sqlNum}</span>
+      <tr class="table-row" onclick="window.__kcs.viewSqlScript('${s.id}')">
+          <td>
+              <span class="id-badge">${sqlNum}</span>
           </td>
-          <td class="px-5 py-4 max-w-[300px]">
-              <p class="text-sm font-semibold text-gray-900 dark:text-white truncate" title="${escapeHtml(s.name)}">${escapeHtml(s.name)}</p>
-              <p class="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5">${escapeHtml(authorName)} · ${formatDate(s.updatedAt)}</p>
+          <td class="title-cell">
+              <p class="cell-title" title="${escapeHtml(s.name)}">${escapeHtml(s.name)}</p>
+              <p class="cell-subtitle">${escapeHtml(authorName)} · ${formatDate(s.updatedAt)}</p>
           </td>
-          <td class="px-5 py-4">
-              <span class="text-[9px] ${dbInfo.color} px-2 py-0.5 rounded font-bold uppercase">${dbInfo.label}</span>
+          <td>
+              <span class="db-badge ${dbInfo.color}">${dbInfo.label}</span>
           </td>
-          <td class="px-5 py-4">
-              ${badgeHtml}
+          <td>
+              <span class="op-badge op-${opType.toLowerCase()}">${opType}</span>
           </td>
-          <td class="px-5 py-4 text-right">
-              <div class="flex items-center justify-end gap-2 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity" onclick="event.stopPropagation()">
-                  <button onclick="window.__kcs.explainSql('${s.id}')" class="p-1.5 text-gray-500 hover:text-yellow-600 dark:hover:text-yellow-400 bg-gray-100 hover:bg-yellow-50 dark:bg-[#1e1f20] dark:hover:bg-yellow-900/30 rounded transition-colors" title="A IA explicará o que este script faz"><i class="ph-fill ph-lightbulb text-sm"></i></button>
-                  ${canManage ? `<button onclick="window.__kcs.editSqlScript('${s.id}')" class="p-1.5 text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 bg-gray-100 hover:bg-blue-50 dark:bg-[#1e1f20] dark:hover:bg-blue-900/30 rounded transition-colors" title="Editar"><i class="ph-fill ph-pencil-simple text-sm"></i></button>` : ''}
-                  ${hasPermission('manage_sql') ? `<button onclick="window.__kcs.deleteSqlScript('${s.id}')" class="p-1.5 text-gray-500 hover:text-red-600 dark:hover:text-red-400 bg-gray-100 hover:bg-red-50 dark:bg-[#1e1f20] dark:hover:bg-red-900/30 rounded transition-colors" title="Excluir"><i class="ph-fill ph-trash text-sm"></i></button>` : ''}
+          <td class="actions-cell">
+              <div class="table-actions" onclick="event.stopPropagation()">
+                  <button onclick="window.__kcs.explainSql('${s.id}')" class="btn-icon btn-explain" title="A IA explicará o que este script faz"><i class="ph ph-lightbulb"></i></button>
+                  ${canManage ? `<button onclick="window.__kcs.editSqlScript('${s.id}')" class="btn-icon" title="Editar"><i class="ph ph-pencil-simple"></i></button>` : ''}
+                  ${hasPermission('manage_sql') ? `<button onclick="window.__kcs.deleteSqlScript('${s.id}')" class="btn-icon btn-delete" title="Excluir"><i class="ph ph-trash"></i></button>` : ''}
               </div>
           </td>
       </tr>`;
@@ -446,61 +415,59 @@ function renderSqlTable(scripts) {
   return tableHtml;
 }
 
-// MANTENHA O SEU RENDER SQL CARD INTACTO ABAIXO DISSO
 export function renderSqlCard(script) {
-  const dbInfo = SQL_DB_TYPES.find((t) => t.value === script.dbType) || { label: script.dbType, color: 'bg-gray-100 dark:bg-gray-600/30 text-gray-700 dark:text-gray-300' };
+  const dbInfo = SQL_DB_TYPES.find((t) => t.value === script.dbType) || { label: script.dbType, color: '' };
   const canManage = hasPermission('manage_sql') || script.createdById === getCurrentUser().id;
 
   const opType = script.sqlCategory || 'SELECT';
-  let badgeHtml = '<span class="shrink-0 bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-700/50 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider">🟢 Consulta</span>';
-  if (opType === 'UPDATE') badgeHtml = '<span class="shrink-0 bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-400 border border-yellow-200 dark:border-yellow-700/50 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider">🟡 Alteração</span>';
-  else if (opType === 'DELETE') badgeHtml = '<span class="shrink-0 bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-700/50 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider">🔴 Exclusão</span>';
-
-  const sqlNumHtml = script.scriptNumber ? `<div class="text-purple-600 dark:text-purple-500 text-[11px] font-bold mb-1.5 tracking-wider uppercase">#SQL-${script.scriptNumber}</div>` : '';
+  const sqlNumHtml = script.scriptNumber ? `<div class="id-badge">#SQL-${script.scriptNumber}</div>` : '';
 
   const user = getCurrentUser();
   const userId = user?.uid || user?.id;
   const isFav = (script.favorites || []).includes(userId);
-  const starClass = isFav ? 'ph-fill ph-star text-yellow-500 dark:text-yellow-400' : 'ph ph-star text-gray-400 dark:text-gray-500 hover:text-yellow-500 dark:hover:text-yellow-400';
+  const starClass = isFav ? 'ph-fill ph-star fav-active' : 'ph ph-star';
   const isLiked = (script.likes || []).includes(userId);
-  const heartClass = isLiked ? 'ph-fill ph-heart text-pink-500 dark:text-pink-400' : 'ph ph-heart text-gray-400 hover:text-pink-500 dark:hover:text-pink-400';
+  const heartClass = isLiked ? 'ph-fill ph-heart like-active' : 'ph ph-heart';
 
   return `
-    <div class="article-card bg-surface border border-border-subtle rounded-xl p-5 hover:border-gray-400 dark:hover:border-gray-500 transition-colors cursor-pointer flex flex-col gap-3 shadow-sm h-full" onclick="window.__kcs.viewSqlScript('${script.id}')">
-      <div>
+    <div class="article-card" onclick="window.__kcs.viewSqlScript('${script.id}')">
+      <div class="card-header">
           ${sqlNumHtml}
-          <div class="flex items-start justify-between gap-2">
-            <h3 class="text-gray-900 dark:text-white font-semibold text-base flex-1 line-clamp-2">${escapeHtml(script.name)}</h3>
-            ${badgeHtml}
+          <div class="card-title-row">
+            <h3 class="card-title">${escapeHtml(script.name)}</h3>
+            <span class="op-badge op-${opType.toLowerCase()}">${opType}</span>
           </div>
       </div>
-      <div class="flex gap-2"><span class="text-[10px] ${dbInfo.color} px-2 py-0.5 rounded uppercase font-semibold">${dbInfo.label}</span></div>
-      <pre class="bg-gray-50 dark:bg-bg-main rounded-lg p-3 text-[10px] text-green-600 dark:text-green-400 font-mono overflow-hidden max-h-20 line-clamp-3 border border-border-subtle">${escapeHtml(truncate(script.code || '', 150))}</pre>
-      <div class="flex items-center justify-between text-xs text-gray-500 pt-2 mt-auto border-t border-border-subtle">
-        <span><i class="ph ph-user mr-1 text-[14px] align-text-bottom"></i>${escapeHtml((script.createdBy || 'Sistema').split(' ')[0])} · ${formatDate(script.updatedAt)}</span>
-        <div class="flex items-center gap-2 sm:gap-3 touch-target">
-            <button onclick="event.stopPropagation(); window.__kcs.toggleSqlLike('${script.id}')" class="transition-transform hover:scale-110 touch-target flex items-center gap-1 group">
-                <i class="${heartClass} text-[18px] align-text-bottom"></i>
-                <span class="text-[11px] font-medium group-hover:text-pink-500">${(script.likes || []).length}</span>
-            </button>
-            <span class="text-blue-500 dark:text-blue-400"><i class="ph-fill ph-chat-circle mr-1 align-text-bottom"></i>${(script.comments || []).length}</span>
-            <button onclick="event.stopPropagation(); window.__kcs.toggleSqlFavorite('${script.id}')" class="transition-transform hover:scale-110 ml-1 touch-target" title="Favoritar"><i class="${starClass} text-[18px] align-text-bottom"></i></button>
+      <div class="db-indicator"><span class="db-badge ${dbInfo.color}">${dbInfo.label}</span></div>
+      <pre class="code-preview">${escapeHtml(truncate(script.code || '', 150))}</pre>
+      
+      <div class="card-footer">
+        <div class="card-meta">
+            <span><i class="ph ph-user"></i> ${escapeHtml((script.createdBy || 'Sistema').split(' ')[0])} · ${formatDate(script.updatedAt)}</span>
+            <div class="card-interactions">
+                <button onclick="event.stopPropagation(); window.__kcs.toggleSqlLike('${script.id}')" class="btn-interaction">
+                    <i class="${heartClass}"></i>
+                    <span class="interaction-count">${(script.likes || []).length}</span>
+                </button>
+                <span class="interaction-stat"><i class="ph ph-chat-circle"></i> ${(script.comments || []).length}</span>
+                <button onclick="event.stopPropagation(); window.__kcs.toggleSqlFavorite('${script.id}')" class="btn-interaction" title="Favoritar"><i class="${starClass}"></i></button>
+            </div>
         </div>
       </div>
       
-      <div class="flex flex-col sm:flex-row gap-2 pt-1 mt-1" onclick="event.stopPropagation()">
-        <button onclick="window.__kcs.explainSql('${script.id}')" class="flex-1 text-xs bg-yellow-50 dark:bg-yellow-600/20 text-yellow-600 dark:text-yellow-400 py-2.5 sm:py-1.5 hover:bg-yellow-100 dark:hover:bg-yellow-600/40 rounded-lg transition-colors font-medium" title="A IA explicará o que este script faz"><i class="ph-fill ph-lightbulb mr-1"></i>Explicar</button>
-        ${canManage ? `<button onclick="window.__kcs.editSqlScript('${script.id}')" class="flex-1 text-xs bg-blue-50 dark:bg-blue-600/20 text-blue-600 dark:text-blue-400 py-2.5 sm:py-1.5 hover:bg-blue-100 dark:hover:bg-blue-600/40 rounded-lg transition-colors font-medium">Editar</button>` : ''}
-        ${hasPermission('manage_sql') ? `<button onclick="window.__kcs.deleteSqlScript('${script.id}')" class="flex-1 sm:flex-none text-xs bg-red-50 dark:bg-red-600/20 text-red-600 dark:text-red-400 px-3 py-2.5 sm:py-1.5 hover:bg-red-100 dark:hover:bg-red-600/40 rounded-lg transition-colors font-medium">Excluir</button>` : ''}
+      <div class="card-buttons" onclick="event.stopPropagation()">
+        <button onclick="window.__kcs.explainSql('${script.id}')" class="btn-card-action btn-explain" title="A IA explicará o que este script faz"><i class="ph ph-lightbulb"></i> Explicar</button>
+        ${canManage ? `<button onclick="window.__kcs.editSqlScript('${script.id}')" class="btn-card-action">Editar</button>` : ''}
+        ${hasPermission('manage_sql') ? `<button onclick="window.__kcs.deleteSqlScript('${script.id}')" class="btn-card-action btn-delete">Excluir</button>` : ''}
       </div>
     </div>
   `;
 }
 
 function getIconHtml(iconRaw, isGroup = false) {
-    if (!iconRaw) return `<i class="ph ph-folder text-[18px] ${isGroup ? 'text-gray-500 dark:text-gray-400 group-hover:text-yellow-500 dark:group-hover:text-yellow-400 transition-colors' : 'text-gray-500 dark:text-gray-600'}"></i>`;
-    if (iconRaw.startsWith('ph-')) return `<i class="ph ${iconRaw} text-[18px] ${isGroup ? 'text-gray-500 dark:text-gray-400 group-hover:text-yellow-500 dark:group-hover:text-yellow-400 transition-colors' : 'text-gray-500 dark:text-gray-600'}"></i>`;
-    return `<span class="text-[16px] leading-none ${isGroup ? 'mr-1' : ''}">${iconRaw}</span>`;
+    if (!iconRaw) return `<i class="ph ph-folder tree-icon"></i>`;
+    if (iconRaw.startsWith('ph-')) return `<i class="ph ${iconRaw.replace('ph-fill', 'ph')} tree-icon"></i>`;
+    return `<span class="tree-icon-text">${iconRaw}</span>`;
 }
 
 export function renderSidebar(articleCounts, sqlCounts, activeFilter = 'all', activeSqlFilter = 'all', activeView = 'articles', categoryTree = [], allArticles = [], allScripts = []) {
@@ -510,15 +477,14 @@ export function renderSidebar(articleCounts, sqlCounts, activeFilter = 'all', ac
   const user = getCurrentUser();
   const userId = user?.uid || user?.id;
   
-  const closeSidebarMobile = "if(window.innerWidth < 1024) { document.getElementById('sidebar').classList.add('-translate-x-full'); document.getElementById('sidebar-overlay').classList.add('hidden'); }";
+  const closeSidebarMobile = "if(window.innerWidth < 1024) { document.getElementById('sidebar').classList.add('-translate-x-full'); }";
   
-  let html = `<div class="mb-2 px-2 pt-1"><span class="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Visão Geral</span></div>`;
-  html += `<button onclick="window.__kcs.switchToDashboard(); ${closeSidebarMobile}" class="sidebar-item w-full flex items-center gap-3 px-4 py-2.5 sm:py-2 rounded-lg text-sm transition-colors ${activeView === 'dashboard' ? 'bg-indigo-50 dark:bg-indigo-600/20 text-indigo-600 dark:text-indigo-400' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-white'}"><i class="ph ph-chart-pie-slice text-[18px]"></i><span class="text-xs">Dashboard</span></button>`;
-  html += `<button onclick="window.__kcs.startTour(); ${closeSidebarMobile}" class="sidebar-item w-full flex items-center gap-3 px-4 py-2.5 sm:py-2 rounded-lg text-sm transition-colors text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-white mt-1"><i class="ph ph-rocket text-[18px] text-purple-500 dark:text-purple-400"></i><span class="text-xs font-semibold">Rever Tour</span></button>`;
+  let html = `<div class="sidebar-section-title"><span>Visão Geral</span></div>`;
+  html += `<button onclick="window.__kcs.switchToDashboard(); ${closeSidebarMobile}" class="sidebar-item ${activeView === 'dashboard' ? 'active' : ''}"><i class="ph ph-chart-pie-slice"></i><span>Dashboard</span></button>`;
+  html += `<button onclick="window.__kcs.startTour(); ${closeSidebarMobile}" class="sidebar-item"><i class="ph ph-rocket icon-highlight"></i><span>Rever Tour</span></button>`;
   
-  // 1. TOUR WRAPPER: BASE DE CONHECIMENTO
   html += `<div id="tour-base-conhecimento">`;
-  html += `<div class="mt-4 mb-2 px-2 pt-1"><span class="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Base de Conhecimento</span></div>`;
+  html += `<div class="sidebar-section-title"><span>Base de Conhecimento</span></div>`;
   
   const articleItems = [
       { key: 'all', label: 'Todos os Artigos', icon: 'ph-books', count: articleCounts.total },
@@ -534,23 +500,20 @@ export function renderSidebar(articleCounts, sqlCounts, activeFilter = 'all', ac
       { key: ARTICLE_STATUS.APPROVED, label: 'Publicados', icon: 'ph-seal-check', count: articleCounts.approved || 0 }
   );
 
-  html += articleItems.map((item) => `<button onclick="window.__kcs.filterByStatus('${item.key}'); ${closeSidebarMobile}" class="sidebar-item w-full flex items-center gap-3 px-4 py-2.5 sm:py-2 rounded-lg text-sm transition-colors mt-1 ${activeView === 'articles' && activeFilter === item.key ? 'bg-blue-50 dark:bg-blue-600/20 text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-white'}"><i class="ph ${item.icon} text-[18px]"></i><span class="flex-1 text-left text-xs">${item.label}</span><span class="text-[10px] bg-gray-200 dark:bg-gray-700/60 text-gray-700 dark:text-white px-1.5 py-0.5 rounded-full">${item.count}</span></button>`).join('');
+  html += articleItems.map((item) => `<button onclick="window.__kcs.filterByStatus('${item.key}'); ${closeSidebarMobile}" class="sidebar-item ${activeView === 'articles' && activeFilter === item.key ? 'active' : ''}"><i class="ph ${item.icon}"></i><span class="sidebar-item-label">${item.label}</span><span class="count-badge">${item.count}</span></button>`).join('');
   html += `</div>`;
 
-  // 2. TOUR WRAPPER: CATEGORIAS (Adicionado id="tour-categorias")
   if (categoryTree.length > 0 || hasRole('super_admin')) {
-      html += `<div id="tour-categorias" class="mt-4 pt-3 border-t border-border-subtle"><div class="flex items-center justify-between px-2 mb-1"><span class="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Categorias</span>${hasRole('super_admin') ? `<button onclick="window.__kcs.openCategoryManager(); ${closeSidebarMobile}" class="text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors touch-target" title="Gerenciar Categorias"><i class="ph ph-gear text-[16px]"></i></button>` : ''}</div><div class="space-y-1">`;
+      html += `<div id="tour-categorias" class="sidebar-separator"><div class="sidebar-section-title sidebar-title-flex"><span>Categorias</span>${hasRole('super_admin') ? `<button onclick="window.__kcs.openCategoryManager(); ${closeSidebarMobile}" class="btn-sidebar-action" title="Gerenciar Categorias"><i class="ph ph-gear"></i></button>` : ''}</div><div class="tree-container">`;
       if (categoryTree.length > 0) {
           html += renderCategoryTree(categoryTree, activeFilter, 0, allArticles, closeSidebarMobile);
       } else {
-          html += `<div class="px-2 py-1 text-[10px] text-gray-400 dark:text-gray-500 italic">Nenhuma categoria cadastrada.</div>`;
+          html += `<div class="tree-empty-state">Nenhuma categoria cadastrada.</div>`;
       }
       html += `</div></div>`;
   }
-
-  // 3. TOUR WRAPPER: BIBLIOTECA SQL (Adicionado id="tour-sql")
   if (hasPermission('manage_sql') || !canEdit) {
-    html += `<div id="tour-sql" class="mt-4 pt-3 border-t border-border-subtle"><div class="px-2 mb-1"><span class="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Biblioteca SQL</span></div>`;
+    html += `<div id="tour-sql" class="sidebar-separator"><div class="sidebar-section-title"><span>Biblioteca SQL</span></div>`;
     
     const sqlItems = [
       { key: 'all', label: 'Todos os Scripts', icon: 'ph-folders', count: sqlCounts.total || 0 },
@@ -561,10 +524,10 @@ export function renderSidebar(articleCounts, sqlCounts, activeFilter = 'all', ac
     ];
 
     html += sqlItems.map((item) => `
-      <button onclick="window.__kcs.filterSqlByStatus('${item.key}'); ${closeSidebarMobile}" class="sidebar-item w-full flex items-center gap-3 px-4 py-2.5 sm:py-2 rounded-lg text-sm transition-colors mt-1 ${activeView === 'sql' && activeSqlFilter === item.key ? 'bg-purple-50 dark:bg-purple-600/20 text-purple-600 dark:text-purple-400' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-white'}">
-        <i class="ph ${item.icon} text-[18px]"></i>
-        <span class="flex-1 text-left text-xs">${item.label}</span>
-        <span class="text-[10px] bg-gray-200 dark:bg-gray-700/60 text-gray-700 dark:text-white px-1.5 py-0.5 rounded-full">${item.count}</span>
+      <button onclick="window.__kcs.filterSqlByStatus('${item.key}'); ${closeSidebarMobile}" class="sidebar-item ${activeView === 'sql' && activeSqlFilter === item.key ? 'active sql-active' : ''}">
+        <i class="ph ${item.icon}"></i>
+        <span class="sidebar-item-label">${item.label}</span>
+        <span class="count-badge">${item.count}</span>
       </button>
     `).join('');
 
@@ -584,9 +547,9 @@ function renderCategoryTree(nodes, activeFilter, depth = 0, allArticles = [], cl
     let html = '';
 
     const articlesHtml = nodeArticles.map(a => `
-        <div onclick="window.__kcs.viewArticle('${a.id}'); ${closeScript}" class="flex items-center gap-2 py-2 px-2 rounded-lg text-xs cursor-pointer transition-colors text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 ml-4 group">
-            <i class="ph ph-file-text text-[18px] text-gray-400 dark:text-gray-500 group-hover:text-blue-500 dark:group-hover:text-blue-400 transition-colors"></i>
-            <span class="flex-1 text-left truncate" title="${escapeHtml(a.title)}">${a.articleNumber ? `<span class="text-gray-400 dark:text-gray-500 mr-1">#${a.articleNumber}</span>` : ''}${escapeHtml(a.title)}</span>
+        <div onclick="window.__kcs.viewArticle('${a.id}'); ${closeScript}" class="tree-article">
+            <i class="ph ph-file-text"></i>
+            <span class="tree-article-title" title="${escapeHtml(a.title)}">${a.articleNumber ? `<span class="tree-article-id">#${a.articleNumber}</span> ` : ''}${escapeHtml(a.title)}</span>
         </div>
     `).join('');
 
@@ -594,13 +557,13 @@ function renderCategoryTree(nodes, activeFilter, depth = 0, allArticles = [], cl
 
     if (hasChildren || hasArticles) {
         html += `
-            <details class="group mb-1" style="margin-left: ${paddingLeft}px;">
-                <summary class="flex items-center gap-2 py-2.5 sm:py-2 px-2 rounded-lg text-sm cursor-pointer list-none transition-colors text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-white select-none">
+            <details class="tree-details" style="margin-left: ${paddingLeft}px;">
+                <summary class="tree-summary">
                     ${getIconHtml(node.icon, true)}
-                    <span class="flex-1 text-xs font-medium">${escapeHtml(node.name)}</span>
-                    <span class="transform transition-transform group-open:rotate-90 text-xs text-gray-400 dark:text-gray-500 p-1">▶</span>
+                    <span class="tree-summary-title">${escapeHtml(node.name)}</span>
+                    <span class="tree-indicator">▶</span>
                 </summary>
-                <div class="mt-1 border-l border-border-subtle ml-3 pl-1">
+                <div class="tree-children">
                     ${childrenHtml}
                     ${articlesHtml}
                 </div>
@@ -608,9 +571,9 @@ function renderCategoryTree(nodes, activeFilter, depth = 0, allArticles = [], cl
         `;
     } else if (depth === 0) {
          html += `
-            <div class="flex items-center gap-2 py-2 px-2 rounded-lg text-sm transition-colors text-gray-400 dark:text-gray-500 mb-1 select-none">
+            <div class="tree-empty">
                 ${getIconHtml(node.icon, false)}
-                <span class="flex-1 text-xs font-medium">${escapeHtml(node.name)} (Vazia)</span>
+                <span class="tree-empty-title">${escapeHtml(node.name)} (Vazia)</span>
             </div>
         `;
     }
@@ -619,33 +582,25 @@ function renderCategoryTree(nodes, activeFilter, depth = 0, allArticles = [], cl
   }).join('');
 }
 
-// ==========================================
-// FUNÇÃO AUXILIAR: COPIAR TABELAS PARA O EXCEL/SLACK
-// ==========================================
 window.copyTableToClipboard = function(tableId, btnElement) {
     const table = document.getElementById(tableId);
     if (!table) return;
 
     let text = '';
-    // Lê as linhas da tabela
     for (let i = 0; i < table.rows.length; i++) {
         let row = [];
         for (let j = 0; j < table.rows[i].cells.length; j++) {
             const cellText = table.rows[i].cells[j].innerText.trim();
-            // Ignora colunas de botões (Ação) para o texto copiado ficar limpo
             if (cellText.toLowerCase() !== 'ação' && cellText.toLowerCase() !== 'revisar') {
-                // Substitui quebras de linha por espaço para não quebrar a linha do Excel
                 row.push(cellText.replace(/\n/g, ' '));
             }
         }
-        // Junta as colunas com "Tab" (\t) e as linhas com "Enter" (\n)
         text += row.join('\t') + '\n';
     }
 
     navigator.clipboard.writeText(text).then(() => {
-        // Feedback visual no botão
         const originalHtml = btnElement.innerHTML;
-        btnElement.innerHTML = '<i class="ph-fill ph-check-circle text-green-500"></i>';
+        btnElement.innerHTML = '<i class="ph ph-check-circle copy-success"></i>';
         if (window.__kcs && window.__kcs.showToast) {
             window.__kcs.showToast('Dados copiados para a área de transferência!', 'success');
         }
@@ -655,54 +610,102 @@ window.copyTableToClipboard = function(tableId, btnElement) {
     });
 };
 
-// ==========================================
-// RENDERIZAÇÃO DO DASHBOARD KCS
-// ==========================================
 export function renderDashboard(articles, scripts, topAnalysts = [], topCollaborators = []) {
     const container = document.getElementById('dashboard-container');
     if (!container) return;
 
-    // 1. DADOS BÁSICOS E KPIS
+    const now = new Date();
+    const msPerDay = 1000 * 60 * 60 * 24;
+
+    // ==========================================
+    // 1. CÁLCULOS DOS KPIs PRINCIPAIS E SAÚDE
+    // ==========================================
     const validArticles = articles.filter(a => a.status === 'approved' || (typeof ARTICLE_STATUS !== 'undefined' && a.status === ARTICLE_STATUS.APPROVED));
     const totalViews = articles.reduce((acc, a) => acc + (a.views || 0), 0);
 
+    // Taxa de Aprovação
+    const approvalRate = articles.length > 0 ? Math.round((validArticles.length / articles.length) * 100) : 0;
+
+    // Tempo Médio de Revisão (Aprovados que possuem data de criação e atualização distintas)
+    let totalReviewTime = 0;
+    let reviewedCount = 0;
+    validArticles.forEach(a => {
+        if (a.createdAt && a.updatedAt && a.createdAt !== a.updatedAt) {
+            totalReviewTime += (new Date(a.updatedAt) - new Date(a.createdAt)) / msPerDay;
+            reviewedCount++;
+        }
+    });
+    const avgReviewDays = reviewedCount > 0 ? Math.round(totalReviewTime / reviewedCount) : 0;
+
+    // Artigos Desatualizados (> 90 dias sem atualização)
+    const outdatedCount = validArticles.filter(a => {
+        const age = (now - new Date(a.updatedAt || a.createdAt || now)) / msPerDay;
+        return age > 90;
+    }).length;
+
+    // Nunca Revisados (Aprovados sem registro de autoridade revisora)
+    const neverReviewedCount = articles.filter(a => a.status === 'approved' && !a.approvedBy && !a.reviewedBy && !a.validatedBy).length;
+
     const hasReport = (a) => {
-        return (a.reportCount || 0) > 0 || 
-               (a.reports && a.reports.length > 0) || 
-               a.flagged === true || 
-               a.status === 'review' || 
-               a.status === 'pendente_revisao';
+        return (a.reportCount || 0) > 0 || (a.reports && a.reports.length > 0) || a.flagged === true || a.status === 'review' || a.status === 'pendente_revisao';
     };
 
-    // 2. INTELIGÊNCIA: Alerta de Qualidade
     const qualityAlertArticles = articles.filter(a => {
         const score = (a.useful || (a.likes || []).length || 0) - (a.notUseful || 0);
         return score < 0 || hasReport(a);
     });
 
-    // 3. INTELIGÊNCIA: Fila de Revisão Urgente
-    const now = new Date();
+    // ==========================================
+    // 2. CÁLCULOS DE QUALIDADE DA BASE
+    // ==========================================
+    const noCategoryCount = articles.filter(a => !a.categoryId && !a.category || a.category === 'Sem categoria').length;
+    const lowAccessCount = validArticles.filter(a => (a.views || 0) < 10).length;
+    
+    // Detector de Duplicatas (Títulos idênticos)
+    const titleCounts = {};
+    articles.forEach(a => {
+        if (!a.title) return;
+        const t = a.title.trim().toLowerCase();
+        titleCounts[t] = (titleCounts[t] || 0) + 1;
+    });
+    const duplicateCount = articles.filter(a => a.title && titleCounts[a.title.trim().toLowerCase()] > 1).length;
+
+    // ==========================================
+    // 3. FILA DE REVISÃO CRÍTICA (Com Scoring)
+    // ==========================================
     const urgentArticles = articles.filter(a => {
         const isDraft = a.status === 'draft' || (typeof ARTICLE_STATUS !== 'undefined' && a.status === ARTICLE_STATUS.DRAFT);
         const isApproved = a.status === 'approved' || (typeof ARTICLE_STATUS !== 'undefined' && a.status === ARTICLE_STATUS.APPROVED);
         
-        const lastUpdate = new Date(a.updatedAt || a.createdAt || Date.now());
-        const daysOld = (now - lastUpdate) / (1000 * 60 * 60 * 24);
-        
+        const ageDays = Math.floor((now - new Date(a.updatedAt || a.createdAt || now)) / msPerDay);
         const isReported = hasReport(a);
         const isHighViewDraft = isDraft && (a.views || 0) > 5;
-        const isStagnantDraft = isDraft && daysOld > 3;  
-        const isStale = isApproved && daysOld > 6; 
+        const isStagnantDraft = isDraft && ageDays > 3;  
+        const isStale = isApproved && ageDays > 6; 
         
-        if (isReported) a._alertReason = 'Reporte de Erro';
-        else if (isStagnantDraft) a._alertReason = 'Rascunho (> 3 dias)';
-        else if (isHighViewDraft) a._alertReason = 'Alto Acesso (>5)';
-        else if (isStale) a._alertReason = 'Revisão Vencida (> 6 dias)';
-        
-        return isReported || isHighViewDraft || isStagnantDraft || isStale;
-    }).sort((a, b) => (b.views || 0) - (a.views || 0)).slice(0, 5);
+        if (!isReported && !isHighViewDraft && !isStagnantDraft && !isStale) return false;
 
-    // 4. RANKINGS (Fallback Inteligente)
+        a._ageDays = ageDays;
+        let score = 0;
+
+        // Atribuição de Prioridade e Peso Crítico
+        if (isReported) { 
+            a._alertReason = 'Reporte de Erro'; a._priority = 'Alta'; score += 100; 
+        } else if (isHighViewDraft) { 
+            a._alertReason = 'Alto Acesso (>5)'; a._priority = 'Alta'; score += 80; 
+        } else if (isStale) { 
+            a._alertReason = 'Revisão Vencida (> 6d)'; a._priority = 'Média'; score += 50 + ageDays; 
+        } else if (isStagnantDraft) { 
+            a._alertReason = 'Rascunho Parado (> 3d)'; a._priority = 'Baixa'; score += 20 + ageDays; 
+        }
+        
+        a._criticalityScore = score;
+        return true;
+    }).sort((a, b) => b._criticalityScore - a._criticalityScore).slice(0, 8); // Top 8 mais críticos
+
+    // ==========================================
+    // 4. RANKINGS GERAIS
+    // ==========================================
     let finalAnalysts = topAnalysts;
     let finalCollaborators = topCollaborators;
 
@@ -711,14 +714,12 @@ export function renderDashboard(articles, scripts, topAnalysts = [], topCollabor
         articles.forEach(a => {
             const author = a.createdBy || 'Sistema';
             if (!authorStats[author]) authorStats[author] = { name: author, approved: 0, drafts: 0 };
-            
             if (a.status === 'approved' || (typeof ARTICLE_STATUS !== 'undefined' && a.status === ARTICLE_STATUS.APPROVED)) {
                 authorStats[author].approved++;
             } else {
                 authorStats[author].drafts++;
             }
         });
-        
         finalAnalysts = Object.values(authorStats).sort((a, b) => b.approved - a.approved).slice(0, 5);
         finalCollaborators = Object.values(authorStats).sort((a, b) => b.drafts - a.drafts).slice(0, 5);
     }
@@ -726,217 +727,261 @@ export function renderDashboard(articles, scripts, topAnalysts = [], topCollabor
     const sortedByViews = [...articles].sort((a, b) => (b.views || 0) - (a.views || 0)).slice(0, 5);
     const topScripts = [...scripts].sort((a, b) => (b.likes || []).length - (a.likes || []).length).slice(0, 5);
 
-    // 5. RENDERIZAÇÃO DA UI
+    // ==========================================
+    // 5. INJEÇÃO DO DOM
+    // ==========================================
     container.innerHTML = `
-        <h2 class="text-xl sm:text-2xl font-bold text-text-primary mb-4 flex items-center gap-2">
-            <i class="ph-fill ph-chart-line-up text-blue-500"></i> Dashboard de Governança
+        <h2 class="dash-title">
+            <i class="ph ph-chart-line-up dash-icon-main"></i> Dashboard de Governança
         </h2>
         
-        <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5 mb-6">
-            <div class="bg-surface border border-border-subtle rounded-2xl p-5 shadow-card hover:shadow-md hover:-translate-y-1 transition-all duration-300 cursor-default group">
-                <p class="text-[11px] text-text-muted uppercase font-bold tracking-wider flex items-center gap-2 mb-2"><i class="ph ph-file-text text-gray-400 group-hover:text-blue-500 transition-colors text-lg"></i>Procedimentos</p>
-                <p class="text-4xl font-extrabold text-text-primary">${articles.length}</p>
+        <div class="dash-metrics">
+            <div class="metric-card">
+                <p class="metric-label"><i class="ph ph-file-text"></i>Procedimentos</p>
+                <p class="metric-value">${articles.length}</p>
             </div>
-            <div class="bg-surface border border-border-subtle rounded-2xl p-5 shadow-card hover:shadow-md hover:-translate-y-1 transition-all duration-300 cursor-default group">
-                <p class="text-[11px] text-text-muted uppercase font-bold tracking-wider flex items-center gap-2 mb-2"><i class="ph ph-check-circle text-gray-400 group-hover:text-blue-500 transition-colors text-lg"></i>KCS Aprovados</p>
-                <p class="text-4xl font-extrabold text-blue-600 dark:text-blue-400">${validArticles.length}</p>
+            <div class="metric-card">
+                <p class="metric-label"><i class="ph ph-check-circle"></i>Aprovados</p>
+                <p class="metric-value value-approved">${validArticles.length}</p>
             </div>
-            <div class="bg-surface border border-border-subtle rounded-2xl p-5 shadow-card hover:shadow-md hover:-translate-y-1 transition-all duration-300 cursor-default group">
-                <p class="text-[11px] text-text-muted uppercase font-bold tracking-wider flex items-center gap-2 mb-2"><i class="ph ph-eye text-gray-400 group-hover:text-green-500 transition-colors text-lg"></i>Total de Acessos</p>
-                <p class="text-4xl font-extrabold text-green-600 dark:text-green-400">${totalViews}</p>
+            <div class="metric-card">
+                <p class="metric-label"><i class="ph ph-percent"></i>Taxa de Aprovação</p>
+                <p class="metric-value value-views">${approvalRate}%</p>
             </div>
-            <div class="bg-surface border border-red-500/30 dark:border-red-500/20 rounded-2xl p-5 shadow-card hover:shadow-md hover:-translate-y-1 transition-all duration-300 cursor-default relative overflow-hidden group">
-                <div class="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-red-500 to-orange-500 opacity-80"></div>
-                <p class="text-[11px] text-red-600 dark:text-red-400 font-bold uppercase tracking-wider flex items-center gap-2 mb-2"><i class="ph-fill ph-warning-octagon text-lg group-hover:scale-110 transition-transform"></i>Alerta de Qualidade</p>
-                <p class="text-4xl font-extrabold text-red-600 dark:text-red-400">${qualityAlertArticles.length}</p>
+            <div class="metric-card">
+                <p class="metric-label"><i class="ph ph-clock"></i>Tempo Méd. Revisão</p>
+                <p class="metric-value">${avgReviewDays}d</p>
             </div>
-        </div>
-
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-            <div class="bg-surface border border-border-strong rounded-2xl p-5 shadow-card transition-all">
-                <h3 class="text-sm font-bold text-purple-600 dark:text-purple-400 uppercase tracking-wider mb-4 border-b border-border-subtle pb-3 flex items-center gap-2">
-                    <i class="ph-fill ph-medal text-[18px]"></i> Top Analistas (Curadoria)
-                </h3>
-                <div class="table-responsive custom-scrollbar">
-                    <table class="w-full text-left border-collapse whitespace-nowrap">
-                        <tbody class="divide-y divide-border-subtle text-sm">
-                            ${finalAnalysts.filter(a => (a.articlesApproved || a.approved || 0) > 0).map((u, i) => `
-                                <tr class="hover:bg-bg-canvas transition-colors group">
-                                    <td class="px-4 py-3 flex items-center gap-3">
-                                        <div class="w-6 text-center font-bold text-text-muted">#${i + 1}</div>
-                                        <div class="w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 flex items-center justify-center font-bold text-xs border border-purple-200 dark:border-purple-800/50">${(u.displayName || u.name || '?').charAt(0).toUpperCase()}</div>
-                                        <p class="font-bold text-text-primary">${escapeHtml(formatFullName(u.displayName || u.name))}</p>
-                                    </td>
-                                    <td class="px-4 py-3 text-right">
-                                        <span class="bg-purple-100 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 text-xs px-2 py-1 rounded font-bold">${u.articlesApproved || u.approved || 0}</span>
-                                    </td>
-                                </tr>
-                            `).join('') || '<tr><td colspan="2" class="p-4 text-xs text-text-muted text-center italic">Nenhuma aprovação registrada.</td></tr>'}
-                        </tbody>
-                    </table>
-                </div>
+            
+            <div class="metric-card">
+                <p class="metric-label"><i class="ph ph-eye"></i>Total de Acessos</p>
+                <p class="metric-value value-views">${totalViews}</p>
             </div>
-
-            <div class="bg-surface border border-border-strong rounded-2xl p-5 shadow-card transition-all">
-                <h3 class="text-sm font-bold text-green-600 dark:text-green-400 uppercase tracking-wider mb-4 border-b border-border-subtle pb-3 flex items-center gap-2">
-                    <i class="ph-fill ph-hand-heart text-[18px]"></i> Top Colaboradores (Envios)
-                </h3>
-                <div class="table-responsive custom-scrollbar">
-                    <table class="w-full text-left border-collapse whitespace-nowrap">
-                        <tbody class="divide-y divide-border-subtle text-sm">
-                            ${finalCollaborators.filter(c => (c.draftsSubmitted || c.drafts || 0) > 0).map((u, i) => `
-                                <tr class="hover:bg-bg-canvas transition-colors group">
-                                    <td class="px-4 py-3 flex items-center gap-3">
-                                        <div class="w-6 text-center font-bold text-text-muted">#${i + 1}</div>
-                                        <div class="w-8 h-8 rounded-full bg-green-100 dark:bg-green-900/20 text-green-600 dark:text-green-400 flex items-center justify-center font-bold text-xs border border-green-200 dark:border-green-800/50">${(u.displayName || u.name || '?').charAt(0).toUpperCase()}</div>
-                                        <p class="font-bold text-text-primary">${escapeHtml(formatFullName(u.displayName || u.name))}</p>
-                                    </td>
-                                    <td class="px-4 py-3 text-right">
-                                        <span class="bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-400 text-xs px-2 py-1 rounded font-bold">${u.draftsSubmitted || u.drafts || 0}</span>
-                                    </td>
-                                </tr>
-                            `).join('') || '<tr><td colspan="2" class="p-4 text-xs text-text-muted text-center italic">Nenhum envio registrado.</td></tr>'}
-                        </tbody>
-                    </table>
-                </div>
+            <div class="metric-card">
+                <p class="metric-label"><i class="ph ph-calendar-blank"></i>Desatualizados (>90d)</p>
+                <p class="metric-value ${outdatedCount > 0 ? 'value-alert' : ''}">${outdatedCount}</p>
+            </div>
+            <div class="metric-card">
+                <p class="metric-label"><i class="ph ph-shield-warning"></i>Nunca Revisados</p>
+                <p class="metric-value ${neverReviewedCount > 0 ? 'value-alert' : ''}">${neverReviewedCount}</p>
+            </div>
+            <div class="metric-card alert-metric">
+                <p class="metric-label label-alert"><i class="ph ph-warning-octagon"></i>Alerta Qualidade</p>
+                <p class="metric-value value-alert">${qualityAlertArticles.length}</p>
             </div>
         </div>
 
-        <div class="bg-surface border border-border-strong rounded-2xl p-5 shadow-card mb-6 transition-all relative overflow-hidden">
-            <div class="absolute top-0 left-0 w-1 h-full bg-red-500"></div>
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between border-b border-border-subtle pb-4 mb-4 gap-3">
-                <div class="flex items-center gap-3">
-                    <h3 class="text-sm font-bold text-text-primary uppercase tracking-wider flex items-center gap-2">
-                        <i class="ph-fill ph-siren text-[18px] text-red-500"></i> Fila de Revisão Crítica
+        <h2 class="dash-title" style="margin-top: 2rem;">
+            <i class="ph ph-heartbeat dash-icon-main"></i> Qualidade da Base
+        </h2>
+
+        <div class="dash-metrics">
+            <div class="metric-card">
+                <p class="metric-label"><i class="ph ph-folder-notch-minus"></i>Sem Categoria</p>
+                <p class="metric-value ${noCategoryCount > 0 ? 'value-alert' : ''}">${noCategoryCount}</p>
+            </div>
+            <div class="metric-card">
+                <p class="metric-label"><i class="ph ph-copy"></i>Duplicados (Nomes)</p>
+                <p class="metric-value ${duplicateCount > 0 ? 'value-alert' : ''}">${duplicateCount}</p>
+            </div>
+            <div class="metric-card">
+                <p class="metric-label"><i class="ph ph-trend-down"></i>Baixo Acesso (< 10)</p>
+                <p class="metric-value">${lowAccessCount}</p>
+            </div>
+            <div class="metric-card">
+                <p class="metric-label"><i class="ph ph-user-minus"></i>Pendentes/Drafts</p>
+                <p class="metric-value">${articles.length - validArticles.length}</p>
+            </div>
+        </div>
+
+        <div class="dash-widget widget-urgent mt-6">
+            <div class="widget-header-row">
+                <div class="widget-title-group">
+                    <h3 class="widget-header header-red">
+                        <i class="ph ph-siren"></i> Fila de Revisão Crítica
                     </h3>
-                    <button onclick="window.copyTableToClipboard('dash-table-urgents', this)" class="text-text-muted hover:text-blue-500 transition-colors px-2 py-1 rounded bg-bg-canvas border border-border-strong shadow-sm touch-target" title="Copiar Tabela">
-                        <i class="ph ph-copy text-[16px] align-middle"></i>
+                    <button onclick="window.copyTableToClipboard('dash-table-urgents', this)" class="copy-btn" title="Copiar Tabela">
+                        <i class="ph ph-copy"></i>
                     </button>
                 </div>
-                <div class="flex items-center gap-1.5 text-[10px] text-text-secondary font-medium bg-bg-canvas px-3 py-2 rounded-lg border border-border-strong">
-                    <i class="ph-fill ph-info text-blue-500"></i>
-                    <span><strong>Gatilhos:</strong> Reporte, Rascunho Parado, Acessos Elevados ou Obsoleto</span>
+                <div class="info-box hidden sm:flex">
+                    <i class="ph ph-info"></i>
+                    <span><strong>Ordenado por Criticidade:</strong> Reportes e Idade do rascunho elevam a prioridade.</span>
                 </div>
             </div>
 
-            <div class="table-responsive custom-scrollbar">
-                <table id="dash-table-urgents" class="w-full text-left border-collapse whitespace-nowrap">
+            <div class="table-wrapper">
+                <table id="dash-table-urgents" class="table-default">
                     <thead>
-                        <tr class="bg-bg-canvas/50 border-b border-border-subtle text-[10px] uppercase tracking-wider text-text-muted">
-                            <th class="py-3 px-4 font-bold">KCS ID</th>
-                            <th class="py-3 px-4 font-bold">Título do Procedimento</th>
-                            <th class="py-3 px-4 font-bold text-center">Acessos</th>
-                            <th class="py-3 px-4 font-bold">Gatilho</th>
-                            <th class="py-3 px-4 font-bold text-right">Ação</th>
+                        <tr>
+                            <th>KCS ID</th>
+                            <th>Título do Procedimento</th>
+                            <th class="col-center">Idade</th>
+                            <th class="col-center">Prioridade</th>
+                            <th>Gatilho</th>
+                            <th class="col-right">Ação</th>
                         </tr>
                     </thead>
-                    <tbody class="text-sm divide-y divide-border-subtle">
+                    <tbody>
                         ${urgentArticles.map(art => `
-                            <tr class="hover:bg-bg-canvas transition-colors group cursor-pointer" onclick="window.__kcs.viewArticle('${art.id}')">
-                                <td class="py-3 px-4 font-mono text-blue-600 dark:text-blue-400 font-bold text-xs">#${art.articleNumber || '---'}</td>
-                                <td class="py-3 px-4 font-medium text-text-primary max-w-[250px] truncate" title="${escapeHtml(art.title)}">${escapeHtml(art.title)}</td>
-                                <td class="py-3 px-4 text-center text-text-secondary"><i class="ph ph-eye mr-1"></i>${art.views || 0}</td>
-                                <td class="py-3 px-4">
-                                    <span class="inline-flex items-center gap-1 bg-red-50 dark:bg-red-900/10 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-900/30 text-[10px] px-2 py-1 rounded font-bold uppercase tracking-tight">
-                                        <i class="ph-fill ph-warning-circle"></i> ${escapeHtml(art._alertReason)}
+                            <tr class="table-row" onclick="window.__kcs.viewArticle('${art.id}')">
+                                <td class="id-cell">#${art.articleNumber || '---'}</td>
+                                <td class="title-cell-truncate" title="${escapeHtml(art.title)}">${escapeHtml(art.title)}</td>
+                                <td class="col-center stat-muted"><i class="ph ph-clock"></i> ${art._ageDays}d</td>
+                                <td class="col-center">
+                                    <span class="${art._priority === 'Alta' ? 'badge-alert' : art._priority === 'Média' ? 'badge-purple' : 'badge-green'}">${art._priority}</span>
+                                </td>
+                                <td>
+                                    <span class="badge-alert">
+                                        <i class="ph ph-warning-circle"></i> ${escapeHtml(art._alertReason)}
                                     </span>
                                 </td>
-                                <td class="py-3 px-4 text-right">
-                                    <button class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-xs font-bold px-3 py-1.5 bg-blue-50 dark:bg-blue-900/20 rounded-lg transition-colors opacity-100 lg:opacity-0 lg:group-hover:opacity-100">
+                                <td class="col-right">
+                                    <button class="btn-review">
                                         Revisar
                                     </button>
                                 </td>
                             </tr>
-                        `).join('') || '<tr><td colspan="5" class="py-6 text-center text-sm font-medium text-green-600"><i class="ph-fill ph-check-circle text-xl align-middle mr-1"></i> Nenhum alerta crítico.</td></tr>'}
+                        `).join('') || '<tr><td colspan="6" class="empty-cell-success"><i class="ph ph-check-circle"></i> Nenhum alerta crítico ativo na base.</td></tr>'}
                     </tbody>
                 </table>
             </div>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div class="bg-surface border border-border-strong rounded-2xl p-5 shadow-card transition-all">
-                <div class="flex items-center gap-3 border-b border-border-subtle pb-3 mb-4">
-                    <h3 class="text-sm font-bold text-text-primary flex items-center gap-2 uppercase tracking-wider">
-                        <i class="ph-bold ph-trend-up text-blue-500"></i> Top Acessados
-                    </h3>
-                    <button onclick="window.copyTableToClipboard('dash-table-views', this)" class="text-text-muted hover:text-blue-500 transition-colors px-2 py-1 rounded bg-bg-canvas border border-border-strong shadow-sm touch-target" title="Copiar Tabela">
-                        <i class="ph ph-copy text-[16px] align-middle"></i>
-                    </button>
-                </div>
-                
-                <div class="table-responsive custom-scrollbar">
-                    <table id="dash-table-views" class="w-full text-left border-collapse whitespace-nowrap">
-                        <thead>
-                            <tr class="bg-bg-canvas/50 border-b border-border-subtle text-[10px] uppercase tracking-wider text-text-muted">
-                                <th class="py-3 px-4 font-bold">Título</th>
-                                <th class="py-3 px-4 font-bold">Autor</th>
-                                <th class="py-3 px-4 font-bold text-right">Views</th>
-                            </tr>
-                        </thead>
-                        <tbody class="text-sm divide-y divide-border-subtle">
-                            ${sortedByViews.filter(a => (a.views || 0) > 0).map((a, i) => {
-                                const authorName = formatFullName(a.createdBy);
-                                return `
-                                <tr class="hover:bg-bg-canvas transition-colors group cursor-pointer" onclick="window.__kcs.viewArticle('${a.id}')">
-                                    <td class="py-3 px-4 font-medium text-text-primary max-w-[200px] truncate" title="${escapeHtml(a.title)}">
-                                        <span class="text-text-muted mr-1 font-mono text-[10px]">${i+1}.</span>
-                                        <span class="text-xs">${escapeHtml(a.title)}</span>
+        <div class="dash-tables-row mt-6">
+            <div class="dash-widget">
+                <h3 class="widget-header header-purple">
+                    <i class="ph ph-medal"></i> Top Analistas (Curadoria)
+                </h3>
+                <div class="table-wrapper">
+                    <table class="table-default">
+                        <tbody>
+                            ${finalAnalysts.filter(a => (a.articlesApproved || a.approved || 0) > 0).map((u, i) => `
+                                <tr class="table-row">
+                                    <td class="user-cell">
+                                        <div class="rank-number">#${i + 1}</div>
+                                        <div class="avatar-mini">${(u.displayName || u.name || '?').charAt(0).toUpperCase()}</div>
+                                        <p class="user-name">${escapeHtml(formatFullName(u.displayName || u.name))}</p>
                                     </td>
-                                    <td class="py-3 px-4">
-                                        <div class="flex items-center gap-1.5">
-                                            <div class="w-5 h-5 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-[9px] font-bold text-text-secondary">${authorName.charAt(0).toUpperCase()}</div>
-                                            <span class="text-[11px] text-text-secondary font-medium">${escapeHtml(authorName)}</span>
-                                        </div>
+                                    <td class="stat-cell">
+                                        <span class="badge-purple">${u.articlesApproved || u.approved || 0}</span>
                                     </td>
-                                    <td class="py-3 px-4 text-right">
-                                        <span class="bg-bg-canvas border border-border-strong text-text-secondary text-[10px] px-2 py-1 rounded font-bold">${a.views}</span>
-                                    </td>
-                                </tr>`;
-                            }).join('') || '<tr><td colspan="3" class="py-4 text-xs text-text-muted text-center">Nenhum dado.</td></tr>'}
+                                </tr>
+                            `).join('') || '<tr><td colspan="2" class="empty-cell">Nenhuma aprovação registrada.</td></tr>'}
                         </tbody>
                     </table>
                 </div>
             </div>
 
-            <div class="bg-surface border border-border-strong rounded-2xl p-5 shadow-card transition-all">
-                <div class="flex items-center gap-3 border-b border-border-subtle pb-3 mb-4">
-                    <h3 class="text-sm font-bold text-text-primary flex items-center gap-2 uppercase tracking-wider">
-                        <i class="ph-bold ph-database text-purple-500"></i> Scripts Úteis
+            <div class="dash-widget">
+                <h3 class="widget-header header-green">
+                    <i class="ph ph-hand-heart"></i> Top Colaboradores (Envios)
+                </h3>
+                <div class="table-wrapper">
+                    <table class="table-default">
+                        <tbody>
+                            ${finalCollaborators.filter(c => (c.draftsSubmitted || c.drafts || 0) > 0).map((u, i) => `
+                                <tr class="table-row">
+                                    <td class="user-cell">
+                                        <div class="rank-number">#${i + 1}</div>
+                                        <div class="avatar-mini">${(u.displayName || u.name || '?').charAt(0).toUpperCase()}</div>
+                                        <p class="user-name">${escapeHtml(formatFullName(u.displayName || u.name))}</p>
+                                    </td>
+                                    <td class="stat-cell">
+                                        <span class="badge-green">${u.draftsSubmitted || u.drafts || 0}</span>
+                                    </td>
+                                </tr>
+                            `).join('') || '<tr><td colspan="2" class="empty-cell">Nenhum envio registrado.</td></tr>'}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="dash-tables-row mt-6">
+            <div class="dash-widget">
+                <div class="widget-header-row">
+                    <h3 class="widget-header header-blue">
+                        <i class="ph ph-trend-up"></i> Top Acessados
                     </h3>
-                    <button onclick="window.copyTableToClipboard('dash-table-sql', this)" class="text-text-muted hover:text-purple-500 transition-colors px-2 py-1 rounded bg-bg-canvas border border-border-strong shadow-sm touch-target" title="Copiar Tabela">
-                        <i class="ph ph-copy text-[16px] align-middle"></i>
+                    <button onclick="window.copyTableToClipboard('dash-table-views', this)" class="copy-btn" title="Copiar Tabela">
+                        <i class="ph ph-copy"></i>
                     </button>
                 </div>
                 
-                <div class="table-responsive custom-scrollbar">
-                    <table id="dash-table-sql" class="w-full text-left border-collapse whitespace-nowrap">
+                <div class="table-wrapper">
+                    <table id="dash-table-views" class="table-default">
                         <thead>
-                            <tr class="bg-bg-canvas/50 border-b border-border-subtle text-[10px] uppercase tracking-wider text-text-muted">
-                                <th class="py-3 px-4 font-bold">Nome do Script</th>
-                                <th class="py-3 px-4 font-bold">Autor</th>
-                                <th class="py-3 px-4 font-bold text-right">Útil</th>
+                            <tr>
+                                <th>Título</th>
+                                <th>Autor</th>
+                                <th class="col-right">Views</th>
                             </tr>
                         </thead>
-                        <tbody class="text-sm divide-y divide-border-subtle">
+                        <tbody>
+                            ${sortedByViews.filter(a => (a.views || 0) > 0).map((a, i) => {
+                                const authorName = formatFullName(a.createdBy);
+                                return `
+                                <tr class="table-row" onclick="window.__kcs.viewArticle('${a.id}')">
+                                    <td class="title-cell-truncate" title="${escapeHtml(a.title)}">
+                                        <span class="rank-muted">${i+1}.</span>
+                                        <span class="truncate-text">${escapeHtml(a.title)}</span>
+                                    </td>
+                                    <td>
+                                        <div class="user-badge">
+                                            <div class="avatar-mini">${authorName.charAt(0).toUpperCase()}</div>
+                                            <span class="user-name">${escapeHtml(authorName)}</span>
+                                        </div>
+                                    </td>
+                                    <td class="col-right">
+                                        <span class="badge-neutral">${a.views}</span>
+                                    </td>
+                                </tr>`;
+                            }).join('') || '<tr><td colspan="3" class="empty-cell">Nenhum dado.</td></tr>'}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="dash-widget">
+                <div class="widget-header-row">
+                    <h3 class="widget-header header-purple">
+                        <i class="ph ph-database"></i> Scripts Úteis
+                    </h3>
+                    <button onclick="window.copyTableToClipboard('dash-table-sql', this)" class="copy-btn" title="Copiar Tabela">
+                        <i class="ph ph-copy"></i>
+                    </button>
+                </div>
+                
+                <div class="table-wrapper">
+                    <table id="dash-table-sql" class="table-default">
+                        <thead>
+                            <tr>
+                                <th>Nome do Script</th>
+                                <th>Autor</th>
+                                <th class="col-right">Útil</th>
+                            </tr>
+                        </thead>
+                        <tbody>
                             ${topScripts.filter(s => (s.likes||[]).length > 0).map((s, i) => {
                                 const authorName = formatFullName(s.createdBy);
                                 return `
-                                <tr class="hover:bg-bg-canvas transition-colors group cursor-pointer" onclick="window.__kcs.viewSqlScript('${s.id}')">
-                                    <td class="py-3 px-4 font-medium text-text-primary max-w-[200px] truncate" title="${escapeHtml(s.name)}">
-                                        <span class="text-text-muted mr-1 font-mono text-[10px]">${i+1}.</span>
-                                        <span class="text-xs">${escapeHtml(s.name)}</span>
+                                <tr class="table-row" onclick="window.__kcs.viewSqlScript('${s.id}')">
+                                    <td class="title-cell-truncate" title="${escapeHtml(s.name)}">
+                                        <span class="rank-muted">${i+1}.</span>
+                                        <span class="truncate-text">${escapeHtml(s.name)}</span>
                                     </td>
-                                    <td class="py-3 px-4">
-                                        <div class="flex items-center gap-1.5">
-                                            <div class="w-5 h-5 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-[9px] font-bold text-text-secondary">${authorName.charAt(0).toUpperCase()}</div>
-                                            <span class="text-[11px] text-text-secondary font-medium">${escapeHtml(authorName)}</span>
+                                    <td>
+                                        <div class="user-badge">
+                                            <div class="avatar-mini">${authorName.charAt(0).toUpperCase()}</div>
+                                            <span class="user-name">${escapeHtml(authorName)}</span>
                                         </div>
                                     </td>
-                                    <td class="py-3 px-4 text-right">
-                                        <span class="text-purple-600 dark:text-purple-400 text-xs font-bold"><i class="ph-fill ph-heart mr-1 align-text-bottom"></i>${(s.likes||[]).length}</span>
+                                    <td class="col-right">
+                                        <span class="stat-highlight"><i class="ph ph-heart"></i> ${(s.likes||[]).length}</span>
                                     </td>
                                 </tr>`;
-                            }).join('') || '<tr><td colspan="3" class="py-4 text-xs text-text-muted text-center">Nenhum dado.</td></tr>'}
+                            }).join('') || '<tr><td colspan="3" class="empty-cell">Nenhum dado.</td></tr>'}
                         </tbody>
                     </table>
                 </div>
@@ -957,11 +1002,10 @@ export function showToast(message, type = 'info') {
   if (!container) return;
   
   const iconMap = { success: 'ph-check-circle', error: 'ph-warning-circle', info: 'ph-info', warning: 'ph-warning' };
-  const colors = { success: 'bg-green-600/95', error: 'bg-red-600/95', info: 'bg-blue-600/95', warning: 'bg-yellow-600/95' };
   
   const toast = document.createElement('div');
-  toast.className = `flex items-center gap-3 px-4 py-3 sm:py-3.5 rounded-xl border border-white/10 text-white text-sm shadow-xl font-medium ${colors[type] || colors.info} animate-slide-in backdrop-blur-md z-[9999]`;
-  toast.innerHTML = `<i class="ph ${iconMap[type] || iconMap.info} text-[22px]"></i><span>${escapeHtml(message)}</span>`;
+  toast.className = `toast-item toast-${type} animate-slide-in`;
+  toast.innerHTML = `<i class="ph ${iconMap[type] || iconMap.info} toast-icon"></i><span>${escapeHtml(message)}</span>`;
   
   container.appendChild(toast);
   setTimeout(() => { toast.classList.add('animate-slide-out'); setTimeout(() => toast.remove(), 300); }, 3500);
@@ -975,9 +1019,13 @@ export function showLoading(show) {
     if (!topBar) {
         topBar = document.createElement('div');
         topBar.id = 'kcs-top-loader';
-        topBar.className = 'fixed top-0 left-0 h-1 bg-blue-500 z-[9999] transition-all duration-500 ease-out shadow-[0_0_10px_rgba(59,130,246,0.7)]';
+        topBar.className = 'loading-bar';
         topBar.style.width = '0%';
-        document.body.appendChild(topBar);
+        
+        const overlayRoot = document.getElementById('overlay-root');
+        if (overlayRoot) {
+            overlayRoot.appendChild(topBar);
+        }
     }
     
     if (show) {
@@ -1031,17 +1079,17 @@ export function formatContentForView(content) {
     if (!content) return '';
 
     if (Array.isArray(content)) {
-        let html = '<div class="space-y-4 mt-2">';
+        let html = '<div class="content-steps">';
         content.forEach(step => {
-            html += `<div class="flex gap-3 items-start group">`;
-            html += `<div class="shrink-0 flex items-center justify-center w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400 font-bold text-[11px] mt-0.5 border border-blue-200 dark:border-blue-800 shadow-sm">${step.stepNumber}</div>`;
-            html += `<div class="flex-1 min-w-0">`;
+            html += `<div class="step-item">`;
+            html += `<div class="step-number">${step.stepNumber}</div>`;
+            html += `<div class="step-desc">`;
             if (step.description) {
-                html += `<div class="text-[13px] sm:text-sm text-gray-800 dark:text-gray-200 leading-relaxed pt-0.5">${escapeHtml(step.description).replace(/\n/g, '<br>')}</div>`;
+                html += `<div class="step-text">${escapeHtml(step.description).replace(/\n/g, '<br>')}</div>`;
             }
             if (step.images && step.images.length > 0) {
-                html += `<div class="mt-2.5 flex flex-wrap gap-3">` + 
-                    step.images.map(url => `<img src="${url}" style="max-height: 240px; width: auto; max-width: 100%; border-radius: 6px; border: 1px solid #d1d5db; object-fit: contain;" class="dark:border-gray-700 shadow-sm cursor-pointer hover:opacity-90 transition-opacity">`).join('') 
+                html += `<div class="step-images">` + 
+                    step.images.map(url => `<img src="${url}" class="image-preview">`).join('') 
                 + `</div>`;
             }
             html += `</div></div>`;
@@ -1053,10 +1101,6 @@ export function formatContentForView(content) {
     return content;
 }
 
-/**
- * Renderiza o Selo de Autenticidade (Pixel-Perfect Ghost Style)
- * @param {Object} companyData - Objeto contendo maxUsers e planName
- */
 export function renderCompanyPlanBadge(companyData) {
     const badgeContainer = document.getElementById('company-plan-badge');
     const badgeContainerMobile = document.getElementById('company-plan-badge-mobile');
@@ -1071,38 +1115,121 @@ export function renderCompanyPlanBadge(companyData) {
     const limit = Number(companyData.userLimit || companyData.maxUsers || 0);
     const planName = (companyData.planName || companyData.plan || '').toLowerCase();
 
-    // 1. Extração do Nível (Sem Redundância)
     let label = 'STARTER';
-    let colorVar = 'var(--kcs-starter)';
+    if (limit >= 9999 || planName.includes('enterprise') || planName === 'gold') label = 'UNLIMITED';
+    else if (limit > 5 || planName === 'prata' || planName.includes('teams')) label = 'TEAMS';
 
-    if (limit >= 9999 || planName.includes('enterprise') || planName === 'gold') {
-        label = 'UNLIMITED';
-        colorVar = 'var(--kcs-unlimited)';
-    } else if (limit > 5 || planName === 'prata' || planName.includes('teams')) {
-        label = 'TEAMS';
-        colorVar = 'var(--kcs-teams)';
-    }
+    const htmlBadge = `<div class="kcs-plan-badge badge-${label.toLowerCase()}">${label}</div>`;
 
-    // 2. Construção do Badge com Opacidade de Fundo de 8% (Selo de Vidro)
-    const htmlBadge = `
-        <div class="kcs-plan-badge" 
-             style="color: ${colorVar}; 
-                    background-color: color-mix(in srgb, ${colorVar}, transparent 92%);">
-            ${label}
-        </div>
-    `;
-
-    // 3. Injeção
     if (badgeContainer) badgeContainer.innerHTML = htmlBadge;
     if (badgeContainerMobile) badgeContainerMobile.innerHTML = htmlBadge;
 }
-
 
 export function formatFullName(nameStr) {
     if (!nameStr) return 'Sistema';
     const parts = nameStr.trim().split(' ');
     if (parts.length > 1) {
-        return `${parts[0]} ${parts[parts.length - 1]}`; // Retorna Primeiro e Último nome
+        return `${parts[0]} ${parts[parts.length - 1]}`; 
     }
     return parts[0];
+}
+
+// ==========================================
+// OVERLAY & DOCK SYNCHRONIZATION (VISUAL RENDER)
+// ==========================================
+
+export function updateOverlayState() {
+    const overlayRoot = document.getElementById('overlay-root');
+    if (!overlayRoot) return;
+    
+    const hasActiveModals = overlayRoot.querySelectorAll('.kcs-active-overlay').length > 0;
+    if (hasActiveModals) {
+        overlayRoot.classList.add('overlay-visible');
+    } else {
+        overlayRoot.classList.remove('overlay-visible');
+    }
+}
+
+export function updateDockState() {
+    const dockRoot = document.getElementById('kcs-dock');
+    if (!dockRoot) return;
+    
+    const hasTabs = dockRoot.querySelectorAll('.kcs-minimized-tab').length > 0;
+    if (hasTabs) {
+        dockRoot.classList.add('dock-visible');
+    } else {
+        dockRoot.classList.remove('dock-visible');
+    }
+}
+
+export function mountModalToOverlay(modalNode) {
+    const overlayRoot = document.getElementById('overlay-root');
+    if (!overlayRoot || !modalNode) {
+        console.warn('overlay-root ou modalNode não encontrado');
+        return;
+    }
+
+    if (!overlayRoot.contains(modalNode)) {
+        overlayRoot.appendChild(modalNode);
+    }
+    
+    modalNode.classList.remove('hidden', 'kcs-minimized');
+    modalNode.classList.add('kcs-active-overlay');
+    
+    updateOverlayState();
+}
+
+export function renderMinimizedTab(modalId, title, onRestore, onClose) {
+    const dockRoot = document.getElementById('kcs-dock');
+    if (!dockRoot) {
+        console.warn('kcs-dock não encontrado');
+        return;
+    }
+
+    if (dockRoot.querySelector(`.kcs-minimized-tab[data-modal="${modalId}"]`)) return;
+
+    const tabNode = document.createElement('div');
+    tabNode.className = 'kcs-minimized-tab dock-tab';
+    tabNode.dataset.modal = modalId;
+
+    tabNode.innerHTML = `
+        <span class="dock-tab-title" title="${escapeHtml(title)}">${escapeHtml(title)}</span>
+        <div class="dock-tab-actions">
+            <button type="button" class="btn-restore" title="Restaurar">⤢</button>
+            <button type="button" class="btn-close" title="Fechar">✕</button>
+        </div>
+    `;
+
+    tabNode.addEventListener('click', (e) => {
+        if (!e.target.closest('button') && onRestore) onRestore(modalId);
+    });
+
+    tabNode.querySelector('.btn-restore').addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (onRestore) onRestore(modalId);
+    });
+
+    tabNode.querySelector('.btn-close').addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (onClose) onClose(modalId);
+    });
+
+    dockRoot.appendChild(tabNode);
+    updateDockState();
+}
+
+export function removeModalElements(modalId) {
+    const modalNode = document.getElementById(modalId);
+    if (modalNode) {
+        modalNode.remove();
+    }
+
+    const dockRoot = document.getElementById('kcs-dock');
+    if (dockRoot) {
+        const tabNode = dockRoot.querySelector(`.kcs-minimized-tab[data-modal="${modalId}"]`);
+        if (tabNode) tabNode.remove();
+    }
+
+    updateOverlayState();
+    updateDockState();
 }

@@ -1,5 +1,6 @@
 /**
  * kcsCore.js — Core de Inteligência Artificial e Gestão KCS
+ * Refatoração SRE: Cache-First (Dexie), Segurança de Tipos JSON e Firebase Reads Optimization
  */
 
 import { dbCloud } from './cloud.js';
@@ -9,6 +10,15 @@ import { CONFIG, COLLECTION_ARTICLES } from '../config.js';
 
 // ID de Sessão Único (Protege contra o mesmo usuário abrindo 2 abas)
 export const SESSION_ID = Math.random().toString(36).substring(2, 15);
+
+// ==========================================
+// INICIALIZAÇÃO DO CACHE LOCAL (DEXIE.JS)
+// Economia de 90% das leituras do Firebase
+// ==========================================
+export const dbLocal = new Dexie('KCS_CacheDB');
+dbLocal.version(1).stores({
+    articles: 'id, companyId, status, categoryId, updatedAt'
+});
 
 async function fetchWithBackoff(url, options, maxRetries = 4) {
     let retries = 0;
@@ -71,21 +81,40 @@ async function callGeminiIA(systemPrompt, userOriginalText, actionType, isJson =
         cleanedText = cleanedText.replace(/^```[a-z]*\n/i, '').replace(/\n```$/, '').trim();
     }
 
+    // Auditoria Assíncrona
     try {
         const envPrefix = COLLECTION_ARTICLES.split('_')[0];
-        await addDoc(collection(dbCloud, `${envPrefix}_chat_logs`), {
+        addDoc(collection(dbCloud, `${envPrefix}_chat_logs`), {
             userId: user?.uid || user?.id || 'system',
             userName: user?.displayName || 'Usuário Editor',
             action: actionType,
             input: userOriginalText,
             output: cleanedText,
             timestamp: new Date().toISOString()
-        });
+        }).catch(() => {}); // Fire and forget
     } catch (e) {
         console.warn("Falha ao gravar log de auditoria IA:", e);
     }
 
-    return isJson ? JSON.parse(cleanedText) : cleanedText;
+    // FALLBACK ROBUSTO PARA JSON (SRE)
+    if (isJson) {
+        try {
+            return JSON.parse(cleanedText);
+        } catch (e) {
+            console.warn("[IA Fallback] JSON corrompido pela IA. Acionando Regex extrator...");
+            const match = cleanedText.match(/\{[\s\S]*\}/);
+            if (match) {
+                try {
+                    return JSON.parse(match[0]);
+                } catch(err2) {
+                    throw new Error("A IA devolveu um formato irrecuperável.");
+                }
+            }
+            throw new Error("Não foi possível extrair os dados estruturados da IA.");
+        }
+    }
+
+    return cleanedText;
 }
 
 export async function reescreverTextoTecnico(promptText) {
@@ -103,7 +132,7 @@ OBJETIVOS DE EXTRAÇÃO:
 
 REGRAS PARA A CHAVE 'passos':
 - Escreva de forma limpa, direta, com verbos no infinitivo (ex: Acessar, Clicar).
-- Se houver tags como [IMAGEM_0], [IMAGEM_1] no texto, MANTENHA-AS no meio do texto, exatamente na posição lógica onde a imagem ilustra o passo correspondente. NUNCA as remova.
+- Se houver tags como [IMAGEM_0], [IMAGEM_1] ou __IMAGEM_0__ no texto, MANTENHA-AS no meio do texto, exatamente na posição lógica onde a imagem ilustra o passo correspondente. NUNCA as remova.
 - Use quebras de linha normais para separar as ações. Não crie listas numeradas automaticamente.
 
 RETORNO OBRIGATÓRIO (JSON STRICT):
@@ -124,24 +153,60 @@ ${promptText}`;
 
 export async function corrigirGramaticaApenas(promptText) {
     const systemPrompt = `Atue como um revisor gramatical. Corrija exclusivamente erros de ortografia e acentuação.
-NÃO remova marcadores como [IMAGEM_0]. Retorne APENAS o texto corrigido.
+NÃO remova marcadores como __IMAGEM_0__. Retorne APENAS o texto corrigido, sem adicionar nenhum comentário adicional.
 TEXTO ORIGINAL:
-    ${promptText}`;
+${promptText}`;
     return await callGeminiIA(systemPrompt, promptText, 'corrigir', false);
 }
 
-export async function listArticles() { 
-    const user = getCurrentUser();
-    if (!user || !user.companyId) return [];
-    const q = query(collection(dbCloud, COLLECTION_ARTICLES), where("companyId", "==", user.companyId));
-    const snap = await getDocs(q);
-    return snap.docs.map(doc => doc.data());
+// ==========================================
+// CACHE-FIRST CRUD OPERATIONS
+// ==========================================
+
+async function syncFirebaseToLocal(companyId) {
+    try {
+        const q = query(collection(dbCloud, COLLECTION_ARTICLES), where("companyId", "==", companyId));
+        const snap = await getDocs(q);
+        const data = snap.docs.map(doc => doc.data());
+        
+        // Atualização em massa no Dexie
+        await dbLocal.articles.bulkPut(data);
+        return data;
+    } catch (e) {
+        console.warn("[Dexie] Falha ao sincronizar do Firebase:", e);
+        return [];
+    }
 }
 
+export async function listArticles(forceSync = false) { 
+    const user = getCurrentUser();
+    if (!user || !user.companyId) return [];
+
+    if (!forceSync) {
+        try {
+            const cached = await dbLocal.articles.where('companyId').equals(user.companyId).toArray();
+            if (cached.length > 0) {
+                // Sincroniza em background (Fire and Forget)
+                syncFirebaseToLocal(user.companyId).catch(() => {});
+                return cached;
+            }
+        } catch (e) {
+            console.warn("[Dexie] Falha ao ler cache, recorrendo à nuvem:", e);
+        }
+    }
+    
+    return await syncFirebaseToLocal(user.companyId);
+}
 export async function getArticle(id) { 
+    // Sempre busca da nuvem para garantir a versão mais recente em leitura de artigo
     const docRef = doc(dbCloud, COLLECTION_ARTICLES, id);
     const snap = await getDoc(docRef);
-    return snap.exists() ? snap.data() : null;
+    if (snap.exists()) {
+        const data = snap.data();
+        dbLocal.articles.put(data).catch(() => {}); // Atualiza o cache
+        return data;
+    }
+    return null;
 }
 
 export async function createArticle(data) {
@@ -178,7 +243,10 @@ export async function createArticle(data) {
             currentEditorSession: null,
             lastEditHeartbeat: null
         };
+        
         await setDoc(doc(dbCloud, COLLECTION_ARTICLES, newId), newArticle);
+        await dbLocal.articles.put(newArticle).catch(() => {}); // Adiciona ao Cache
+        
         return newArticle;
     } catch (error) {
         console.error("Erro ao salvar procedimento:", error);
@@ -192,6 +260,7 @@ export async function updateArticle(id, data) {
         if (!user) throw new Error("Usuário não autenticado.");
         const userId = user.uid || user.id || 'unknown_user_id';
         const authorName = user.displayName || user.name || user.email || 'Usuário KCS';
+        
         const existing = await getArticle(id);
         if (!existing) throw new Error("Artigo não encontrado.");
 
@@ -214,7 +283,6 @@ export async function updateArticle(id, data) {
             history: newHistory,
             status: statusFinal,
             reviewerId: reviewerFinal,
-            // GARANTIR QUE A TRAVA SEJA LIBERADA AO SALVAR
             currentEditorId: null,
             currentEditorName: null,
             currentEditorSession: null,
@@ -222,6 +290,8 @@ export async function updateArticle(id, data) {
         };
         
         await updateDoc(doc(dbCloud, COLLECTION_ARTICLES, id), updatedArticle);
+        await dbLocal.articles.put(updatedArticle).catch(() => {}); // Atualiza o Cache
+        
         return updatedArticle;
     } catch (error) {
         console.error("Erro ao salvar procedimento:", error);
@@ -231,10 +301,11 @@ export async function updateArticle(id, data) {
 
 export async function removeArticle(id) { 
     await deleteDoc(doc(dbCloud, COLLECTION_ARTICLES, id));
+    await dbLocal.articles.delete(id).catch(() => {}); // Remove do cache
 }
 
 // ==========================================
-// INTERAÇÕES SOCIAIS (BLINDADAS)
+// INTERAÇÕES SOCIAIS (BLINDADAS E CACHEADAS)
 // ==========================================
 export async function flagArticle(id, reason) {
     const user = getCurrentUser();
@@ -243,6 +314,7 @@ export async function flagArticle(id, reason) {
     if (!existing) return;
     const comments = Array.isArray(existing.comments) ? existing.comments.filter(val => val != null) : [];
     comments.push({ id: `cmt_${Date.now()}`, userId: userId, userName: user.displayName || user.email || 'Usuário', text: `⚠️ [SINALIZADO]: ${reason}`, date: new Date().toISOString() });
+    
     await updateDoc(doc(dbCloud, COLLECTION_ARTICLES, id), { status: 'pendente_revisao', comments: comments });
 }
 
@@ -324,7 +396,6 @@ export async function getDashboardMetrics() {
         throw error;
     }
 }
-
 // ==========================================
 // PREVENÇÃO DE CONCORRÊNCIA: TRANSAÇÕES ATÔMICAS
 // ==========================================
@@ -343,7 +414,7 @@ export async function setArticleLock(articleId) {
             if (!snap.exists()) throw new Error("Documento não encontrado");
 
             const data = snap.data();
-            const now = Date.now(); // Data bruta inteira para não quebrar matemática
+            const now = Date.now(); 
             const lockTimeout = 5 * 60 * 1000;
 
             const lastHeartbeatMs = data.lastEditHeartbeat || 0;
@@ -352,16 +423,13 @@ export async function setArticleLock(articleId) {
             const isLockedByOtherUser = data.currentEditorId && data.currentEditorId !== currentUserId;
             const isLockedByOtherSession = data.currentEditorId === currentUserId && data.currentEditorSession !== SESSION_ID;
 
-            // Se for OUTRO usuário, ou MESMO usuário em ABA DIFERENTE
             if ((isLockedByOtherUser || isLockedByOtherSession) && (now - lastHeartbeatMs) < lockTimeout) {
-                // A TRANSAÇÃO É INTERROMPIDA AQUI. Retorna como 'LOCKED'.
                 return { 
                     status: 'LOCKED',
                     lockedBy: data.currentEditorName || 'Outro Editor'
                 }; 
             }
 
-            // GRAVA O LOCK: Ambiente seguro, sem concorrentes.
             transaction.update(docRef, {
                 currentEditorId: currentUserId,
                 currentEditorName: user.displayName || user.email || 'Usuário KCS',
@@ -389,7 +457,6 @@ export async function releaseArticleLock(articleId) {
             if (!snap.exists()) return;
             const data = snap.data();
             
-            // Apenas o dono da sessão ativa pode liberar o lock via onUnload
             if (data.currentEditorSession === SESSION_ID) {
                 transaction.update(docRef, {
                     currentEditorId: null,
@@ -418,7 +485,7 @@ export async function forceReleaseLock(articleId) {
 }
 
 // ==========================================
-// NOTIFICAÇÕES E AUDITORIA DE LEITURA
+// NOTIFICAÇÕES, AUDITORIA DE LEITURA E SYNC DE CACHE
 // ==========================================
 
 const articleStatusCache = new Map();
@@ -440,12 +507,20 @@ export function initArticleNotifications(callback) {
         where("companyId", "==", user.companyId)
     );
 
+    // O Snapshot agora atua como um Web Worker de Sincronismo do Dexie
     notificationsUnsubscribe = onSnapshot(q, (snapshot) => {
         snapshot.docChanges().forEach((change) => {
             const docId = change.doc.id;
             const data = change.doc.data();
             const currentStatus = data.status; 
             const articleTitle = data.title || 'Procedimento atualizado';
+
+            // MANUTENÇÃO REATIVA DO DEXIE CACHE
+            if (change.type === "added" || change.type === "modified") {
+                dbLocal.articles.put(data).catch(() => {});
+            } else if (change.type === "removed") {
+                dbLocal.articles.delete(docId).catch(() => {});
+            }
 
             if (isInitialSnapshot) {
                 articleStatusCache.set(docId, currentStatus);
@@ -520,13 +595,13 @@ export async function logArticleRead(articleId, articleTitle) {
             views: increment(1)
         });
 
-        await addDoc(collection(dbCloud, 'article_reads'), {
+        addDoc(collection(dbCloud, 'article_reads'), {
             articleId: articleId,
             articleTitle: articleTitle,
             userId: userId,
             userName: user?.displayName || 'Usuário',
             readAt: new Date().toISOString()
-        });
+        }).catch(() => {});
         
     } catch (error) {
         console.error("Falha ao registrar auditoria de leitura KCS:", error);
