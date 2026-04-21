@@ -145,66 +145,9 @@ function safeBindEvent(element, eventType, handler) {
 }
 
 // ==========================================
-// MODAL: NOVA DOCUMENTAÇÃO (CRIAÇÃO/EDIÇÃO)
+// MDI TAB: NOVA DOCUMENTAÇÃO (CRIAÇÃO/EDIÇÃO)
 // ==========================================
 export function openArticleModal(article = null, onSave, rebindToolbar) {
-    const modal = document.getElementById('article-modal');
-    const title = document.getElementById('modal-title');
-    const form = document.getElementById('article-form');
-    const formBody = document.getElementById('article-form-body');
-    const footer = document.getElementById('article-form-footer');
-    
-    if (!modal || !form || !formBody) return;
-
-    attachToOverlay(modal);
-
-    if (title && !document.getElementById('btn-controls-article')) {
-        const headerDiv = title.parentElement;
-        if (headerDiv) {
-            headerDiv.className = 'modal-header';
-            safeBindEvent(headerDiv, 'click', (e) => {
-                if (e.target.closest('button')) return;
-                if (modal.classList.contains('kcs-minimized')) window.__kcs.toggleMinimize('article-modal');
-            });
-
-            title.className = 'modal-title';
-            if (!title.querySelector('i')) {
-                const originalText = title.textContent || 'Nova Documentação KCS';
-                title.innerHTML = `<i class="ph-fill ph-pencil-simple text-blue-500"></i> <span>${originalText}</span>`;
-            }
-
-            const closeBtn = headerDiv.querySelector('button'); 
-            const controlsDiv = document.createElement('div');
-            controlsDiv.id = 'btn-controls-article';
-            controlsDiv.className = 'modal-controls';
-
-            const minBtn = document.createElement('button');
-            minBtn.innerHTML = '<i class="ph-bold ph-minus"></i>';
-            minBtn.className = 'btn-icon';
-            minBtn.title = "Minimizar";
-            minBtn.type = 'button';
-            minBtn.addEventListener('click', (e) => { e.stopPropagation(); window.__kcs.toggleMinimize('article-modal'); });
-            
-            const maxBtn = document.createElement('button');
-            maxBtn.innerHTML = '<i class="ph-bold ph-arrows-out-simple"></i>';
-            maxBtn.className = 'btn-icon btn-max';
-            maxBtn.title = "Expandir";
-            maxBtn.type = 'button';
-            maxBtn.addEventListener('click', (e) => { e.stopPropagation(); window.__kcs.toggleMaximize('article-modal'); });
-
-            if (closeBtn) {
-                closeBtn.className = 'btn-icon btn-close';
-                closeBtn.innerHTML = '<i class="ph-bold ph-x"></i>';
-                closeBtn.addEventListener('click', (e) => { e.stopPropagation(); window.__kcs.closeModal('article-modal', false); });
-                
-                controlsDiv.appendChild(minBtn);
-                controlsDiv.appendChild(maxBtn);
-                controlsDiv.appendChild(closeBtn);
-                headerDiv.appendChild(controlsDiv);
-            }
-        }
-    }
-
     const user = getCurrentUser();
     const authorName = article ? article.createdBy : user.displayName;
     const kcsNum = article?.articleNumber ? `KCS-${article.articleNumber}` : 'Gerado ao salvar';
@@ -214,98 +157,113 @@ export function openArticleModal(article = null, onSave, rebindToolbar) {
         `<option value="${c.id}" ${article?.categoryId === c.id || article?.category === c.id ? 'selected' : ''}>${c.path}</option>`
     ).join('');
 
-    modal.dataset.title = article?.title ? `Edit: ${article.title}` : 'Novo Procedimento';
+    const idUnico = article?.id || `novo-${Date.now()}`;
+    const tituloAba = article?.title ? `Edit: ${article.title}` : 'Novo Procedimento';
 
-   formBody.innerHTML = `
-        <div class="form-row-metadata">
-            <div class="form-group meta-block">
-                <p class="meta-label">Número do Procedimento</p>
-                <p class="meta-value id-highlight">${kcsNum}</p>
-            </div>
-            <div class="form-group meta-block meta-divider">
-                <p class="meta-label">Autor Original</p>
-                <p class="meta-value">${authorName}</p>
-            </div>
-        </div>
+    // 1. Criar o Contêiner do Formulário (Aba de Conteúdo)
+    const formContainer = document.createElement('form');
+    formContainer.className = 'flex flex-col h-full';
+    formContainer.id = `form-${idUnico}`;
 
-        <div class="alert-box alert-indigo">
-            <div class="alert-icon"><i class="ph-fill ph-magic-wand"></i></div>
-            <div class="alert-content">
-                <h4 class="alert-title">Piloto Automático KCS</h4>
-                <p class="alert-text">Não perca tempo preenchendo caixas. Descreva o problema, a causa, a solução e as imagens na caixa de <strong>Passo a Passo</strong> e clique em <strong class="badge-indigo">✨ Refinar Conteúdo</strong>.</p>
-            </div>
-        </div>
-        
-        <div class="form-group">
-            <label class="form-label">Título *</label>
-            <input type="text" id="article-title" placeholder="Deixe em branco e a IA deduzirá para você..." class="form-input" value="${article?.title || ''}" />
-        </div>
-        
-        <div class="form-row-split">
-            <div class="form-group">
-                <label class="form-label">Sintoma / Problema</label>
-                <textarea id="article-symptom" rows="2" placeholder="Auto-preenchido via IA..." class="form-textarea">${article?.symptom || ''}</textarea>
-            </div>
-            <div class="form-group">
-                <label class="form-label">Ambiente</label>
-                <textarea id="article-environment" rows="2" placeholder="Auto-preenchido via IA..." class="form-textarea">${article?.environment || ''}</textarea>
-            </div>
-        </div>
-        
-        <div class="form-group">
-            <label class="form-label">Causa</label>
-            <textarea id="article-cause" rows="2" placeholder="Auto-preenchido via IA..." class="form-textarea">${article?.cause || ''}</textarea>
-        </div>
-        <div class="form-group">
-            <label class="form-label">Solução</label>
-            <textarea id="article-solution" rows="2" placeholder="Auto-preenchido via IA..." class="form-textarea">${article?.solution || ''}</textarea>
-        </div>
-        
-        <div class="form-group editor-container">
-            <label class="form-label">Procedimento Detalhado / Captura de Rascunho</label>
-            <div class="editor-toolbar">
-                <div class="toolbar-actions-left">
-                    <button type="button" data-format="undo" class="btn-tool"><i class="ph ph-arrow-u-up-left"></i></button>
-                    <button type="button" data-format="redo" class="btn-tool"><i class="ph ph-arrow-u-up-right"></i></button>
-                    <div class="toolbar-divider"></div>
-                    <button type="button" data-format="bold" class="btn-tool tool-bold">B</button>
-                    <button type="button" data-format="italic" class="btn-tool tool-italic">I</button>
-                    <button type="button" data-format="underline" class="btn-tool tool-underline">U</button>
-                    <div class="toolbar-divider"></div>
-                    <button type="button" data-format="h3" class="btn-tool tool-h3">H3</button>
-                    <button type="button" data-format="insertUnorderedList" class="btn-tool"><i class="ph ph-list-bullets"></i></button>
-                    <button type="button" data-format="insertOrderedList" class="btn-tool"><i class="ph ph-list-numbers"></i></button>
-                    <div class="toolbar-divider"></div>
-                    <button type="button" data-format="image" class="btn-tool tool-image" title="Anexar Imagem"><i class="ph ph-camera"></i></button>
+    // 2. Montar o HTML com IDs ÚNICOS para permitir múltiplas abas abertas
+    formContainer.innerHTML = `
+        <div class="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 custom-scrollbar">
+            <div class="form-row-metadata">
+                <div class="form-group meta-block">
+                    <p class="meta-label">Número do Procedimento</p>
+                    <p class="meta-value id-highlight">${kcsNum}</p>
                 </div>
-                <div class="toolbar-actions-right">
-                    <button id="btn-ia-reescrever" type="button" class="btn-ia btn-ia-reescrever"><i class="ph-fill ph-magic-wand"></i> Refinar</button>
-                    <button id="btn-ia-corrigir" type="button" class="btn-ia btn-ia-corrigir"><i class="ph-fill ph-text-aa"></i> Gramática</button>
+                <div class="form-group meta-block meta-divider">
+                    <p class="meta-label">Autor Original</p>
+                    <p class="meta-value">${authorName}</p>
                 </div>
             </div>
-            <div id="article-body" contenteditable="true" class="editor-content modal-zoomable"></div>
+
+            <div class="alert-box alert-indigo">
+                <div class="alert-icon"><i class="ph-fill ph-magic-wand"></i></div>
+                <div class="alert-content">
+                    <h4 class="alert-title">Piloto Automático KCS</h4>
+                    <p class="alert-text">Descreva o problema e a solução no <strong>Passo a Passo</strong> e clique em <strong class="badge-indigo">✨ Refinar</strong>.</p>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Título *</label>
+                <input type="text" id="article-title-${idUnico}" placeholder="Deixe em branco e a IA deduzirá para você..." class="form-input" value="${article?.title || ''}" />
+            </div>
+            
+            <div class="form-row-split">
+                <div class="form-group">
+                    <label class="form-label">Sintoma / Problema</label>
+                    <textarea id="article-symptom-${idUnico}" rows="2" class="form-textarea">${article?.symptom || ''}</textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Ambiente</label>
+                    <textarea id="article-environment-${idUnico}" rows="2" class="form-textarea">${article?.environment || ''}</textarea>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Causa</label>
+                <textarea id="article-cause-${idUnico}" rows="2" class="form-textarea">${article?.cause || ''}</textarea>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Solução</label>
+                <textarea id="article-solution-${idUnico}" rows="2" class="form-textarea">${article?.solution || ''}</textarea>
+            </div>
+            
+            <div class="form-group editor-container">
+                <label class="form-label">Procedimento Detalhado / Captura de Rascunho</label>
+                <div class="editor-toolbar">
+                    <div class="toolbar-actions-left">
+                        <button type="button" data-format="undo" class="btn-tool"><i class="ph ph-arrow-u-up-left"></i></button>
+                        <button type="button" data-format="redo" class="btn-tool"><i class="ph ph-arrow-u-up-right"></i></button>
+                        <div class="toolbar-divider"></div>
+                        <button type="button" data-format="bold" class="btn-tool tool-bold">B</button>
+                        <button type="button" data-format="italic" class="btn-tool tool-italic">I</button>
+                        <button type="button" data-format="underline" class="btn-tool tool-underline">U</button>
+                        <div class="toolbar-divider"></div>
+                        <button type="button" data-format="h3" class="btn-tool tool-h3">H3</button>
+                        <button type="button" data-format="insertUnorderedList" class="btn-tool"><i class="ph ph-list-bullets"></i></button>
+                        <button type="button" data-format="insertOrderedList" class="btn-tool"><i class="ph ph-list-numbers"></i></button>
+                        <div class="toolbar-divider"></div>
+                        <button type="button" data-format="image" class="btn-tool tool-image" title="Anexar Imagem"><i class="ph ph-camera"></i></button>
+                    </div>
+                    <div class="toolbar-actions-right">
+                        <button type="button" class="btn-ia btn-ia-reescrever"><i class="ph-fill ph-magic-wand"></i> Refinar</button>
+                    </div>
+                </div>
+                <div id="article-body-${idUnico}" contenteditable="true" class="editor-content modal-zoomable"></div>
+            </div>
+            
+            <div class="form-row-multi">
+                <div class="form-group">
+                    <label class="form-label">Categoria</label>
+                    <select id="article-category-${idUnico}" class="form-select">${categoryOptions}</select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Visibilidade</label>
+                    <select id="article-visibility-${idUnico}" class="form-select">
+                        <option value="${VISIBILITY.PUBLIC}" ${article?.visibility === VISIBILITY.PUBLIC ? 'selected' : ''}>🌍 Público</option>
+                        <option value="${VISIBILITY.PRIVATE}" ${article?.visibility === VISIBILITY.PRIVATE ? 'selected' : ''}>🔒 Privado</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Tags (Vírgula)</label>
+                    <input type="text" id="article-tags-${idUnico}" class="form-input" value="${(article?.tags || []).join(', ')}" />
+                </div>
+            </div>
         </div>
-        
-        <div class="form-row-multi">
-            <div class="form-group">
-                <label class="form-label">Categoria</label>
-                <select id="article-category" class="form-select">${categoryOptions}</select>
-            </div>
-            <div class="form-group">
-                <label class="form-label">Visibilidade</label>
-                <select id="article-visibility" class="form-select">
-                    <option value="${VISIBILITY.PUBLIC}" ${article?.visibility === VISIBILITY.PUBLIC ? 'selected' : ''}>🌍 Público</option>
-                    <option value="${VISIBILITY.PRIVATE}" ${article?.visibility === VISIBILITY.PRIVATE ? 'selected' : ''}>🔒 Privado</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label class="form-label">Tags (Vírgula)</label>
-                <input type="text" id="article-tags" class="form-input" value="${(article?.tags || []).join(', ')}" />
-            </div>
+
+        <div class="flex flex-col sm:flex-row justify-end gap-3 px-4 sm:px-6 py-4 border-t border-border-subtle bg-bg-main/50 pb-4 shrink-0">
+            <button type="button" class="btn-secondary btn-cancel-tab">Cancelar</button>
+            <button type="submit" class="btn-neutral btn-draft-tab">Salvar Rascunho</button>
+            ${hasPermission('validate_article') ? `<button type="submit" class="btn-primary btn-publish-tab">Salvar e Aprovar</button>` : ''}
         </div>
     `;
 
-    const editorCorpo = document.getElementById('article-body');
+    // 3. Preencher o Editor (HTML Body)
+    const editorCorpo = formContainer.querySelector(`#article-body-${idUnico}`);
     if (editorCorpo) {
         let htmlParaCarregar = article?.steps || article?.body || '';
         if (Array.isArray(htmlParaCarregar)) {
@@ -317,58 +275,61 @@ export function openArticleModal(article = null, onSave, rebindToolbar) {
         }
         editorCorpo.innerHTML = htmlParaCarregar;
     }
-    
-    initEditor('article-body');
 
-    const canPublish = hasPermission('validate_article');
-    footer.innerHTML = `
-        <button type="button" id="btn-cancel-article-footer" class="btn-secondary">Cancelar</button>
-        <button type="submit" id="btn-draft-direct" class="btn-neutral">Salvar Rascunho</button>
-        ${canPublish ? `<button type="submit" id="btn-publish-direct" class="btn-primary">Salvar e Aprovar</button>` : ''}
-    `;
-
+    // 4. Lógica de Ações e Botões do Rodapé
     let submitAction = 'draft';
-    safeBindEvent(document.getElementById('btn-draft-direct'), 'click', () => { submitAction = 'draft'; });
-    if (canPublish) safeBindEvent(document.getElementById('btn-publish-direct'), 'click', () => { submitAction = 'approved'; });
+    const btnDraft = formContainer.querySelector('.btn-draft-tab');
+    const btnPublish = formContainer.querySelector('.btn-publish-tab');
+    const btnCancel = formContainer.querySelector('.btn-cancel-tab');
 
-    safeBindEvent(form, 'submit', (e) => {
+    if (btnDraft) btnDraft.addEventListener('click', () => { submitAction = 'draft'; });
+    if (btnPublish) btnPublish.addEventListener('click', () => { submitAction = 'approved'; });
+    if (btnCancel) btnCancel.addEventListener('click', () => window.TabManager.closeTab(idUnico));
+
+    // 5. Interceptador do Formulário (Salvar)
+    formContainer.addEventListener('submit', (e) => {
         e.preventDefault();
-        const titleValue = document.getElementById('article-title')?.value?.trim();
+        const titleValue = document.getElementById(`article-title-${idUnico}`)?.value?.trim();
         if (!titleValue) return alert("Por favor, preencha o Título."); 
         
+        // Remove a Flag de "Não salvo" para que a aba feche sem pedir confirmação
+        window.TabManager.markDirty(idUnico, false);
+
         onSave({ 
             title: titleValue, 
-            symptom: document.getElementById('article-symptom')?.value?.trim() || '', 
-            environment: document.getElementById('article-environment')?.value?.trim() || '', 
-            cause: document.getElementById('article-cause')?.value?.trim() || '', 
-            solution: document.getElementById('article-solution')?.value?.trim() || '', 
-            steps: document.getElementById('article-body')?.innerHTML || '', 
-            categoryId: document.getElementById('article-category')?.value || '', 
-            visibility: document.getElementById('article-visibility')?.value || VISIBILITY.PUBLIC,
-            tags: (document.getElementById('article-tags')?.value || '').split(',').map(t => t.trim()).filter(Boolean), 
+            symptom: document.getElementById(`article-symptom-${idUnico}`)?.value?.trim() || '', 
+            environment: document.getElementById(`article-environment-${idUnico}`)?.value?.trim() || '', 
+            cause: document.getElementById(`article-cause-${idUnico}`)?.value?.trim() || '', 
+            solution: document.getElementById(`article-solution-${idUnico}`)?.value?.trim() || '', 
+            steps: document.getElementById(`article-body-${idUnico}`)?.innerHTML || '', 
+            categoryId: document.getElementById(`article-category-${idUnico}`)?.value || '', 
+            visibility: document.getElementById(`article-visibility-${idUnico}`)?.value || VISIBILITY.PUBLIC,
+            tags: (document.getElementById(`article-tags-${idUnico}`)?.value || '').split(',').map(t => t.trim()).filter(Boolean), 
             statusRequest: submitAction 
         }, article?.id || null);
-        window.__kcs.closeModal('article-modal', false);
+        
+        window.TabManager.closeTab(idUnico, true);
     });
 
-    if (rebindToolbar) rebindToolbar();
-    safeBindEvent(document.getElementById('btn-cancel-article'), 'click', () => window.__kcs.closeModal('article-modal', false));
-    safeBindEvent(document.getElementById('btn-cancel-article-footer'), 'click', () => window.__kcs.closeModal('article-modal', false));
+    // 6. Conecta o Formulário Gerado ao TabManager
+    window.TabManager.openTab(idUnico, tituloAba, 'ph-file-text', formContainer);
+
+    // 7. Inicializa o Editor (deve ser após injetar no DOM via requestAnimationFrame)
+    requestAnimationFrame(() => {
+        initEditor(`article-body-${idUnico}`);
+        if (rebindToolbar) rebindToolbar();
+        
+        // Foca automaticamente no campo de título para acelerar a digitação
+        document.getElementById(`article-title-${idUnico}`)?.focus();
+    });
 }
 
 // ==========================================
-// MODAL: VISUALIZADOR MULTI-JANELAS
+// MDI TAB: VISUALIZADOR DE PROCEDIMENTOS (FULL WIDTH + GRID LAYOUT)
 // ==========================================
 export function openViewModal(article, currentUser) {
-    const modalId = `dynamic-view-${article.id}`;
-    let modal = document.getElementById(modalId);
-    
-    if (modal) {
-        if (modal.classList.contains('kcs-minimized')) {
-            window.__kcs.toggleMinimize(modalId);
-        }
-        return;
-    }
+    const idUnico = `view-${article.id}`;
+    const tituloAba = article.articleNumber ? `#${article.articleNumber} - ${article.title}` : article.title;
     
     const safeText = (str) => { 
         if(!str) return ''; 
@@ -377,151 +338,210 @@ export function openViewModal(article, currentUser) {
 
     const userId = currentUser?.uid || currentUser?.id;
     const isFav = (article.favorites || []).includes(userId);
+    const isLiked = (article.likes || []).includes(userId);
 
-    modal = document.createElement('div');
-    modal.id = modalId;
-    modal.className = 'modal-container';
-    modal.dataset.title = article.articleNumber ? `#${article.articleNumber}` : article.title;
+    // 1. Criar o Contêiner da Aba
+    const container = document.createElement('div');
+    container.className = 'flex flex-col h-full';
+    container.id = `view-container-${idUnico}`;
+    container.style.backgroundColor = 'var(--color-editor-background)';
 
-    modal.innerHTML = `
-        <div class="modal-content-box">
-            <div class="modal-header" data-action="header-min">
-                <h2 class="modal-title">
-                    <i class="ph-fill ph-file-text icon-blue"></i>
-                    ${article.articleNumber ? `<span class="id-badge">#${article.articleNumber}</span>` : ''} 
-                    <span class="title-text">${safeText(article.title)}</span>
-                </h2>
+    // 2. Montar o HTML com Layout Full Width e Grid
+    container.innerHTML = `
+        <div class="flex-1 overflow-y-auto p-6 md:p-8 custom-scrollbar modal-zoomable relative" style="background-color: var(--color-editor-background);">
+            
+            ${article.status === 'review' || article.status === 'pendente_revisao' ? `
+            <div class="w-full mb-8 bg-yellow-500/10 border border-yellow-500/20 text-yellow-500 px-5 py-4 rounded-lg flex items-center gap-3 text-sm shadow-sm" data-html2pdf-ignore>
+                <i class="ph-fill ph-warning-circle text-2xl"></i>
+                <span><strong>Atenção:</strong> Este procedimento está em revisão ou foi sinalizado pela equipe.</span>
+            </div>` : ''}
+
+            <div id="kcs-print-area-${article.id}" class="print-area w-full">
                 
-                <div class="modal-controls">
-                    <button class="btn-icon" title="Minimizar" data-action="minimize"><i class="ph-bold ph-minus"></i></button>
-                    <button class="btn-icon btn-max" title="Expandir/Restaurar" data-action="maximize"><i id="icon-max-${modalId}" class="ph-bold ph-arrows-out-simple"></i></button>
-                    <button class="btn-icon btn-close" title="Fechar" data-action="close"><i class="ph-bold ph-x"></i></button>
+                <div class="mb-8 pb-6" style="border-bottom: 1px solid var(--color-border-subtle);">
+                    <h1 class="text-3xl sm:text-4xl font-extrabold mb-5 leading-tight tracking-tight" style="color: var(--color-text-inverse);">${safeText(article.title)}</h1>
+                    
+                    <div class="flex flex-wrap items-center gap-2.5">
+                        ${article.articleNumber ? `<span class="px-2.5 py-1 bg-blue-500/10 text-blue-500 font-mono text-[12px] font-bold rounded">#KCS-${article.articleNumber}</span>` : ''}
+                        ${article.categoryId || article.category ? `<span class="px-3 py-1 bg-purple-500/10 text-purple-400 text-[11px] font-bold uppercase tracking-wider rounded-full">${safeText(article.categoryId || article.category)}</span>` : ''}
+                        ${article.visibility === VISIBILITY.PRIVATE ? `<span class="px-2.5 py-1 bg-red-500/10 text-red-400 text-[12px] font-bold rounded flex items-center gap-1.5"><i class="ph-bold ph-lock"></i> Privado</span>` : `<span class="px-2.5 py-1 bg-green-500/10 text-green-400 text-[12px] font-bold rounded flex items-center gap-1.5"><i class="ph-bold ph-globe"></i> Público</span>`}
+                        ${article.tags ? article.tags.map(t => `<span class="px-3 py-1 text-[11px] rounded-full" style="background-color: var(--color-hover); color: var(--color-text-secondary); border: 1px solid var(--color-border);">${safeText(t)}</span>`).join('') : ''}
+                    </div>
                 </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-4 gap-6 mb-12">
+                    ${article.symptom ? `
+                    <div class="border-l-4 border-red-500 pl-4 pr-3 py-3 relative group rounded-r-lg flex flex-col h-full" style="background-color: var(--color-sidebar-background);">
+                        <h4 class="text-[12px] font-bold text-red-500 uppercase tracking-widest mb-2 flex items-center gap-2"><i class="ph-fill ph-warning-circle text-base"></i> Sintoma</h4>
+                        <div class="text-[13.5px] leading-relaxed flex-1" style="color: var(--color-text-primary);">${safeText(article.symptom)}</div>
+                        <button class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded hover:bg-black/10 dark:hover:bg-white/10" style="color: var(--color-text-muted);" title="Copiar" data-action="copy-field"><i class="ph ph-copy text-lg"></i></button>
+                    </div>` : ''}
+                    
+                    ${article.environment ? `
+                    <div class="border-l-4 border-blue-500 pl-4 pr-3 py-3 relative group rounded-r-lg flex flex-col h-full" style="background-color: var(--color-sidebar-background);">
+                        <h4 class="text-[12px] font-bold text-blue-500 uppercase tracking-widest mb-2 flex items-center gap-2"><i class="ph-fill ph-desktop text-base"></i> Ambiente</h4>
+                        <div class="text-[13.5px] leading-relaxed flex-1" style="color: var(--color-text-primary);">${safeText(article.environment)}</div>
+                        <button class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded hover:bg-black/10 dark:hover:bg-white/10" style="color: var(--color-text-muted);" title="Copiar" data-action="copy-field"><i class="ph ph-copy text-lg"></i></button>
+                    </div>` : ''}
+                    
+                    ${article.cause ? `
+                    <div class="border-l-4 border-yellow-500 pl-4 pr-3 py-3 relative group rounded-r-lg flex flex-col h-full" style="background-color: var(--color-sidebar-background);">
+                        <h4 class="text-[12px] font-bold text-yellow-500 uppercase tracking-widest mb-2 flex items-center gap-2"><i class="ph-fill ph-magnifying-glass text-base"></i> Causa</h4>
+                        <div class="text-[13.5px] leading-relaxed flex-1" style="color: var(--color-text-primary);">${safeText(article.cause)}</div>
+                        <button class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded hover:bg-black/10 dark:hover:bg-white/10" style="color: var(--color-text-muted);" title="Copiar" data-action="copy-field"><i class="ph ph-copy text-lg"></i></button>
+                    </div>` : ''}
+                    
+                    ${article.solution ? `
+                    <div class="border-l-4 border-green-500 pl-4 pr-3 py-3 relative group rounded-r-lg flex flex-col h-full" style="background-color: var(--color-sidebar-background);">
+                        <h4 class="text-[12px] font-bold text-green-500 uppercase tracking-widest mb-2 flex items-center gap-2"><i class="ph-fill ph-check-circle text-base"></i> Solução</h4>
+                        <div class="text-[13.5px] leading-relaxed flex-1" style="color: var(--color-text-primary);">${safeText(article.solution)}</div>
+                        <button class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded hover:bg-black/10 dark:hover:bg-white/10" style="color: var(--color-text-muted);" title="Copiar" data-action="copy-field"><i class="ph ph-copy text-lg"></i></button>
+                    </div>` : ''}
+                </div>
+
+                ${article.steps || article.body ? `
+                <div class="pt-8" style="border-top: 1px solid var(--color-border-subtle);">
+                    <h4 class="text-[12px] font-bold uppercase tracking-widest mb-6 flex items-center gap-2" style="color: var(--color-text-muted);"><i class="ph-bold ph-list-numbers text-base"></i> Passo a Passo Detalhado</h4>
+                    <div class="markdown-body max-w-none text-[15px] leading-relaxed" style="color: var(--color-text-primary);">${formatContentForView(article.steps || article.body)}</div>
+                </div>` : ''}
             </div>
 
-            <div class="modal-body modal-zoomable">
+            <div class="w-full mt-16 pt-8" style="border-top: 1px solid var(--color-border-subtle);" data-html2pdf-ignore>
+                <h4 class="text-[12px] font-bold uppercase tracking-widest mb-6 flex items-center gap-2" style="color: var(--color-text-muted);"><i class="ph-fill ph-chats text-base text-blue-500"></i> Comentários da Equipe</h4>
                 
-                ${article.status === 'review' || article.status === 'pendente_revisao' ? `
-                <div class="alert-box alert-warning" data-html2pdf-ignore>
-                    <i class="ph-fill ph-warning-circle alert-icon"></i>
-                    <span class="alert-text"><strong>Atenção:</strong> Este procedimento está em revisão.</span>
-                </div>` : ''}
-
-                <div id="kcs-print-area-${article.id}" class="print-area">
-                    <div class="view-header-meta">
-                        <h2 class="view-main-title">${safeText(article.title)}</h2>
-                        <div class="view-tags">
-                            ${article.tags ? article.tags.map(t => `<span class="tag-badge">${safeText(t)}</span>`).join('') : ''}
-                            ${article.categoryId || article.category ? `<span class="tag-badge tag-category">${safeText(article.categoryId || article.category)}</span>` : ''}
-                            ${article.visibility === VISIBILITY.PRIVATE ? `<span class="tag-badge tag-private"><i class="ph-bold ph-lock"></i> Privado</span>` : `<span class="tag-badge tag-public"><i class="ph-bold ph-globe"></i> Público</span>`}
-                        </div>
-                    </div>
-
-                    <div class="view-content-grid">
-                        ${article.symptom ? `
-                        <div class="field-group">
-                            <div class="field-header">
-                                <h4 class="field-title"><i class="ph-fill ph-warning-circle icon-red"></i> Sintoma</h4>
-                                <button class="btn-icon btn-copy" title="Copiar conteúdo" data-action="copy-field"><i class="ph ph-copy"></i></button>
-                            </div>
-                            <div class="field-content">${safeText(article.symptom)}</div>
-                        </div>` : ''}
-                        
-                        ${article.environment ? `
-                        <div class="field-group">
-                            <div class="field-header">
-                                <h4 class="field-title"><i class="ph-fill ph-desktop icon-blue"></i> Ambiente</h4>
-                                <button class="btn-icon btn-copy" title="Copiar conteúdo" data-action="copy-field"><i class="ph ph-copy"></i></button>
-                            </div>
-                            <div class="field-content">${safeText(article.environment)}</div>
-                        </div>` : ''}
-                        
-                        ${article.cause ? `
-                        <div class="field-group">
-                            <div class="field-header">
-                                <h4 class="field-title"><i class="ph-fill ph-magnifying-glass icon-yellow"></i> Causa</h4>
-                                <button class="btn-icon btn-copy" title="Copiar conteúdo" data-action="copy-field"><i class="ph ph-copy"></i></button>
-                            </div>
-                            <div class="field-content">${safeText(article.cause)}</div>
-                        </div>` : ''}
-                        
-                        ${article.solution ? `
-                        <div class="field-group">
-                            <div class="field-header">
-                                <h4 class="field-title"><i class="ph-fill ph-check-circle icon-green"></i> Solução</h4>
-                                <button class="btn-icon btn-copy" title="Copiar conteúdo" data-action="copy-field"><i class="ph ph-copy"></i></button>
-                            </div>
-                            <div class="field-content">${safeText(article.solution)}</div>
-                        </div>` : ''}
-                    </div>
-
-                    ${article.steps || article.body ? `<div class="view-steps-container"><h4 class="field-title steps-title"><i class="ph-fill ph-list-numbers icon-gray"></i> Procedimento Detalhado</h4><div class="markdown-body">${formatContentForView(article.steps || article.body)}</div></div>` : ''}
-                </div>
-
-                <div class="view-footer-actions" data-html2pdf-ignore>
-                    <div class="action-group">
-                        <button class="btn-interaction btn-like" data-action="toggle-like">
-                            <i class="ph-fill ph-heart"></i> Curtiu (${(article.likes || []).length})
-                        </button>
-                        <button class="btn-interaction btn-comment" data-action="prompt-comment">
-                            <i class="ph-fill ph-chat-circle"></i> Comentar (${(article.comments || []).length})
-                        </button>
-                        <button class="btn-interaction btn-fav" data-action="toggle-fav">
-                            <i class="${isFav ? 'ph-fill' : 'ph'} ph-star"></i> ${isFav ? 'Desfavoritar' : 'Favoritar'}
-                        </button>
-                        <button class="btn-interaction btn-export" data-action="export-pdf" data-num="${article.articleNumber || 'DOC'}" data-title="${safeText(article.title).replace(/"/g, '&quot;')}">
-                            <i class="ph-fill ph-download-simple"></i> PDF
-                        </button>
-                    </div>
-
-                    <div class="action-group">
-                        <button class="btn-secondary" data-action="open-history">
-                            <i class="ph-bold ph-clock-counter-clockwise"></i> Histórico
-                        </button>
-                        <button class="btn-danger" data-action="flag-article">
-                            <i class="ph-bold ph-warning-circle"></i> Reportar
+                <div class="mb-8 rounded-xl overflow-hidden shadow-sm focus-within:ring-1 focus-within:ring-blue-500 transition-all" style="background-color: var(--color-sidebar-background); border: 1px solid var(--color-border);">
+                    <textarea id="inline-comment-input-${idUnico}" rows="2" placeholder="Adicione uma observação, dúvida ou sugestão de melhoria..." class="w-full bg-transparent p-4 outline-none resize-y min-h-[70px] text-[14px]" style="color: var(--color-text-inverse);"></textarea>
+                    <div class="flex justify-end p-3" style="background-color: rgba(0,0,0,0.1); border-top: 1px solid var(--color-border-subtle);">
+                        <button type="button" id="btn-send-comment-${idUnico}" class="flex items-center gap-2 px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg shadow-sm transition-colors">
+                            <i class="ph-bold ph-paper-plane-right"></i> Publicar Comentário
                         </button>
                     </div>
                 </div>
 
-                ${article.comments && article.comments.length > 0 ? `
-                <div class="comments-section" data-html2pdf-ignore>
-                    <h4 class="comments-title"><i class="ph-fill ph-chats"></i> Comentários da Equipe</h4>
-                    ${article.comments.map(c => `
-                        <div class="comment-card">
-                            <div class="comment-header">
-                                <span class="comment-author">${safeText(c.userName)}</span>
-                                <span class="comment-date">${new Date(c.date).toLocaleDateString()}</span>
+                <div id="inline-comments-list-${idUnico}" class="space-y-4">
+                    ${article.comments && article.comments.length > 0 ? article.comments.map(c => `
+                        <div class="p-5 rounded-xl shadow-sm" style="background-color: var(--color-sidebar-background); border: 1px solid var(--color-border-subtle);">
+                            <div class="flex items-center justify-between mb-3">
+                                <span class="text-[13px] font-bold" style="color: var(--color-text-inverse);">${safeText(c.userName)}</span>
+                                <span class="text-[11px]" style="color: var(--color-text-muted);">${new Date(c.date).toLocaleString('pt-BR')}</span>
                             </div>
-                            <p class="comment-text">${safeText(c.text)}</p>
+                            <p class="text-[14px] leading-relaxed" style="color: var(--color-text-primary);">${safeText(c.text)}</p>
                         </div>
-                    `).join('')}
-                </div>` : ''}
+                    `).join('') : '<p class="text-[13px] italic empty-comment-msg" style="color: var(--color-text-muted);">Nenhum comentário ainda. Seja o primeiro a contribuir!</p>'}
+                </div>
+            </div>
+            
+            <div class="h-12"></div>
+        </div>
+
+        <div class="flex flex-col sm:flex-row justify-between items-center gap-3 px-6 py-3.5 shrink-0 shadow-[0_-4px_12px_rgba(0,0,0,0.05)]" style="background-color: var(--color-sidebar-background); border-top: 1px solid var(--color-border);" data-html2pdf-ignore>
+            <div class="flex items-center gap-2">
+                <button class="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-colors" style="color: var(--color-text-primary);" onmouseover="this.style.backgroundColor='var(--color-hover)'" onmouseout="this.style.backgroundColor='transparent'" data-action="toggle-like">
+                    <i class="${isLiked ? 'ph-fill text-red-500' : 'ph text-gray-400'} ph-heart text-lg"></i> Curtir (<span id="like-count-${idUnico}">${(article.likes || []).length}</span>)
+                </button>
+                <button class="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-colors" style="color: var(--color-text-primary);" onmouseover="this.style.backgroundColor='var(--color-hover)'" onmouseout="this.style.backgroundColor='transparent'" data-action="focus-comment">
+                    <i class="ph-fill ph-chat-circle text-blue-500 text-lg"></i> Comentar (<span id="comment-count-${idUnico}">${(article.comments || []).length}</span>)
+                </button>
+                <button class="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-colors" style="color: var(--color-text-primary);" onmouseover="this.style.backgroundColor='var(--color-hover)'" onmouseout="this.style.backgroundColor='transparent'" data-action="toggle-fav">
+                    <i class="${isFav ? 'ph-fill text-yellow-500' : 'ph text-gray-400'} ph-star text-lg"></i> ${isFav ? 'Salvo' : 'Favoritar'}
+                </button>
+            </div>
+
+            <div class="flex items-center gap-2">
+                <button class="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-colors" style="color: var(--color-text-primary);" onmouseover="this.style.backgroundColor='var(--color-hover)'" onmouseout="this.style.backgroundColor='transparent'" data-action="export-pdf" data-num="${article.articleNumber || 'DOC'}" data-title="${safeText(article.title).replace(/"/g, '&quot;')}">
+                    <i class="ph-bold ph-download-simple text-gray-400 text-lg"></i> PDF
+                </button>
+                <button class="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-colors" style="color: var(--color-text-primary);" onmouseover="this.style.backgroundColor='var(--color-hover)'" onmouseout="this.style.backgroundColor='transparent'" data-action="open-history">
+                    <i class="ph-bold ph-clock-counter-clockwise text-gray-400 text-lg"></i> Histórico
+                </button>
+                <button class="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold text-red-500 hover:bg-red-500/10 transition-colors" data-action="flag-article">
+                    <i class="ph-bold ph-warning-circle text-lg"></i> Reportar
+                </button>
+                ${hasPermission('edit_article') ? `
+                    <div class="w-px h-5 mx-2" style="background-color: var(--color-border);"></div>
+                    <button class="flex items-center gap-1.5 px-5 py-2 rounded-lg text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 shadow-sm transition-colors" data-action="edit-article">
+                        <i class="ph-bold ph-pencil-simple text-lg"></i> Editar
+                    </button>
+                ` : ''}
             </div>
         </div>
     `;
-    
-    modal.querySelector('[data-action="header-min"]').addEventListener('click', (e) => {
-        if (!e.target.closest('button')) window.__kcs.toggleMinimize(modalId);
-    });
-    modal.querySelector('[data-action="minimize"]').addEventListener('click', (e) => { e.stopPropagation(); window.__kcs.toggleMinimize(modalId); });
-    modal.querySelector('[data-action="maximize"]').addEventListener('click', (e) => { e.stopPropagation(); window.__kcs.toggleMaximize(modalId); });
-    modal.querySelector('[data-action="close"]').addEventListener('click', (e) => { e.stopPropagation(); window.__kcs.closeModal(modalId, true); });
 
-    modal.querySelectorAll('[data-action="copy-field"]').forEach(btn => btn.addEventListener('click', (e) => window.copyFieldText(e.currentTarget)));
+    // 3. Lógica do Novo Comentário Inline
+    const btnSendComment = container.querySelector(`#btn-send-comment-${idUnico}`);
+    const inputComment = container.querySelector(`#inline-comment-input-${idUnico}`);
+    const commentsList = container.querySelector(`#inline-comments-list-${idUnico}`);
+
+    btnSendComment.addEventListener('click', async () => {
+        const text = inputComment.value.trim();
+        if (!text) return;
+
+        try {
+            const originalHtml = btnSendComment.innerHTML;
+            btnSendComment.innerHTML = '<i class="ph-bold ph-spinner animate-spin"></i> Publicando...';
+            btnSendComment.disabled = true;
+
+            // Salva no banco de dados (Importando o módulo do Firebase)
+            const { addComment } = await import('../services/kcsCore.js');
+            await addComment(article.id, text);
+
+            const emptyMsg = commentsList.querySelector('.empty-comment-msg');
+            if (emptyMsg) emptyMsg.remove();
+
+            const newCommentHtml = `
+                <div class="p-5 rounded-xl shadow-sm animate-fade-in" style="background-color: var(--color-sidebar-background); border: 1px solid var(--color-border-subtle);">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="text-[13px] font-bold" style="color: var(--color-text-inverse);">${safeText(currentUser?.displayName || 'Você')}</span>
+                        <span class="text-[11px] text-blue-500 font-semibold">Agora mesmo</span>
+                    </div>
+                    <p class="text-[14px] leading-relaxed" style="color: var(--color-text-primary);">${safeText(text)}</p>
+                </div>
+            `;
+            
+            commentsList.insertAdjacentHTML('beforeend', newCommentHtml);
+            inputComment.value = ''; 
+
+            const countSpan = container.querySelector(`#comment-count-${idUnico}`);
+            if (countSpan) countSpan.innerText = parseInt(countSpan.innerText) + 1;
+
+            window.__kcs.showToast('Comentário publicado!', 'success');
+            
+        } catch(e) {
+            window.__kcs.showToast('Erro ao salvar comentário.', 'error');
+        } finally {
+            btnSendComment.innerHTML = '<i class="ph-bold ph-paper-plane-right"></i> Publicar Comentário';
+            btnSendComment.disabled = false;
+        }
+    });
+
+    container.querySelector('[data-action="focus-comment"]').addEventListener('click', () => {
+        inputComment.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        setTimeout(() => inputComment.focus(), 300);
+    });
+
+    // 4. Vincular Demais Eventos
+    container.querySelectorAll('[data-action="copy-field"]').forEach(btn => btn.addEventListener('click', (e) => window.copyFieldText(e.currentTarget)));
+    container.querySelector('[data-action="toggle-like"]').addEventListener('click', () => window.__kcs.toggleLike(article.id));
+    container.querySelector('[data-action="toggle-fav"]').addEventListener('click', () => window.__kcs.toggleFavorite(article.id));
     
-    modal.querySelector('[data-action="toggle-like"]').addEventListener('click', () => window.__kcs.toggleLike(article.id));
-    modal.querySelector('[data-action="prompt-comment"]').addEventListener('click', () => window.__kcs.promptComment(article.id));
-    modal.querySelector('[data-action="toggle-fav"]').addEventListener('click', () => window.__kcs.toggleFavorite(article.id));
-    modal.querySelector('[data-action="export-pdf"]').addEventListener('click', (e) => {
+    container.querySelector('[data-action="export-pdf"]').addEventListener('click', (e) => {
         const ds = e.currentTarget.dataset;
         window.exportArticleToPDF(ds.num, ds.title, e.currentTarget, article.id);
     });
 
-    modal.querySelector('[data-action="open-history"]').addEventListener('click', () => window.__kcs.openHistory(article.id, 'articles'));
-    modal.querySelector('[data-action="flag-article"]').addEventListener('click', () => window.__kcs.flagArticle(article.id));
+    container.querySelector('[data-action="open-history"]').addEventListener('click', () => window.__kcs.openHistory(article.id, 'articles'));
+    container.querySelector('[data-action="flag-article"]').addEventListener('click', () => window.__kcs.flagArticle(article.id));
+    
+    const btnEdit = container.querySelector('[data-action="edit-article"]');
+    if (btnEdit) {
+        btnEdit.addEventListener('click', () => {
+            window.TabManager.closeTab(idUnico, true);
+            window.__kcs.editArticle(article.id);
+        });
+    }
 
-    attachToOverlay(modal);
+    // 5. Injetar na Barra de Abas
+    window.TabManager.openTab(idUnico, tituloAba, 'ph-book-open', container);
 }
 
 // ==========================================
@@ -622,97 +642,118 @@ export function openReadmeModal(readmeMarkdown) {
 // MÓDULOS DE SQL
 // ==========================================
 
+// ==========================================
+// MDI TAB: BIBLIOTECA SQL (CRIAÇÃO/EDIÇÃO)
+// ==========================================
 export function openSqlModal(script = null, onSave) {
-    const modal = document.getElementById('sql-modal');
-    const form = document.getElementById('sql-form');
-    const title = document.getElementById('sql-modal-title');
-    const formBody = document.getElementById('sql-form-body');
-    const footer = document.getElementById('sql-form-footer');
-    
-    if (!modal || !form || !formBody) return;
-    
-    attachToOverlay(modal);
-    
-    title.textContent = script ? 'Editar Script SQL' : 'Novo Script SQL';
-    modal.dataset.title = script ? `SQL: ${script.name}` : 'Novo Script SQL';
+    const idUnico = script?.id || `sql-novo-${Date.now()}`;
+    const tituloAba = script ? `SQL: ${script.name}` : 'Novo Script SQL';
 
-    const typeOptions = SQL_DB_TYPES.map(t => `<option value="${t.value}" ${script?.dbType === t.value ? 'selected' : ''}>${t.label}</option>`).join('');
+    // 1. Definição das opções de Banco de Dados (Mantendo a lógica original)
+    const SQL_DB_TYPES = [
+        { value: 'mysql', label: 'MySQL' },
+        { value: 'postgres', label: 'PostgreSQL' },
+        { value: 'sqlserver', label: 'SQL Server' },
+        { value: 'oracle', label: 'Oracle DB' }
+    ];
 
-    formBody.innerHTML = `
-        <div class="form-group">
-            <label class="form-label">Nome do Script *</label>
-            <input type="text" id="sql-name" placeholder="Ex: Corrige CFOP Nulo na Tabela Produtos" class="form-input" required value="${script?.name || ''}" />
-        </div>
-        
-        <div class="form-row-split">
+    const typeOptions = SQL_DB_TYPES.map(t => 
+        `<option value="${t.value}" ${script?.dbType === t.value ? 'selected' : ''}>${t.label}</option>`
+    ).join('');
+
+    // 2. Criar o Contêiner do Formulário dinâmico
+    const formContainer = document.createElement('form');
+    formContainer.className = 'flex flex-col h-full';
+    formContainer.id = `form-${idUnico}`;
+
+    // 3. Montar o HTML do formulário com IDs escopados por aba
+    formContainer.innerHTML = `
+        <div class="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 custom-scrollbar">
             <div class="form-group">
-                <label class="form-label">Banco de Dados</label>
-                <select id="sql-db-type" class="form-select">${typeOptions}</select>
+                <label class="form-label">Nome do Script *</label>
+                <input type="text" id="sql-name-${idUnico}" placeholder="Ex: Corrige CFOP Nulo na Tabela Produtos" class="form-input" required value="${script?.name || ''}" />
             </div>
+            
+            <div class="form-row-split">
+                <div class="form-group">
+                    <label class="form-label">Banco de Dados</label>
+                    <select id="sql-db-type-${idUnico}" class="form-select">${typeOptions}</select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Operação</label>
+                    <select id="sql-category-${idUnico}" class="form-select">
+                        <option value="SELECT" ${script?.sqlCategory === 'SELECT' ? 'selected' : ''}>Consulta (SELECT)</option>
+                        <option value="UPDATE" ${script?.sqlCategory === 'UPDATE' ? 'selected' : ''}>Alteração (UPDATE/INSERT)</option>
+                        <option value="DELETE" ${script?.sqlCategory === 'DELETE' ? 'selected' : ''}>Exclusão (DELETE/DROP)</option>
+                    </select>
+                </div>
+            </div>
+            
             <div class="form-group">
-                <label class="form-label">Operação</label>
-                <select id="sql-category" class="form-select">
-                    <option value="SELECT" ${script?.sqlCategory === 'SELECT'?'selected':''}>Consulta (SELECT)</option>
-                    <option value="UPDATE" ${script?.sqlCategory === 'UPDATE'?'selected':''}>Alteração (UPDATE/INSERT)</option>
-                    <option value="DELETE" ${script?.sqlCategory === 'DELETE'?'selected':''}>Exclusão (DELETE/DROP)</option>
+                <label class="form-label">Descrição</label>
+                <input type="text" id="sql-desc-${idUnico}" placeholder="O que esse script resolve na prática?" class="form-input" value="${script?.description || ''}" />
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Código SQL *</label>
+                <textarea id="sql-code-${idUnico}" rows="12" placeholder="SELECT * FROM table..." class="form-textarea code-editor font-mono text-sm bg-[#1e1e1e] text-[#d4d4d4] border-border-subtle" required>${script?.code || ''}</textarea>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Visibilidade</label>
+                <select id="sql-visibility-${idUnico}" class="form-select">
+                    <option value="${VISIBILITY.PUBLIC}" ${script?.visibility === VISIBILITY.PUBLIC ? 'selected' : ''}>🌍 Público (Empresa)</option>
+                    <option value="${VISIBILITY.PRIVATE}" ${script?.visibility === VISIBILITY.PRIVATE ? 'selected' : ''}>🔒 Privado (Setor)</option>
                 </select>
             </div>
         </div>
-        
-        <div class="form-group">
-            <label class="form-label">Descrição</label>
-            <input type="text" id="sql-desc" placeholder="O que esse script resolve na prática?" class="form-input" value="${script?.description || ''}" />
-        </div>
-        
-        <div class="form-group">
-            <label class="form-label">Código SQL *</label>
-            <textarea id="sql-code" rows="6" placeholder="SELECT * FROM table..." class="form-textarea code-editor" required>${script?.code || ''}</textarea>
-        </div>
-        
-        <div class="form-group">
-            <label class="form-label">Visibilidade</label>
-            <select id="sql-visibility" class="form-select">
-                <option value="${VISIBILITY.PUBLIC}" ${script?.visibility === VISIBILITY.PUBLIC ? 'selected' : ''}>🌍 Público (Empresa)</option>
-                <option value="${VISIBILITY.PRIVATE}" ${script?.visibility === VISIBILITY.PRIVATE ? 'selected' : ''}>🔒 Privado (Setor)</option>
-            </select>
+
+        <div class="flex flex-col sm:flex-row justify-end gap-3 px-4 sm:px-6 py-4 border-t border-border-subtle bg-bg-main/50 pb-4 shrink-0">
+            <button type="button" class="btn-secondary btn-cancel-sql-tab">Cancelar</button>
+            <button type="submit" class="btn-primary">Salvar Script</button>
         </div>
     `;
 
-    if(footer) {
-        footer.innerHTML = `
-            <button type="button" id="btn-cancel-sql-footer" class="btn-secondary">Cancelar</button>
-            <button type="submit" class="btn-primary">Salvar Script</button>
-        `;
-        safeBindEvent(document.getElementById('btn-cancel-sql-footer'), 'click', () => window.__kcs.closeModal('sql-modal', false));
-    }
-    
-    safeBindEvent(document.getElementById('btn-cancel-sql'), 'click', () => window.__kcs.closeModal('sql-modal', false));
-    
-    safeBindEvent(form, 'submit', (e) => { 
-        e.preventDefault(); 
+    // 4. Lógica de Cancelamento
+    formContainer.querySelector('.btn-cancel-sql-tab').addEventListener('click', () => {
+        window.TabManager.closeTab(idUnico);
+    });
+
+    // 5. Interceptador de Envio (Submit)
+    formContainer.addEventListener('submit', (e) => {
+        e.preventDefault();
+        
+        // Remove o estado de "não salvo" antes de fechar
+        window.TabManager.markDirty(idUnico, false);
+
         onSave({ 
-            name: document.getElementById('sql-name').value, 
-            description: document.getElementById('sql-desc').value, 
-            code: document.getElementById('sql-code').value, 
-            dbType: document.getElementById('sql-db-type').value, 
-            sqlCategory: document.getElementById('sql-category').value, 
-            visibility: document.getElementById('sql-visibility').value, 
+            name: document.getElementById(`sql-name-${idUnico}`).value, 
+            description: document.getElementById(`sql-desc-${idUnico}`).value, 
+            code: document.getElementById(`sql-code-${idUnico}`).value, 
+            dbType: document.getElementById(`sql-db-type-${idUnico}`).value, 
+            sqlCategory: document.getElementById(`sql-category-${idUnico}`).value, 
+            visibility: document.getElementById(`sql-visibility-${idUnico}`).value, 
             statusRequest: 'approved' 
-        }); 
-        window.__kcs.closeModal('sql-modal', false); 
+        });
+
+        window.TabManager.closeTab(idUnico, true);
+    });
+
+    // 6. Abrir na Interface de Abas
+    window.TabManager.openTab(idUnico, tituloAba, 'ph-database', formContainer);
+
+    // Foco automático no título para melhorar a experiência
+    requestAnimationFrame(() => {
+        document.getElementById(`sql-name-${idUnico}`)?.focus();
     });
 }
 
+// ==========================================
+// MDI TAB: VISUALIZADOR DE SCRIPT SQL (DESIGN IDE)
+// ==========================================
 export function openSqlViewModal(script) {
-    const modalId = `sql-view-${script.id}`;
-    let modal = document.getElementById(modalId);
-    
-    if (modal) {
-        if (modal.classList.contains('kcs-minimized')) {
-            window.__kcs.toggleMinimize(modalId);
-        }
-        return;
-    }
+    const idUnico = `view-sql-${script.id}`;
+    const tituloAba = script.scriptNumber ? `#SQL-${script.scriptNumber}` : script.name;
     
     const safeText = (str) => { 
         if(!str) return ''; 
@@ -722,187 +763,299 @@ export function openSqlViewModal(script) {
     const currentUser = getCurrentUser();
     const userId = currentUser?.uid || currentUser?.id;
     const isFav = (script.favorites || []).includes(userId);
+    const isLiked = (script.likes || []).includes(userId);
 
-    modal = document.createElement('div');
-    modal.id = modalId;
-    modal.className = 'modal-container';
-    modal.dataset.title = script.scriptNumber ? `SQL-${script.scriptNumber}` : script.name;
+    const container = document.createElement('div');
+    container.className = 'flex flex-col h-full bg-editor-background';
+    container.id = `view-container-${idUnico}`;
+    container.style.backgroundColor = 'var(--color-editor-background)';
 
-    modal.innerHTML = `
-        <div class="modal-content-box">
-            <div class="modal-header" data-action="header-min">
-                <h2 class="modal-title">
-                    <i class="ph-fill ph-database icon-purple"></i>
-                    ${script.scriptNumber ? `<span class="id-badge">#SQL-${script.scriptNumber}</span>` : ''} 
-                    <span class="title-text">${safeText(script.name)}</span>
-                </h2>
+    container.innerHTML = `
+        <div class="flex-1 overflow-y-auto p-6 md:p-8 custom-scrollbar modal-zoomable relative" style="background-color: var(--color-editor-background);">
+            
+            ${script.status === 'review' || script.status === 'pendente_revisao' ? `
+            <div class="w-full mb-8 bg-yellow-500/10 border border-yellow-500/20 text-yellow-500 px-5 py-4 rounded-lg flex items-center gap-3 text-sm shadow-sm">
+                <i class="ph-fill ph-warning-circle text-2xl"></i>
+                <span><strong>Atenção:</strong> Este script foi sinalizado ou está em revisão. Execute com cautela.</span>
+            </div>` : ''}
+
+            <div class="w-full">
                 
-                <div class="modal-controls">
-                    <button class="btn-icon" title="Minimizar" data-action="minimize"><i class="ph-bold ph-minus"></i></button>
-                    <button class="btn-icon btn-max" title="Expandir/Restaurar" data-action="maximize"><i class="ph-bold ph-arrows-out-simple"></i></button>
-                    <button class="btn-icon btn-close" title="Fechar" data-action="close"><i class="ph-bold ph-x"></i></button>
+                <div class="mb-8 pb-6" style="border-bottom: 1px solid var(--color-border-subtle);">
+                    <div class="flex items-center gap-3 mb-4">
+                        <i class="ph-bold ph-database text-purple-500 text-3xl"></i>
+                        <h1 class="text-3xl sm:text-4xl font-extrabold leading-tight tracking-tight" style="color: var(--color-text-inverse);">${safeText(script.name)}</h1>
+                    </div>
+                    
+                    <div class="flex flex-wrap items-center gap-2.5 mb-4">
+                        ${script.scriptNumber ? `<span class="px-2.5 py-1 bg-purple-500/10 text-purple-500 font-mono text-[12px] font-bold rounded">#SQL-${script.scriptNumber}</span>` : ''}
+                        <span class="px-3 py-1 text-[11px] rounded-full border bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-300 dark:border-gray-700">${safeText(script.dbType)}</span>
+                        ${script.visibility === VISIBILITY.PRIVATE ? `<span class="px-2.5 py-1 bg-red-500/10 text-red-400 text-[12px] font-bold rounded flex items-center gap-1.5"><i class="ph-bold ph-lock"></i> Privado</span>` : `<span class="px-2.5 py-1 bg-green-500/10 text-green-400 text-[12px] font-bold rounded flex items-center gap-1.5"><i class="ph-bold ph-globe"></i> Público</span>`}
+                    </div>
+                    <p class="text-[14.5px] leading-relaxed" style="color: var(--color-text-secondary);">${safeText(script.description)}</p>
+                </div>
+                
+                <div class="rounded-xl overflow-hidden shadow-sm mb-12" style="background-color: #1e1e1e; border: 1px solid #3c3c3c;">
+                    <div class="flex justify-between items-center px-4 py-2" style="background-color: #2d2d2d; border-bottom: 1px solid #3c3c3c;">
+                        <div class="flex items-center gap-2">
+                            <i class="ph-fill ph-file-code text-gray-400"></i>
+                            <span class="text-xs font-mono text-gray-300">query.sql</span>
+                        </div>
+                        <button id="btn-copy-code-${idUnico}" class="flex items-center gap-1.5 text-xs text-gray-400 hover:text-white transition-colors">
+                            <i class="ph-bold ph-copy"></i> Copiar Código
+                        </button>
+                    </div>
+                    <pre class="p-6 overflow-x-auto text-sm font-mono text-[#d4d4d4] leading-relaxed"><code>${safeText(script.code)}</code></pre>
                 </div>
             </div>
 
-            <div class="modal-body">
-                ${script.status === 'review' || script.status === 'pendente_revisao' ? `
-                <div class="alert-box alert-warning">
-                    <i class="ph-fill ph-warning-circle alert-icon"></i>
-                    <span class="alert-text"><strong>Atenção:</strong> Este script foi sinalizado ou está em revisão.</span>
-                </div>` : ''}
+            <div class="w-full mt-16 pt-8" style="border-top: 1px solid var(--color-border-subtle);">
+                <h4 class="text-[12px] font-bold uppercase tracking-widest mb-6 flex items-center gap-2" style="color: var(--color-text-muted);"><i class="ph-fill ph-chats text-base text-purple-500"></i> Observações Técnicas</h4>
                 
-                <div class="view-header-meta">
-                    <div class="view-tags">
-                        ${script.visibility === VISIBILITY.PRIVATE ? `<span class="tag-badge tag-private"><i class="ph ph-lock"></i> Setor: ${safeText(script.sectorId)}</span>` : `<span class="tag-badge tag-public"><i class="ph ph-globe"></i> Público</span>`}
-                        <button class="btn-interaction btn-explain" data-action="explain-sql"><i class="ph-fill ph-lightbulb"></i>Explicar IA</button>
-                    </div>
-                    <p class="view-description">${safeText(script.description)}</p>
-                </div>
-                
-                <div class="code-container">
-                    <button class="btn-secondary btn-copy-code" data-action="copy-code">Copiar</button>
-                    <pre class="code-preview"><code>${script.code.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</code></pre>
-                </div>
-                
-                <div class="view-footer-actions">
-                    <div class="action-group">
-                        <button class="btn-interaction btn-like" data-action="toggle-sql-like"><i class="ph-fill ph-heart"></i> Curtiu (${(script.likes || []).length})</button>
-                        <button class="btn-interaction btn-comment" data-action="prompt-sql-comment"><i class="ph-fill ph-chat-circle"></i> Comentar (${(script.comments || []).length})</button>
-                        <button class="btn-interaction btn-fav" data-action="toggle-sql-fav"><i class="${isFav ? 'ph-fill' : 'ph'} ph-star"></i> ${isFav ? 'Desfavoritar' : 'Favoritar'}</button>
-                    </div>
-                    <div class="action-group">
-                        <button class="btn-secondary" data-action="open-sql-history"><i class="ph-fill ph-clock-counter-clockwise"></i> Histórico</button>
-                        <button class="btn-danger" data-action="flag-sql"><i class="ph-fill ph-warning-circle"></i> Reportar Erro</button>
+                <div class="mb-8 rounded-xl overflow-hidden shadow-sm focus-within:ring-1 focus-within:ring-purple-500 transition-all" style="background-color: var(--color-sidebar-background); border: 1px solid var(--color-border);">
+                    <textarea id="inline-sql-comment-${idUnico}" rows="2" placeholder="Comente sobre a eficácia, segurança ou melhorias nesta query..." class="w-full bg-transparent p-4 outline-none resize-y min-h-[70px] text-[14px]" style="color: var(--color-text-inverse);"></textarea>
+                    <div class="flex justify-end p-3" style="background-color: rgba(0,0,0,0.1); border-top: 1px solid var(--color-border-subtle);">
+                        <button type="button" id="btn-send-sql-comment-${idUnico}" class="flex items-center gap-2 px-5 py-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-lg shadow-sm transition-colors">
+                            <i class="ph-bold ph-paper-plane-right"></i> Publicar Observação
+                        </button>
                     </div>
                 </div>
-                
-                ${script.comments && script.comments.length > 0 ? `
-                <div class="comments-section">
-                    <h4 class="comments-title">Comentários da Comunidade</h4>
-                    ${script.comments.map(c => `
-                        <div class="comment-card">
-                            <div class="comment-header">
-                                <span class="comment-author">${safeText(c.userName)}</span>
-                                <span class="comment-date">${new Date(c.date).toLocaleDateString()}</span>
+
+                <div id="inline-sql-list-${idUnico}" class="space-y-4">
+                    ${script.comments && script.comments.length > 0 ? script.comments.map(c => `
+                        <div class="p-5 rounded-xl shadow-sm" style="background-color: var(--color-sidebar-background); border: 1px solid var(--color-border-subtle);">
+                            <div class="flex items-center justify-between mb-3">
+                                <span class="text-[13px] font-bold" style="color: var(--color-text-inverse);">${safeText(c.userName)}</span>
+                                <span class="text-[11px]" style="color: var(--color-text-muted);">${new Date(c.date).toLocaleString('pt-BR')}</span>
                             </div>
-                            <p class="comment-text">${safeText(c.text)}</p>
+                            <p class="text-[14px] leading-relaxed font-mono" style="color: var(--color-text-primary);">${safeText(c.text)}</p>
                         </div>
-                    `).join('')}
-                </div>` : '<p class="empty-state-text">Seja o primeiro a adicionar uma observação!</p>'}
+                    `).join('') : '<p class="text-[13px] italic empty-comment-msg" style="color: var(--color-text-muted);">Nenhuma anotação sobre esta query.</p>'}
+                </div>
+            </div>
+            
+            <div class="h-12"></div>
+        </div>
+
+        <div class="flex flex-col sm:flex-row justify-between items-center gap-3 px-6 py-3.5 shrink-0 shadow-[0_-4px_12px_rgba(0,0,0,0.05)]" style="background-color: var(--color-sidebar-background); border-top: 1px solid var(--color-border);">
+            <div class="flex items-center gap-2">
+                <button class="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-colors" style="color: var(--color-text-primary);" onmouseover="this.style.backgroundColor='var(--color-hover)'" onmouseout="this.style.backgroundColor='transparent'" data-action="toggle-sql-like">
+                    <i class="${isLiked ? 'ph-fill text-red-500' : 'ph text-gray-400'} ph-heart text-lg"></i> Útil (<span id="sql-like-count-${idUnico}">${(script.likes || []).length}</span>)
+                </button>
+                <button class="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-colors" style="color: var(--color-text-primary);" onmouseover="this.style.backgroundColor='var(--color-hover)'" onmouseout="this.style.backgroundColor='transparent'" data-action="focus-sql-comment">
+                    <i class="ph-fill ph-chat-circle text-purple-500 text-lg"></i> Anotar (<span id="sql-comment-count-${idUnico}">${(script.comments || []).length}</span>)
+                </button>
+                <button class="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-colors" style="color: var(--color-text-primary);" onmouseover="this.style.backgroundColor='var(--color-hover)'" onmouseout="this.style.backgroundColor='transparent'" data-action="toggle-sql-fav">
+                    <i class="${isFav ? 'ph-fill text-yellow-500' : 'ph text-gray-400'} ph-star text-lg"></i> ${isFav ? 'Salvo' : 'Favoritar'}
+                </button>
+            </div>
+
+            <div class="flex items-center gap-2">
+                <button class="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold text-yellow-500 hover:bg-yellow-500/10 border border-yellow-500/20 transition-colors" data-action="explain-sql">
+                    <i class="ph-fill ph-lightbulb text-lg"></i> Explicar Código
+                </button>
+                <button class="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-colors" style="color: var(--color-text-primary);" onmouseover="this.style.backgroundColor='var(--color-hover)'" onmouseout="this.style.backgroundColor='transparent'" data-action="open-sql-history">
+                    <i class="ph-bold ph-clock-counter-clockwise text-gray-400 text-lg"></i> Histórico
+                </button>
+                <button class="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold text-red-500 hover:bg-red-500/10 transition-colors" data-action="flag-sql">
+                    <i class="ph-bold ph-warning-circle text-lg"></i> Reportar
+                </button>
+                ${hasPermission('manage_sql') || script.createdById === userId ? `
+                    <div class="w-px h-5 mx-2" style="background-color: var(--color-border);"></div>
+                    <button class="flex items-center gap-1.5 px-5 py-2 rounded-lg text-xs font-bold text-white bg-purple-600 hover:bg-purple-700 shadow-sm transition-colors" data-action="edit-sql">
+                        <i class="ph-bold ph-pencil-simple text-lg"></i> Editar
+                    </button>
+                ` : ''}
             </div>
         </div>
     `;
 
-    modal.querySelector('[data-action="header-min"]').addEventListener('click', (e) => {
-        if (!e.target.closest('button')) window.__kcs.toggleMinimize(modalId);
+    // Botão de Copiar (Comportamento realocado e blindado)
+    container.querySelector(`#btn-copy-code-${idUnico}`).addEventListener('click', async (e) => {
+        try {
+            await navigator.clipboard.writeText(script.code);
+            const btn = e.currentTarget;
+            btn.innerHTML = '<i class="ph-fill ph-check-circle text-green-500"></i> Copiado!';
+            setTimeout(() => btn.innerHTML = '<i class="ph-bold ph-copy"></i> Copiar Código', 2000);
+        } catch (err) {
+            window.__kcs.showToast('Falha ao copiar.', 'error');
+        }
     });
-    modal.querySelector('[data-action="minimize"]').addEventListener('click', (e) => { e.stopPropagation(); window.__kcs.toggleMinimize(modalId); });
-    modal.querySelector('[data-action="maximize"]').addEventListener('click', (e) => { e.stopPropagation(); window.__kcs.toggleMaximize(modalId); });
-    modal.querySelector('[data-action="close"]').addEventListener('click', (e) => { e.stopPropagation(); window.__kcs.closeModal(modalId, true); });
 
-    modal.querySelector('[data-action="explain-sql"]').addEventListener('click', () => window.__kcs.explainSql(script.id));
-    modal.querySelector('[data-action="copy-code"]').addEventListener('click', (e) => window.__kcs.copyCode(e.currentTarget));
-    
-    modal.querySelector('[data-action="toggle-sql-like"]').addEventListener('click', () => window.__kcs.toggleSqlLike(script.id));
-    modal.querySelector('[data-action="prompt-sql-comment"]').addEventListener('click', () => window.__kcs.promptSqlComment(script.id));
-    modal.querySelector('[data-action="toggle-sql-fav"]').addEventListener('click', () => window.__kcs.toggleSqlFavorite(script.id));
-    
-    modal.querySelector('[data-action="open-sql-history"]').addEventListener('click', () => window.__kcs.openHistory(script.id, 'sql'));
-    modal.querySelector('[data-action="flag-sql"]').addEventListener('click', () => window.__kcs.flagSqlScript(script.id));
+    // Lógica do Comentário SQL
+    const btnSendSqlComment = container.querySelector(`#btn-send-sql-comment-${idUnico}`);
+    const inputSqlComment = container.querySelector(`#inline-sql-comment-${idUnico}`);
+    const sqlCommentsList = container.querySelector(`#inline-sql-list-${idUnico}`);
 
-    attachToOverlay(modal);
+    btnSendSqlComment.addEventListener('click', async () => {
+        const text = inputSqlComment.value.trim();
+        if (!text) return;
+
+        try {
+            btnSendSqlComment.innerHTML = '<i class="ph-bold ph-spinner animate-spin"></i> Publicando...';
+            btnSendSqlComment.disabled = true;
+
+            const { addSqlComment } = await import('../services/sqlLibrary.js');
+            await addSqlComment(script.id, text);
+
+            const emptyMsg = sqlCommentsList.querySelector('.empty-comment-msg');
+            if (emptyMsg) emptyMsg.remove();
+
+            sqlCommentsList.insertAdjacentHTML('beforeend', `
+                <div class="p-5 rounded-xl shadow-sm animate-fade-in" style="background-color: var(--color-sidebar-background); border: 1px solid var(--color-border-subtle);">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="text-[13px] font-bold" style="color: var(--color-text-inverse);">${safeText(currentUser?.displayName || 'Você')}</span>
+                        <span class="text-[11px] text-purple-500 font-semibold">Agora mesmo</span>
+                    </div>
+                    <p class="text-[14px] leading-relaxed font-mono" style="color: var(--color-text-primary);">${safeText(text)}</p>
+                </div>
+            `);
+            inputSqlComment.value = ''; 
+
+            const countSpan = container.querySelector(`#sql-comment-count-${idUnico}`);
+            if (countSpan) countSpan.innerText = parseInt(countSpan.innerText) + 1;
+
+            window.__kcs.showToast('Observação salva!', 'success');
+        } catch(e) {
+            window.__kcs.showToast('Erro ao salvar.', 'error');
+        } finally {
+            btnSendSqlComment.innerHTML = '<i class="ph-bold ph-paper-plane-right"></i> Publicar Observação';
+            btnSendSqlComment.disabled = false;
+        }
+    });
+
+    // Focus Comentário
+    container.querySelector('[data-action="focus-sql-comment"]').addEventListener('click', () => {
+        inputSqlComment.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        setTimeout(() => inputSqlComment.focus(), 300);
+    });
+
+    // Demais ações
+    container.querySelector('[data-action="explain-sql"]').addEventListener('click', () => window.__kcs.explainSql(script.id));
+    container.querySelector('[data-action="toggle-sql-like"]').addEventListener('click', () => window.__kcs.toggleSqlLike(script.id));
+    container.querySelector('[data-action="toggle-sql-fav"]').addEventListener('click', () => window.__kcs.toggleSqlFavorite(script.id));
+    container.querySelector('[data-action="open-sql-history"]').addEventListener('click', () => window.__kcs.openHistory(script.id, 'sql'));
+    container.querySelector('[data-action="flag-sql"]').addEventListener('click', () => window.__kcs.flagSqlScript(script.id));
+
+    const btnEdit = container.querySelector('[data-action="edit-sql"]');
+    if (btnEdit) {
+        btnEdit.addEventListener('click', () => {
+            window.TabManager.closeTab(idUnico, true);
+            window.__kcs.editSqlScript(script.id);
+        });
+    }
+
+    // Injetar na Aba com ícone diferente
+    window.TabManager.openTab(idUnico, tituloAba, 'ph-database', container);
 }
 
 export function openHistoryModal(item, type) {
-    const modal = document.getElementById('history-modal');
-    const content = document.getElementById('history-list');
-    if (!modal || !content) return;
+    const safeText = (str) => str ? String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>') : '';
     
-    attachToOverlay(modal);
-    modal.dataset.title = 'Histórico de Versões';
-
-    const safeText = (str) => { 
-        if(!str) return ''; 
-        return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>'); 
-    };
+    const overlay = document.createElement('div');
+    overlay.className = 'fixed inset-0 bg-black/60 z-[9999] flex items-center justify-center backdrop-blur-sm animate-fade-in p-4';
     
-    if (!item.history || item.history.length === 0) {
-        content.innerHTML = '<p class="empty-state-text">Nenhum histórico de versões disponível.</p>';
-    } else {
+    let historyListHtml = '<p class="text-gray-400 text-sm italic">Nenhum histórico de versões disponível.</p>';
+    
+    if (item.history && item.history.length > 0) {
         const reversedHistory = [...item.history].reverse();
         const totalVersions = item.history.length;
         
-        content.innerHTML = reversedHistory.map((h, reversedIndex) => {
+        historyListHtml = reversedHistory.map((h, reversedIndex) => {
             const originalIndex = totalVersions - 1 - reversedIndex;
             return `
-            <details class="history-item">
-                <summary class="history-summary">
-                    <div class="history-meta">
-                        <i class="ph ph-caret-right history-caret"></i>
-                        <div>
-                            <p class="history-version-title">Versão ${originalIndex + 1}</p>
-                            <p class="history-author">Salvo por <span>${safeText(h.updatedBy || 'Sistema')}</span> em ${new Date(h.updatedAt).toLocaleString()}</p>
-                        </div>
+            <div class="mb-4 bg-[#1e1e1e] border border-[#3c3c3c] rounded-lg p-4 shadow-sm hover:border-blue-500/50 transition-colors">
+                <div class="flex justify-between items-start mb-3">
+                    <div>
+                        <h4 class="text-sm font-bold text-gray-200">Versão ${originalIndex + 1}</h4>
+                        <p class="text-[11px] text-gray-500 mt-0.5">Salvo por <span class="text-gray-300 font-semibold">${safeText(h.updatedBy || 'Sistema')}</span> em ${new Date(h.updatedAt).toLocaleString()}</p>
                     </div>
-                    <button class="btn-primary btn-restore" data-action="restore-history" data-index="${originalIndex}">Restaurar</button>
-                </summary>
-                <div class="history-body">
-                    <div class="history-field">
-                        <span class="history-label">Título Registrado:</span>
-                        <p class="history-value">${safeText(h.title || h.name)}</p>
-                    </div>
-                    <div class="history-field">
-                        <span class="history-label">Conteúdo Principal:</span>
-                        <div class="history-content markdown-body">
-                            ${formatContentForView(h.steps || h.body || h.code)}
-                        </div>
-                    </div>
+                    <button class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-bold rounded shadow-sm transition-colors" data-action="restore-history" data-index="${originalIndex}">
+                        <i class="ph-bold ph-clock-counter-clockwise mr-1"></i> Restaurar
+                    </button>
                 </div>
-            </details>
-        `}).join('');
-
-        content.querySelectorAll('[data-action="restore-history"]').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.preventDefault();
-                window.__kcs.restoreVersion(item.id, type, btn.dataset.index);
-            });
-        });
+                <div class="text-[13px] text-gray-400 line-clamp-2 leading-relaxed border-t border-[#3c3c3c] pt-2 mt-2">${safeText(h.title || h.name)}</div>
+            </div>
+            `;
+        }).join('');
     }
+
+    overlay.innerHTML = `
+        <div class="bg-[#252526] border border-[#3c3c3c] rounded-xl shadow-2xl max-w-2xl w-full h-[85vh] flex flex-col transform scale-100 transition-transform">
+            <div class="p-5 border-b border-[#3c3c3c] flex justify-between items-center shrink-0 bg-[#2d2d2d] rounded-t-xl">
+                <h2 class="text-lg font-bold text-gray-100 flex items-center gap-2"><i class="ph-bold ph-clock-counter-clockwise text-blue-500 text-xl"></i> Histórico de Versões</h2>
+                <button class="text-gray-400 hover:text-red-500 transition-colors" id="btn-close-history"><i class="ph-bold ph-x text-xl"></i></button>
+            </div>
+            <div class="p-6 overflow-y-auto flex-1 custom-scrollbar bg-[#252526] rounded-b-xl">
+                ${historyListHtml}
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(overlay);
+
+    overlay.querySelector('#btn-close-history').onclick = () => overlay.remove();
+    
+    overlay.querySelectorAll('[data-action="restore-history"]').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            overlay.remove();
+            window.__kcs.restoreVersion(item.id, type, btn.dataset.index);
+        });
+    });
 }
 
 export function openCategoryModal(refreshCallback) {
-    const modal = document.getElementById('category-modal');
-    const list = document.getElementById('category-list');
-    const select = document.getElementById('cat-parent');
-    const form = document.getElementById('category-form');
-    const btnClose = document.getElementById('btn-close-category-modal');
+    const idUnico = 'tab-category-manager';
+    const container = document.createElement('div');
+    container.className = 'flex flex-col h-full';
+    container.id = `view-container-${idUnico}`;
+    container.style.backgroundColor = 'var(--color-editor-background)';
     
-    if (!modal || !list || !form) return;
+    container.innerHTML = `
+        <div class="flex-1 overflow-y-auto p-6 md:p-10 custom-scrollbar">
+            <div class="max-w-4xl mx-auto">
+                <div class="mb-8 pb-6" style="border-bottom: 1px solid var(--color-border-subtle);">
+                    <h2 class="text-3xl font-extrabold mb-2 flex items-center gap-3" style="color: var(--color-text-inverse);">
+                        <i class="ph-bold ph-folders text-orange-500"></i> Gerenciar Categorias
+                    </h2>
+                    <p class="text-sm" style="color: var(--color-text-secondary);">Organize a árvore de navegação lateral da sua base de conhecimento.</p>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    <div class="md:col-span-2 space-y-3">
+                        <h3 class="text-[11px] font-bold uppercase tracking-widest mb-4" style="color: var(--color-text-muted);">Categorias Existentes</h3>
+                        <div id="category-list-${idUnico}" class="space-y-2"></div>
+                    </div>
 
-    attachToOverlay(modal);
-    modal.dataset.title = 'Gerenciar Categorias';
-
-    function renderList() {
-        const categories = getFlatCategories();
-        select.innerHTML = '<option value="">Raiz (Sem Pai)</option>' + categories.map(c => `<option value="${c.id}">${c.path}</option>`).join('');
-        
-        list.innerHTML = categories.map(c => `
-            <div class="category-list-item">
-                <span class="category-name"><i class="ph ${c.icon || 'ph-folder'}"></i> ${c.path}</span>
-                <div class="category-actions">
-                    <button class="btn-secondary btn-small" data-action="edit-category" data-id="${c.id}" data-name="${c.name}" data-icon="${c.icon || ''}">Editar</button>
-                    <button class="btn-danger btn-small" data-action="delete-category" data-id="${c.id}">Excluir</button>
+                    <div class="md:col-span-1">
+                        <form id="category-form-${idUnico}" class="p-6 rounded-xl sticky top-0 shadow-sm" style="background-color: var(--color-sidebar-background); border: 1px solid var(--color-border-subtle);">
+                            <h3 class="text-[11px] font-bold uppercase tracking-widest mb-5" style="color: var(--color-text-muted);">Nova Categoria</h3>
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-[11px] font-bold uppercase tracking-wider mb-1.5" style="color: var(--color-text-muted);">Nome da Categoria</label>
+                                    <input type="text" id="cat-name-${idUnico}" required class="w-full px-4 py-2.5 rounded-lg text-sm outline-none focus:ring-1 focus:ring-orange-500 transition-all" style="background-color: var(--color-editor-background); color: var(--color-text-primary); border: 1px solid var(--color-border);" />
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] font-bold uppercase tracking-wider mb-1.5" style="color: var(--color-text-muted);">Ícone (Phosphor)</label>
+                                    <input type="text" id="cat-icon-${idUnico}" value="ph-folder" class="w-full px-4 py-2.5 rounded-lg text-sm outline-none focus:ring-1 focus:ring-orange-500 transition-all font-mono" style="background-color: var(--color-editor-background); color: var(--color-text-primary); border: 1px solid var(--color-border);" />
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] font-bold uppercase tracking-wider mb-1.5" style="color: var(--color-text-muted);">Hierarquia (Pai)</label>
+                                    <select id="cat-parent-${idUnico}" class="w-full px-4 py-2.5 rounded-lg text-sm outline-none focus:ring-1 focus:ring-orange-500 transition-all cursor-pointer" style="background-color: var(--color-editor-background); color: var(--color-text-primary); border: 1px solid var(--color-border);">
+                                        <option value="">Raiz (Principal)</option>
+                                    </select>
+                                </div>
+                                <button type="submit" class="w-full mt-4 bg-orange-600 hover:bg-orange-700 text-white text-sm font-bold py-3 rounded-lg transition-colors shadow-sm">
+                                    Adicionar
+                                </button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
             </div>
-        `).join('') || '<p class="empty-state-text">Nenhuma categoria cadastrada.</p>';
+        </div>
+    `;
 
-        list.querySelectorAll('[data-action="edit-category"]').forEach(btn => {
-            btn.addEventListener('click', () => window.__kcs.editCategory(btn.dataset.id, btn.dataset.name, btn.dataset.icon));
-        });
-        list.querySelectorAll('[data-action="delete-category"]').forEach(btn => {
-            btn.addEventListener('click', () => window.__kcs.deleteCategory(btn.dataset.id));
-        });
-    }
 
     window.__kcs.deleteCategory = (id) => { 
         removeCategory(id); 
@@ -942,22 +1095,20 @@ export function openCategoryModal(refreshCallback) {
     }
 }
 
+// ==========================================
+// MDI TAB: ADMINISTRAÇÃO GERAL (COM OVERVIEW SAAS COMPLETO)
+// ==========================================
 export async function openSettingsModal() {
-    const modal = document.getElementById('settings-modal');
-    const usersList = document.getElementById('users-list');
-    const btnClose = document.getElementById('btn-close-settings-modal');
-    
-    if (!modal || !usersList) return;
-    
-    attachToOverlay(modal);
-    modal.dataset.title = 'Administração';
+    const idUnico = 'tab-admin-panel';
+    const container = document.createElement('div');
+    container.className = 'flex flex-col h-full bg-editor-background';
+    container.id = `view-container-${idUnico}`;
+    container.style.backgroundColor = 'var(--color-editor-background)';
 
-    usersList.innerHTML = '<div class="loader-container"><div class="spinner-icon-large"></div></div>';
+    container.innerHTML = `<div class="p-10 flex items-center gap-3 text-blue-500"><i class="ph-bold ph-spinner animate-spin text-2xl"></i> Buscando dados...</div>`;
+    window.TabManager.openTab(idUnico, 'Administração', 'ph-gear-six', container);
 
-    const safeText = (str) => { 
-        if(!str) return ''; 
-        return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>'); 
-    };
+    const safeText = (str) => str ? String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') : '';
 
     try {
         const isSuperAdmin = hasRole('super_admin');
@@ -967,58 +1118,69 @@ export async function openSettingsModal() {
         
         let companies = [];
         if (isSuperAdmin) {
-            companies = await getAllCompaniesFromCloud();
+            // Alteração Chave: Usar fetchCompaniesOverview para trazer o plano e a contagem de usuários
+            const { fetchCompaniesOverview } = await import('../auth.js');
+            companies = await fetchCompaniesOverview();
         }
 
         let companiesSelectOptions = '';
-        if (isSuperAdmin) {
-            companiesSelectOptions = companies.map(c => `<option value="${c.companyId}">${c.companyName}</option>`).join('');
-        } else {
-            companiesSelectOptions = `<option value="${currentUser.companyId}">${currentUser.companyName}</option>`;
-        }
+        if (isSuperAdmin) companiesSelectOptions = companies.map(c => `<option value="${c.companyId}">${c.companyName}</option>`).join('');
+        else companiesSelectOptions = `<option value="${currentUser.companyId}">${currentUser.companyName}</option>`;
         
         const sectorsOptionsHtml = (userSector) => SECTORS.map(s => `<option value="${s.id}" ${userSector === s.id ? 'selected' : ''}>${s.name}</option>`).join('');
 
         let companiesHtml = '';
         if (isSuperAdmin) {
             companiesHtml = `
-            <div class="settings-section">
-                <h3 class="settings-title color-purple">
-                    <i class="ph-fill ph-buildings"></i> Painel Master (Empresas Clientes)
-                </h3>
+            <div class="mb-10">
+                <h3 class="text-sm font-bold uppercase tracking-widest mb-4 flex items-center gap-2" style="color: var(--color-text-muted);"><i class="ph-fill ph-buildings text-purple-500 text-lg"></i> Painel Master (Empresas Clientes)</h3>
                 
-                <div class="form-row">
-                    <input type="text" id="new-company-name" placeholder="Nome da Empresa" class="form-input flex-2" />
-                    <input type="text" id="new-company-domain" placeholder="Domínios (ex: nissei.com)" class="form-input flex-2 font-mono" />
-                    <button class="btn-primary" data-action="create-company">Cadastrar Cliente</button>
+                <div class="flex gap-3 mb-4">
+                    <input type="text" id="new-company-name" placeholder="Nome da Empresa" class="flex-1 px-4 py-2.5 rounded-lg text-sm outline-none focus:ring-1 focus:ring-purple-500 transition-all" style="background-color: var(--color-sidebar-background); color: var(--color-text-primary); border: 1px solid var(--color-border);" />
+                    <input type="text" id="new-company-domain" placeholder="Domínios (ex: nissei.com)" class="flex-1 px-4 py-2.5 rounded-lg text-sm outline-none focus:ring-1 focus:ring-purple-500 transition-all font-mono" style="background-color: var(--color-sidebar-background); color: var(--color-text-primary); border: 1px solid var(--color-border);" />
+                    <button class="px-6 py-2.5 bg-purple-600 hover:bg-purple-700 text-white text-sm font-bold rounded-lg shadow-sm transition-colors" data-action="create-company">Cadastrar Cliente</button>
                 </div>
                 
-                <div class="table-wrapper">
-                    <table class="table-default">
+                <div class="rounded-xl overflow-hidden shadow-sm" style="background-color: var(--color-sidebar-background); border: 1px solid var(--color-border-subtle);">
+                    <table class="w-full text-left border-collapse">
                         <thead>
-                            <tr>
-                                <th>Empresa / Tenant</th>
-                                <th>Domínios</th>
-                                <th>Ações</th>
+                            <tr style="background-color: rgba(0,0,0,0.2); border-bottom: 1px solid var(--color-border-subtle);">
+                                <th class="py-3 px-5 text-[11px] font-bold uppercase tracking-wider" style="color: var(--color-text-muted);">Empresa / Tenant</th>
+                                <th class="py-3 px-5 text-[11px] font-bold uppercase tracking-wider" style="color: var(--color-text-muted);">Domínios</th>
+                                <th class="py-3 px-5 text-[11px] font-bold uppercase tracking-wider" style="color: var(--color-text-muted);">Plano & Ocupação</th>
+                                <th class="py-3 px-5 text-[11px] font-bold uppercase tracking-wider text-right" style="color: var(--color-text-muted);">Ações</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody class="divide-y" style="divide-color: var(--color-border-subtle);">
                             ${companies.map(c => {
-                                const domainsArray = Array.isArray(c.domains) ? c.domains : (c.domains ? String(c.domains).split(',') : []);
-                                const domainsLabel = domainsArray.join(', ') || 'Nenhum';
+                                const domainsLabel = (Array.isArray(c.domains) ? c.domains : (c.domains ? String(c.domains).split(',') : [])).join(', ') || 'Nenhum';
+                                
+                                // Lógica de cores para os Planos
+                                let badgeClass = 'bg-blue-500/10 text-blue-400 border-blue-500/20';
+                                if (c.plan?.toLowerCase() === 'teams') badgeClass = 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20';
+                                if (c.plan?.toLowerCase() === 'unlimited') badgeClass = 'bg-purple-500/10 text-purple-400 border-purple-500/20';
+
                                 return `
-                                <tr class="table-row">
-                                    <td>
-                                        <div class="cell-title">${safeText(c.companyName)} <span class="badge-purple">${c.plan || 'Starter'}</span></div>
-                                        <div class="cell-subtitle font-mono">ID: ${c.companyId.toUpperCase()}</div>
+                                <tr class="transition-colors hover:bg-black/5 dark:hover:bg-white/5">
+                                    <td class="py-4 px-5">
+                                        <div class="font-bold text-[14px]" style="color: var(--color-text-inverse);">${safeText(c.companyName)}</div>
+                                        <div class="text-[11px] font-mono mt-1" style="color: var(--color-text-secondary);">ID: ${c.companyId.toUpperCase()}</div>
                                     </td>
-                                    <td><i class="ph ph-globe"></i> ${safeText(domainsLabel)}</td>
-                                    <td class="actions-cell">
-                                        <button class="btn-secondary btn-small" data-action="edit-company" data-id="${c.companyId}" data-name="${safeText(c.companyName)}" data-domains="${safeText(domainsLabel)}" data-plan="${c.plan || 'Starter'}">Editar</button>
-                                        <button class="btn-danger btn-icon" data-action="delete-company" data-id="${c.companyId}"><i class="ph ph-trash"></i></button>
+                                    <td class="py-4 px-5 text-sm" style="color: var(--color-text-primary);"><i class="ph ph-globe mr-1 text-gray-500"></i> ${safeText(domainsLabel)}</td>
+                                    <td class="py-4 px-5">
+                                        <div class="flex items-center gap-2 mb-1.5">
+                                            <span class="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded border ${badgeClass}">${c.plan || 'Starter'}</span>
+                                        </div>
+                                        <div class="text-[11px] font-medium" style="color: var(--color-text-secondary);">
+                                            <i class="ph-fill ph-users mr-1"></i> ${c.userCount} / ${c.maxUsers >= 9999 ? '∞' : c.maxUsers} vagas
+                                        </div>
+                                    </td>
+                                    <td class="py-4 px-5 text-right">
+                                        <button class="px-3 py-1.5 rounded text-xs font-semibold mr-2 transition-colors" style="background-color: var(--color-editor-background); color: var(--color-text-primary); border: 1px solid var(--color-border);" onmouseover="this.style.borderColor='var(--color-focus)'; this.style.color='var(--color-focus)';" onmouseout="this.style.borderColor='var(--color-border)'; this.style.color='var(--color-text-primary)';" data-action="edit-company" data-id="${c.companyId}" data-name="${safeText(c.companyName)}" data-domains="${safeText(domainsLabel)}" data-plan="${c.plan || 'Starter'}">Editar</button>
+                                        <button class="p-1.5 rounded text-red-500 transition-colors" style="background-color: var(--color-editor-background); border: 1px solid var(--color-border);" onmouseover="this.style.backgroundColor='rgba(239,68,68,0.1)';" onmouseout="this.style.backgroundColor='var(--color-editor-background)';" data-action="delete-company" data-id="${c.companyId}"><i class="ph-bold ph-trash text-sm"></i></button>
                                     </td>
                                 </tr>`;
-                            }).join('') || '<tr><td colspan="3" class="empty-cell">Nenhuma empresa cadastrada.</td></tr>'}
+                            }).join('') || `<tr><td colspan="4" class="py-6 text-center text-sm italic" style="color: var(--color-text-muted);">Nenhuma empresa cadastrada.</td></tr>`}
                         </tbody>
                     </table>
                 </div>
@@ -1026,206 +1188,223 @@ export async function openSettingsModal() {
         }
 
         const invitesHtml = `
-        <div class="settings-section">
-            <h3 class="settings-title color-blue">
-                <i class="ph-fill ph-envelope-simple"></i> Whitelist de Exceção (Convites)
-            </h3>
+        <div class="mb-10">
+            <h3 class="text-sm font-bold uppercase tracking-widest mb-4 flex items-center gap-2" style="color: var(--color-text-muted);"><i class="ph-fill ph-envelope-simple text-blue-500 text-lg"></i> Whitelist de Exceção (Convites)</h3>
             
-            <form id="form-invite-user" class="form-row">
-                <input type="email" id="invite-email" placeholder="E-mail (ex: nome@gmail.com)" class="form-input flex-2" required />
-                ${isSuperAdmin ? `<select id="invite-company" class="form-select flex-1">${companiesSelectOptions}</select>` : `<input type="hidden" id="invite-company" value="${currentUser.companyId}" />`}
-                <select id="invite-sector" class="form-select flex-1">${sectorsOptionsHtml('')}</select>
-                <select id="invite-role" class="form-select flex-1">
+            <form id="form-invite-user" class="flex flex-wrap gap-3 mb-4">
+                <input type="email" id="invite-email" placeholder="E-mail (ex: nome@gmail.com)" class="flex-[2] px-4 py-2.5 rounded-lg text-sm outline-none focus:ring-1 focus:ring-blue-500 transition-all" style="background-color: var(--color-sidebar-background); color: var(--color-text-primary); border: 1px solid var(--color-border);" required />
+                ${isSuperAdmin ? `<select id="invite-company" class="flex-1 px-3 py-2.5 rounded-lg text-sm cursor-pointer" style="background-color: var(--color-sidebar-background); color: var(--color-text-primary); border: 1px solid var(--color-border);">${companiesSelectOptions}</select>` : `<input type="hidden" id="invite-company" value="${currentUser.companyId}" />`}
+                <select id="invite-sector" class="flex-1 px-3 py-2.5 rounded-lg text-sm cursor-pointer" style="background-color: var(--color-sidebar-background); color: var(--color-text-primary); border: 1px solid var(--color-border);">${sectorsOptionsHtml('')}</select>
+                <select id="invite-role" class="flex-1 px-3 py-2.5 rounded-lg text-sm cursor-pointer" style="background-color: var(--color-sidebar-background); color: var(--color-text-primary); border: 1px solid var(--color-border);">
                     ${isSuperAdmin ? `<option value="super_admin">Super Admin</option>` : ''}
                     <option value="admin">Admin</option>
                     <option value="analyst">Analista KCS</option>
                     <option value="user" selected>Usuário Base</option>
                 </select>
-                <button type="submit" class="btn-primary">Autorizar</button>
+                <button type="submit" class="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-lg shadow-sm transition-colors">Autorizar</button>
             </form>
             
-            <div class="table-wrapper">
-                <table class="table-default">
-                    <tbody>
+            <div class="rounded-xl overflow-hidden shadow-sm" style="background-color: var(--color-sidebar-background); border: 1px solid var(--color-border-subtle);">
+                <table class="w-full text-left border-collapse">
+                    <tbody class="divide-y" style="divide-color: var(--color-border-subtle);">
                         ${invites.map(inv => `
-                            <tr class="table-row">
-                                <td class="user-cell">
-                                    <div class="avatar-mini"><i class="ph-fill ph-envelope"></i></div>
+                            <tr class="transition-colors hover:bg-black/5 dark:hover:bg-white/5">
+                                <td class="py-3 px-5 flex items-center gap-3">
+                                    <div class="w-8 h-8 rounded-full bg-blue-500/10 text-blue-500 flex items-center justify-center"><i class="ph-fill ph-envelope"></i></div>
                                     <div>
-                                        <p class="user-name">${safeText(inv.email)}</p>
-                                        <p class="user-role">${inv.role} | Setor: ${inv.sectorId}</p>
+                                        <p class="font-bold text-[13px]" style="color: var(--color-text-inverse);">${safeText(inv.email)}</p>
+                                        <p class="text-[11px] font-medium uppercase tracking-wider" style="color: var(--color-text-secondary);">${inv.role} | Setor: ${inv.sectorId}</p>
                                     </div>
                                 </td>
-                                <td class="actions-cell">
-                                    <button class="btn-danger btn-small" data-action="remove-invite" data-email="${inv.email}">Revogar</button>
+                                <td class="py-3 px-5 text-right">
+                                    <button class="px-3 py-1.5 rounded text-xs font-semibold text-red-500 transition-colors" style="background-color: var(--color-editor-background); border: 1px solid var(--color-border);" onmouseover="this.style.backgroundColor='rgba(239,68,68,0.1)';" onmouseout="this.style.backgroundColor='var(--color-editor-background)';" data-action="remove-invite" data-email="${inv.email}">Revogar</button>
                                 </td>
                             </tr>
-                        `).join('') || '<tr><td class="empty-cell">Nenhum convite pendente.</td></tr>'}
+                        `).join('') || `<tr><td class="py-6 text-center text-sm italic" style="color: var(--color-text-muted);">Nenhum convite pendente.</td></tr>`}
                     </tbody>
                 </table>
             </div>
         </div>`;
 
         const activeUsersHtml = `
-        <div class="settings-section">
-            <h3 class="settings-title">
-                <i class="ph-fill ph-users"></i> Usuários Registrados
-            </h3>
-            <div class="table-wrapper">
-                <table class="table-default">
-                    <tbody>
+        <div class="mb-10">
+            <h3 class="text-sm font-bold uppercase tracking-widest mb-4 flex items-center gap-2" style="color: var(--color-text-muted);"><i class="ph-fill ph-users text-green-500 text-lg"></i> Usuários Registrados</h3>
+            <div class="rounded-xl overflow-hidden shadow-sm" style="background-color: var(--color-sidebar-background); border: 1px solid var(--color-border-subtle);">
+                <table class="w-full text-left border-collapse">
+                    <tbody class="divide-y" style="divide-color: var(--color-border-subtle);">
                         ${users.map(u => {
                             const safeName = (u.displayName && String(u.displayName) !== 'undefined') ? u.displayName : 'Usuário KCS';
                             const safeEmail = (u.email && String(u.email) !== 'undefined') ? u.email : 'Sem e-mail';
                             return `
-                            <tr class="table-row">
-                                <td class="user-cell">
-                                    <img src="${u.photoURL || 'https://via.placeholder.com/40'}" class="avatar-img" onerror="this.style.display='none'">
+                            <tr class="transition-colors hover:bg-black/5 dark:hover:bg-white/5">
+                                <td class="py-3 px-5 flex items-center gap-3">
+                                    <img src="${u.photoURL || 'https://via.placeholder.com/40'}" class="w-8 h-8 rounded-full border" style="border-color: var(--color-border);" onerror="this.style.display='none'">
                                     <div>
-                                        <p class="user-name">${safeText(safeName)}</p>
-                                        <p class="user-email">${safeText(safeEmail)}</p>
+                                        <p class="font-bold text-[13px]" style="color: var(--color-text-inverse);">${safeText(safeName)}</p>
+                                        <p class="text-[12px]" style="color: var(--color-text-secondary);">${safeText(safeEmail)}</p>
                                     </div>
                                 </td>
-                                <td class="actions-cell">
-                                    <div class="table-actions">
+                                <td class="py-3 px-5 text-right">
+                                    <div class="flex items-center justify-end gap-2">
                                         ${isSuperAdmin ? `
-                                        <select class="form-select select-small" data-action="update-company" data-id="${u.id}">
+                                        <select class="px-2 py-1.5 rounded text-xs outline-none cursor-pointer" style="background-color: var(--color-editor-background); color: var(--color-text-primary); border: 1px solid var(--color-border);" data-action="update-company" data-id="${u.id}">
                                             <option value="LIMBO_TENANT" ${u.companyId === 'LIMBO_TENANT' ? 'selected' : ''}>⚠️ Pendente</option>
                                             ${companiesSelectOptions.replace(`value="${u.companyId}"`, `value="${u.companyId}" selected`)}
                                         </select>` : ''}
-                                        <select class="form-select select-small" data-action="update-sector" data-id="${u.id}">
+                                        <select class="px-2 py-1.5 rounded text-xs outline-none cursor-pointer" style="background-color: var(--color-editor-background); color: var(--color-text-primary); border: 1px solid var(--color-border);" data-action="update-sector" data-id="${u.id}">
                                             ${sectorsOptionsHtml(u.sectorId || 'TI')}
                                         </select>
-                                        <select class="form-select select-small" data-action="update-role" data-id="${u.id}">
+                                        <select class="px-2 py-1.5 rounded text-xs outline-none cursor-pointer" style="background-color: var(--color-editor-background); color: var(--color-text-primary); border: 1px solid var(--color-border);" data-action="update-role" data-id="${u.id}">
                                             ${isSuperAdmin ? `<option value="super_admin" ${u.role === 'super_admin' ? 'selected' : ''}>Super Admin</option>` : ''}
                                             <option value="admin" ${u.role === 'admin' ? 'selected' : ''}>Admin</option>
                                             <option value="analyst" ${u.role === 'analyst' ? 'selected' : ''}>Analista</option>
                                             <option value="user" ${u.role === 'user' ? 'selected' : ''}>Usuário</option>
                                         </select>
-                                        <button class="btn-danger btn-icon" data-action="delete-user" data-id="${u.id}"><i class="ph ph-trash"></i></button>
+                                        <button class="p-1.5 rounded text-red-500 transition-colors" style="background-color: var(--color-editor-background); border: 1px solid var(--color-border);" onmouseover="this.style.backgroundColor='rgba(239,68,68,0.1)';" onmouseout="this.style.backgroundColor='var(--color-editor-background)';" data-action="delete-user" data-id="${u.id}"><i class="ph-bold ph-trash text-sm"></i></button>
                                     </div>
                                 </td>
                             </tr>`;
-                        }).join('') || '<tr><td colspan="2" class="empty-cell">Nenhum usuário ativo.</td></tr>'}
+                        }).join('') || `<tr><td colspan="2" class="py-6 text-center text-sm italic" style="color: var(--color-text-muted);">Nenhum usuário ativo.</td></tr>`}
                     </tbody>
                 </table>
             </div>
         </div>`;
 
         const backupHtml = isSuperAdmin ? `
-        <div class="settings-section section-success">
-            <h3 class="settings-title color-green">
-                <i class="ph-fill ph-hard-drives"></i> Proteção de Dados e Backup
-            </h3>
-            <p class="settings-text">
-                O backup exporta toda a base para o Bucket: <strong class="badge-neutral">gs://kcs-system-180db-backups</strong>.
-            </p>
-            <button class="btn-success" data-action="trigger-backup">
+        <div class="mb-10 p-6 rounded-xl border border-green-500/20 bg-green-500/5">
+            <h3 class="text-sm font-bold uppercase tracking-widest mb-2 flex items-center gap-2 text-green-500"><i class="ph-fill ph-hard-drives text-lg"></i> Proteção de Dados e Backup</h3>
+            <p class="text-sm text-gray-400 mb-4 leading-relaxed">O backup exporta toda a base para o Bucket isolado de Cloud Storage.</p>
+            <button class="px-5 py-2.5 bg-green-600 hover:bg-green-700 text-white text-sm font-bold rounded-lg shadow-sm transition-colors flex items-center gap-2" data-action="trigger-backup">
                 <i class="ph-bold ph-cloud-arrow-down"></i> Disparar Backup
             </button>
         </div>` : '';
 
-        usersList.innerHTML = companiesHtml + invitesHtml + activeUsersHtml + backupHtml;
+        // Juntar tudo e atualizar o Container
+        container.innerHTML = `
+            <div class="flex-1 overflow-y-auto p-6 md:p-10 custom-scrollbar">
+                <div class="max-w-6xl mx-auto">
+                    <div class="mb-8 pb-6" style="border-bottom: 1px solid var(--color-border-subtle);">
+                        <h2 class="text-3xl font-extrabold mb-2 flex items-center gap-3" style="color: var(--color-text-inverse);">
+                            <i class="ph-bold ph-gear-six text-blue-500"></i> Administração do Sistema
+                        </h2>
+                        <p class="text-sm" style="color: var(--color-text-secondary);">Gerencie permissões, usuários e configurações estruturais da plataforma.</p>
+                    </div>
+                    ${companiesHtml}
+                    ${invitesHtml}
+                    ${activeUsersHtml}
+                    ${backupHtml}
+                    <div class="h-12"></div>
+                </div>
+            </div>
+        `;
 
-        usersList.querySelectorAll('[data-action="create-company"]').forEach(btn => btn.addEventListener('click', () => window.__kcs.createNewCompany()));
-        usersList.querySelectorAll('[data-action="edit-company"]').forEach(btn => btn.addEventListener('click', (e) => {
+        // Ligar Eventos
+        container.querySelectorAll('[data-action="create-company"]').forEach(btn => btn.addEventListener('click', () => window.__kcs.createNewCompany()));
+        container.querySelectorAll('[data-action="edit-company"]').forEach(btn => btn.addEventListener('click', (e) => {
             const ds = e.currentTarget.dataset;
             window.__kcs.promptEditCompany(ds.id, ds.name, ds.domains, ds.plan);
         }));
-        usersList.querySelectorAll('[data-action="delete-company"]').forEach(btn => btn.addEventListener('click', (e) => window.__kcs.deleteCompany(e.currentTarget.dataset.id)));
-        usersList.querySelectorAll('[data-action="remove-invite"]').forEach(btn => btn.addEventListener('click', (e) => window.__kcs.removeInvite(e.currentTarget.dataset.email)));
-        usersList.querySelectorAll('[data-action="update-company"]').forEach(sel => sel.addEventListener('change', (e) => window.__kcs.updateUserCompany(e.currentTarget.dataset.id, e.target.value)));
-        usersList.querySelectorAll('[data-action="update-sector"]').forEach(sel => sel.addEventListener('change', (e) => window.__kcs.updateUserSector(e.currentTarget.dataset.id, e.target.value)));
-        usersList.querySelectorAll('[data-action="update-role"]').forEach(sel => sel.addEventListener('change', (e) => window.__kcs.updateUserRole(e.currentTarget.dataset.id, e.target.value)));
-        usersList.querySelectorAll('[data-action="delete-user"]').forEach(btn => btn.addEventListener('click', (e) => window.__kcs.deleteUser(e.currentTarget.dataset.id)));
-        usersList.querySelectorAll('[data-action="trigger-backup"]').forEach(btn => btn.addEventListener('click', () => window.__kcs.triggerManualBackup()));
+        container.querySelectorAll('[data-action="delete-company"]').forEach(btn => btn.addEventListener('click', (e) => window.__kcs.deleteCompany(e.currentTarget.dataset.id)));
+        container.querySelectorAll('[data-action="remove-invite"]').forEach(btn => btn.addEventListener('click', (e) => window.__kcs.removeInvite(e.currentTarget.dataset.email)));
+        container.querySelectorAll('[data-action="update-company"]').forEach(sel => sel.addEventListener('change', (e) => window.__kcs.updateUserCompany(e.currentTarget.dataset.id, e.target.value)));
+        container.querySelectorAll('[data-action="update-sector"]').forEach(sel => sel.addEventListener('change', (e) => window.__kcs.updateUserSector(e.currentTarget.dataset.id, e.target.value)));
+        container.querySelectorAll('[data-action="update-role"]').forEach(sel => sel.addEventListener('change', (e) => window.__kcs.updateUserRole(e.currentTarget.dataset.id, e.target.value)));
+        container.querySelectorAll('[data-action="delete-user"]').forEach(btn => btn.addEventListener('click', (e) => window.__kcs.deleteUser(e.currentTarget.dataset.id)));
+        container.querySelectorAll('[data-action="trigger-backup"]').forEach(btn => btn.addEventListener('click', () => window.__kcs.triggerManualBackup()));
 
-        const formInvite = document.getElementById('form-invite-user');
+        const formInvite = container.querySelector('#form-invite-user');
         if (formInvite) {
-            safeBindEvent(formInvite, 'submit', async (e) => {
+            formInvite.addEventListener('submit', async (e) => {
                 e.preventDefault();
-                const em = document.getElementById('invite-email').value;
-                const cp = document.getElementById('invite-company')?.value || currentUser.companyId;
-                const sc = document.getElementById('invite-sector').value;
-                const rl = document.getElementById('invite-role').value;
+                const em = container.querySelector('#invite-email').value;
+                const cp = container.querySelector('#invite-company')?.value || currentUser.companyId;
+                const sc = container.querySelector('#invite-sector').value;
+                const rl = container.querySelector('#invite-role').value;
                 await window.__kcs.inviteUser(em, rl, cp, sc);
             });
         }
 
     } catch (e) { 
-        usersList.innerHTML = `<p class="alert-text color-red">Erro: ${e.message}</p>`; 
-    }
-    
-    if (btnClose) {
-        safeBindEvent(btnClose, 'click', () => window.__kcs.closeModal('settings-modal', false));
+        container.innerHTML = `<div class="p-10 text-red-500 font-bold">Erro de permissão ou conexão: ${e.message}</div>`; 
     }
 }
 
 export function asyncAlert(message) {
-    const modal = document.getElementById('alert-modal');
-    const msgEl = document.getElementById('alert-message');
-    const btnOk = document.getElementById('btn-alert-ok');
-    
-    if (!modal || !msgEl || !btnOk) { 
-        alert(message); 
-        return; 
-    }
-    
-    attachToOverlay(modal);
-    modal.dataset.title = 'Alerta';
-    
-    msgEl.innerHTML = message;
-    
-    safeBindEvent(btnOk, 'click', () => window.__kcs.closeModal('alert-modal', false));
+    const overlay = document.createElement('div');
+    overlay.className = 'fixed inset-0 bg-black/60 z-[9999] flex items-center justify-center backdrop-blur-sm animate-fade-in p-4';
+    overlay.innerHTML = `
+        <div class="bg-[#252526] border border-[#3c3c3c] rounded-xl shadow-2xl max-w-sm w-full p-6 text-center transform scale-100">
+            <i class="ph-fill ph-info text-5xl text-blue-500 mb-4 drop-shadow-lg"></i>
+            <h2 class="text-lg font-bold text-gray-100 mb-2">Aviso</h2>
+            <p class="text-[14px] text-gray-300 mb-8 leading-relaxed">${message}</p>
+            <button class="w-full py-2.5 rounded-lg text-sm font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-md transition-colors" id="btn-alert-ok">Entendi</button>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+    overlay.querySelector('#btn-alert-ok').onclick = () => overlay.remove();
 }
 
 export function asyncPrompt(message, defaultVal = '') {
     return new Promise((resolve) => {
-        const modal = document.getElementById('prompt-modal');
-        const msgEl = document.getElementById('prompt-message');
-        const inputEl = document.getElementById('prompt-input');
-        const btnCancel = document.getElementById('btn-prompt-cancel');
-        const btnConfirm = document.getElementById('btn-prompt-confirm');
+        const overlay = document.createElement('div');
+        overlay.className = 'fixed inset-0 bg-black/60 z-[9999] flex items-center justify-center backdrop-blur-sm animate-fade-in p-4';
+        overlay.innerHTML = `
+            <div class="bg-[#252526] border border-[#3c3c3c] rounded-xl shadow-2xl max-w-md w-full p-6 transform scale-100">
+                <div class="flex items-center gap-3 mb-4">
+                    <i class="ph-fill ph-pencil-simple text-2xl text-blue-500"></i>
+                    <h2 class="text-base font-bold text-gray-100">Entrada Necessária</h2>
+                </div>
+                <label class="block text-sm text-gray-300 mb-3">${message}</label>
+                <input type="text" id="dynamic-prompt-input" class="w-full bg-[#1e1e1e] border border-[#3c3c3c] rounded-lg px-4 py-3 text-white outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 mb-6 transition-all" value="${defaultVal}">
+                <div class="flex justify-end gap-3">
+                    <button class="px-5 py-2.5 rounded-lg text-sm font-semibold text-gray-400 hover:text-white hover:bg-[#333333] transition-colors" id="btn-prompt-cancel">Cancelar</button>
+                    <button class="px-5 py-2.5 rounded-lg text-sm font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-md transition-colors" id="btn-prompt-confirm">Confirmar</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(overlay);
         
-        if (!modal || !msgEl || !inputEl) { 
-            resolve(prompt(message, defaultVal)); 
-            return; 
-        }
-        
-        attachToOverlay(modal);
-        modal.dataset.title = 'Entrada Necessária';
+        const input = overlay.querySelector('#dynamic-prompt-input');
+        // Pequeno delay para garantir que a renderização terminou antes de focar
+        setTimeout(() => input.focus(), 50);
 
-        msgEl.textContent = message; 
-        inputEl.value = defaultVal;
-        inputEl.focus();
+        const cleanup = () => overlay.remove();
+
+        overlay.querySelector('#btn-prompt-cancel').onclick = () => { cleanup(); resolve(null); };
+        overlay.querySelector('#btn-prompt-confirm').onclick = () => { cleanup(); resolve(input.value); };
         
-        const cleanup = () => window.__kcs.closeModal('prompt-modal', false);
-        
-        safeBindEvent(btnCancel, 'click', () => { cleanup(); resolve(null); });
-        safeBindEvent(btnConfirm, 'click', () => { cleanup(); resolve(inputEl.value); });
+        input.onkeydown = (e) => {
+            if (e.key === 'Enter') { cleanup(); resolve(input.value); }
+            if (e.key === 'Escape') { cleanup(); resolve(null); }
+        };
     });
 }
 
 export function openConfirmModal(msg, onConfirm) {
-    const modal = document.getElementById('confirm-modal');
-    const msgEl = document.getElementById('confirm-message');
-    const btnYes = document.getElementById('btn-confirm-yes');
-    const btnNo = document.getElementById('btn-confirm-no');
+    const overlay = document.createElement('div');
+    overlay.className = 'fixed inset-0 bg-black/60 z-[9999] flex items-center justify-center backdrop-blur-sm animate-fade-in p-4';
+    overlay.innerHTML = `
+        <div class="bg-[#252526] border border-[#3c3c3c] rounded-xl shadow-2xl max-w-md w-full p-6 transform scale-100">
+            <div class="flex items-center gap-3 mb-4">
+                <i class="ph-fill ph-warning-circle text-3xl text-yellow-500"></i>
+                <h2 class="text-lg font-bold text-gray-100">Confirmação</h2>
+            </div>
+            <p class="text-[14px] text-gray-300 mb-8 leading-relaxed">${msg}</p>
+            <div class="flex justify-end gap-3">
+                <button class="px-5 py-2.5 rounded-lg text-sm font-semibold text-gray-400 hover:text-white hover:bg-[#333333] transition-colors" id="btn-confirm-no">Cancelar</button>
+                <button class="px-5 py-2.5 rounded-lg text-sm font-semibold bg-red-600 hover:bg-red-700 text-white shadow-md transition-colors" id="btn-confirm-yes">Confirmar</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(overlay);
     
-    if (!modal || !msgEl) { 
-        if (confirm(msg)) onConfirm(); 
-        return; 
-    }
+    const cleanup = () => overlay.remove();
     
-    attachToOverlay(modal);
-    modal.dataset.title = 'Confirmação';
-
-    msgEl.textContent = msg; 
-    
-    const cleanup = () => window.__kcs.closeModal('confirm-modal', false);
-    
-    safeBindEvent(btnNo, 'click', () => cleanup());
-    safeBindEvent(btnYes, 'click', async () => { cleanup(); await onConfirm(); });
+    overlay.querySelector('#btn-confirm-no').onclick = cleanup;
+    overlay.querySelector('#btn-confirm-yes').onclick = async () => { 
+        cleanup(); 
+        await onConfirm(); 
+    };
 }
 
 

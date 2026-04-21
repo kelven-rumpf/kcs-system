@@ -133,18 +133,40 @@ export function renderArticleGrid(articles, paginationConfig = null) {
 
     const currentViewMode = localStorage.getItem('kcs_view_mode') || 'grid';
 
+    // Extrai autores únicos para o filtro (ignorando vazios/nulos)
+    const uniqueAuthors = [...new Set(articles.map(a => a.createdBy).filter(Boolean))].sort();
+
+    // NOVO CABEÇALHO: Inclui o Título, Filtros (Dropdowns) e os Botões (Cards/Tabela)
     let html = `
-        <div class="view-header">
+        <div class="view-header" style="flex-wrap: wrap; gap: 16px;">
             <h2 class="view-title">
-                <i class="ph ph-files"></i> Procedimentos
+                <i class="ph ph-files"></i> PROCEDIMENTOS
             </h2>
-            <div class="view-toggles">
-                <button onclick="window.__kcs.setViewMode('grid')" class="view-toggle-btn ${currentViewMode === 'grid' ? 'active-view' : ''}">
-                    <i class="ph ph-squares-four"></i> <span>Cards</span>
-                </button>
-                <button onclick="window.__kcs.setViewMode('table')" class="view-toggle-btn ${currentViewMode === 'table' ? 'active-view' : ''}">
-                    <i class="ph ph-list-dashes"></i> <span>Tabela</span>
-                </button>
+            
+            <div style="display: flex; align-items: center; gap: 12px; margin-left: auto;">
+                
+                <div style="display: flex; gap: 8px; border-right: 1px solid var(--color-border-subtle); padding-right: 12px;">
+                    <select id="grid-filter-author" class="vscode-select hidden sm:block">
+                        <option value="all">Todos os Autores</option>
+                        ${uniqueAuthors.map(author => `<option value="${escapeHtml(author)}">${escapeHtml(author)}</option>`).join('')}
+                    </select>
+                    
+                    <select id="grid-filter-status" class="vscode-select hidden sm:block">
+                        <option value="all">Todos os Status</option>
+                        <option value="approved">Aprovados</option>
+                        <option value="pendente_revisao">Em Revisão</option>
+                        <option value="draft">Rascunhos</option>
+                    </select>
+                </div>
+
+                <div class="view-toggles">
+                    <button onclick="window.__kcs.setViewMode('grid')" class="view-toggle-btn ${currentViewMode === 'grid' ? 'active-view' : ''}">
+                        <i class="ph ph-squares-four"></i> <span>Cards</span>
+                    </button>
+                    <button onclick="window.__kcs.setViewMode('table')" class="view-toggle-btn ${currentViewMode === 'table' ? 'active-view' : ''}">
+                        <i class="ph ph-list-dashes"></i> <span>Tabela</span>
+                    </button>
+                </div>
             </div>
         </div>
     `;
@@ -181,6 +203,24 @@ export function renderArticleGrid(articles, paginationConfig = null) {
     }
 
     container.innerHTML = html;
+    
+    // --- LIGAÇÃO DOS EVENTOS DE FILTRO ---
+    // Após injetar o HTML, conectamos a função que vai recarregar a lista quando o usuário mudar a opção
+    setTimeout(() => {
+        const authorFilter = document.getElementById('grid-filter-author');
+        const statusFilter = document.getElementById('grid-filter-status');
+        
+        if (authorFilter && window.__kcs.applyGridFilters) {
+            // Mantém a seleção atual caso já exista filtro aplicado
+            if (window.__kcs.currentGridAuthor) authorFilter.value = window.__kcs.currentGridAuthor;
+            authorFilter.addEventListener('change', (e) => window.__kcs.applyGridFilters('author', e.target.value));
+        }
+        
+        if (statusFilter && window.__kcs.applyGridFilters) {
+            if (window.__kcs.currentGridStatus) statusFilter.value = window.__kcs.currentGridStatus;
+            statusFilter.addEventListener('change', (e) => window.__kcs.applyGridFilters('status', e.target.value));
+        }
+    }, 50);
 }
 
 function renderArticleTable(articles) {
@@ -253,53 +293,64 @@ function renderArticleCard(article) {
   const categoryDisplayName = getCategoryName(article.categoryId || article.category);
   const stepsPreviewText = Array.isArray(article.steps) ? article.steps.map(s => s.description).join(' ') : article.steps;
   const previewText = truncate(stripHtml(article.symptom || article.body || stepsPreviewText || ''), 120);
-  const kcsNumHtml = article.articleNumber ? `<div class="id-badge">#KCS-${article.articleNumber}</div>` : '';
+  
+  // Tag do ID KCS
+  const kcsNumHtml = article.articleNumber ? `<span class="bg-blue-500/10 text-blue-500 dark:text-blue-400 border border-blue-500/20 text-[10px] font-mono font-bold px-2 py-0.5 rounded">#KCS-${article.articleNumber}</span>` : '<span></span>';
 
+  // Interações e Favoritos
   const user = getCurrentUser();
   const userId = user?.uid || user?.id;
   const isFav = (article.favorites || []).includes(userId);
-  const starClass = isFav ? 'ph-fill ph-star fav-active' : 'ph ph-star';
+  const starClass = isFav ? 'ph-fill ph-star text-yellow-500' : 'ph ph-star text-gray-400 hover:text-yellow-500';
   const isLiked = (article.likes || []).includes(userId);
-  const heartClass = isLiked ? 'ph-fill ph-heart like-active' : 'ph ph-heart';
+  const heartClass = isLiked ? 'ph-fill ph-heart text-red-500' : 'ph ph-heart text-gray-400 hover:text-red-500';
 
   const authorFullName = formatFullName(article.createdBy);
-  const reviewerName = article.approvedBy || article.validatedBy || article.reviewedBy || (article.status === 'approved' ? article.updatedBy : null);
+  
+  // Lógica inteligente de cor do Status
+  let statusBadge = '';
+  if (article.status === 'approved') statusBadge = '<span class="badge-green text-[9px]">APROVADO</span>';
+  else if (article.status === 'pendente_revisao' || article.status === 'review') statusBadge = '<span class="badge-alert text-[9px] text-orange-500 bg-orange-500/10">EM REVISÃO</span>';
+  else statusBadge = '<span class="badge-neutral text-[9px] border border-gray-600">RASCUNHO</span>';
 
   return `
-    <div class="article-card" onclick="window.__kcs.viewArticle('${article.id}')">
-      <div class="card-header">
-          ${kcsNumHtml}
-          <div class="card-title-row">
-            <h3 class="card-title" title="${escapeHtml(article.title)}">${escapeHtml(article.title)}</h3>
-            <span class="status-badge status-${article.status}">${article.status}</span>
-          </div>
-      </div>
-      <p class="card-preview">${escapeHtml(previewText)}</p>
-      <div class="card-tags">
-        ${(article.tags || []).map(t => `<span class="tag-badge">${escapeHtml(t)}</span>`).join(' ')}
-        ${categoryDisplayName && categoryDisplayName !== 'Sem categoria' ? `<span class="tag-badge tag-category">${escapeHtml(categoryDisplayName)}</span>` : ''}
-      </div>
-      
-      <div class="card-footer">
-        <div class="card-meta">
-            <span><i class="ph ph-user"></i> ${escapeHtml(authorFullName)} · ${formatDate(article.updatedAt)}</span>
-            <div class="card-interactions">
-                <button onclick="event.stopPropagation(); window.__kcs.toggleLike('${article.id}')" class="btn-interaction">
-                    <i class="${heartClass}"></i>
-                    <span class="interaction-count">${(article.likes || []).length}</span>
-                </button>
-                <span class="interaction-stat"><i class="ph ph-chat-circle"></i> ${(article.comments || []).length}</span>
-                <button onclick="event.stopPropagation(); window.__kcs.toggleFavorite('${article.id}')" class="btn-interaction" title="Favoritar"><i class="${starClass}"></i></button>
-            </div>
+    <div class="bg-white dark:bg-surface border border-gray-200 dark:border-border-subtle rounded-xl p-4 flex flex-col gap-3 hover:border-blue-500/50 hover:shadow-md transition-all cursor-pointer relative group" onclick="window.__kcs.viewArticle('${article.id}')">
+        
+        <div class="flex justify-between items-start">
+            ${kcsNumHtml}
+            ${statusBadge}
         </div>
-        ${reviewerName && article.status === 'approved' ? `<span class="approval-badge"><i class="ph ph-check-circle"></i> Aprovado por ${escapeHtml(formatFullName(reviewerName))}</span>` : ''}
-      </div>
+        
+        <div>
+            <h3 class="text-[13px] font-bold text-gray-900 dark:text-gray-100 leading-snug mb-1 line-clamp-2" title="${escapeHtml(article.title)}">${escapeHtml(article.title)}</h3>
+            <p class="text-[11px] text-gray-500 dark:text-gray-400 line-clamp-2 leading-relaxed">${escapeHtml(previewText)}</p>
+        </div>
 
-      ${hasPermission('edit_article') ? `
-      <div class="card-buttons" onclick="event.stopPropagation()">
-        <button onclick="window.__kcs.editArticle('${article.id}')" class="btn-card-action">Editar</button>
-        ${hasPermission('delete_article') ? `<button onclick="window.__kcs.deleteArticle('${article.id}')" class="btn-card-action btn-delete">Excluir</button>` : ''}
-      </div>` : ''}
+        <div class="flex flex-wrap gap-1.5 mt-auto pt-2">
+            ${categoryDisplayName && categoryDisplayName !== 'Sem categoria' ? `<span class="bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20 text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full">${escapeHtml(categoryDisplayName)}</span>` : ''}
+            ${(article.tags || []).slice(0, 2).map(t => `<span class="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 text-[10px] px-2 py-0.5 rounded-full">${escapeHtml(t)}</span>`).join('')}
+        </div>
+
+        <div class="flex justify-between items-center pt-3 border-t border-gray-100 dark:border-border-subtle mt-1">
+            
+            <div class="flex items-center gap-2 text-[11px] text-gray-500 dark:text-gray-400">
+                <div class="w-5 h-5 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-[9px] font-bold text-gray-700 dark:text-gray-300">${authorFullName.charAt(0).toUpperCase()}</div>
+                <span class="truncate max-w-[90px]">${escapeHtml(authorFullName)}</span>
+            </div>
+            
+            <div class="flex items-center gap-3" onclick="event.stopPropagation()">
+                <div class="flex items-center gap-2 mr-2">
+                    <button onclick="window.__kcs.toggleLike('${article.id}')" class="flex items-center gap-1 text-[11px] text-gray-400 transition-colors"><i class="${heartClass} text-sm"></i> ${(article.likes || []).length || ''}</button>
+                    <button onclick="window.__kcs.toggleFavorite('${article.id}')" class="flex items-center text-[11px] transition-colors"><i class="${starClass} text-sm"></i></button>
+                </div>
+                
+                ${hasPermission('edit_article') ? `
+                    <button onclick="window.__kcs.editArticle('${article.id}')" class="text-gray-400 hover:text-blue-500 transition-colors" title="Editar Procedimento"><i class="ph-bold ph-pencil-simple text-[14px]"></i></button>
+                    ${hasPermission('delete_article') ? `<button onclick="window.__kcs.deleteArticle('${article.id}')" class="text-gray-400 hover:text-red-500 transition-colors" title="Excluir"><i class="ph-bold ph-trash text-[14px]"></i></button>` : ''}
+                ` : ''}
+            </div>
+
+        </div>
     </div>
   `;
 }
@@ -309,25 +360,43 @@ export function renderSqlGrid(scripts, paginationConfig = null) {
   if (!container) return;
 
   const currentViewMode = localStorage.getItem('kcs_sql_view_mode') || 'grid';
+  const uniqueAuthors = [...new Set(scripts.map(s => s.createdBy).filter(Boolean))].sort();
 
   let html = `
-    <div class="view-header">
+    <div class="view-header" style="flex-wrap: wrap; gap: 16px;">
         <h2 class="view-title">
-            <i class="ph ph-database"></i> Biblioteca SQL
+            <i class="ph ph-database text-purple-500"></i> BIBLIOTECA SQL
         </h2>
-        <div class="view-toggles">
-            <button onclick="window.__kcs.setSqlViewMode('grid')" class="view-toggle-btn ${currentViewMode === 'grid' ? 'active-view' : ''}">
-                <i class="ph ph-squares-four"></i> <span>Cards</span>
-            </button>
-            <button onclick="window.__kcs.setSqlViewMode('table')" class="view-toggle-btn ${currentViewMode === 'table' ? 'active-view' : ''}">
-                <i class="ph ph-list-dashes"></i> <span>Tabela</span>
-            </button>
+        <div style="display: flex; align-items: center; gap: 12px; margin-left: auto;">
+            
+            <div style="display: flex; gap: 8px; border-right: 1px solid var(--color-border-subtle); padding-right: 12px;">
+                <select id="grid-sql-filter-author" class="vscode-select hidden sm:block">
+                    <option value="all">Todos os Autores</option>
+                    ${uniqueAuthors.map(author => `<option value="${escapeHtml(author)}">${escapeHtml(author)}</option>`).join('')}
+                </select>
+                
+                <select id="grid-sql-filter-op" class="vscode-select hidden sm:block">
+                    <option value="all">Todas as Operações</option>
+                    <option value="SELECT">Consultas (SELECT)</option>
+                    <option value="UPDATE">Alterações (UPDATE)</option>
+                    <option value="DELETE">Exclusões (DELETE)</option>
+                </select>
+            </div>
+
+            <div class="view-toggles">
+                <button onclick="window.__kcs.setSqlViewMode('grid')" class="view-toggle-btn ${currentViewMode === 'grid' ? 'active-view' : ''}">
+                    <i class="ph ph-squares-four"></i> <span>Cards</span>
+                </button>
+                <button onclick="window.__kcs.setSqlViewMode('table')" class="view-toggle-btn ${currentViewMode === 'table' ? 'active-view' : ''}">
+                    <i class="ph ph-list-dashes"></i> <span>Tabela</span>
+                </button>
+            </div>
         </div>
     </div>
   `;
 
   if (!scripts || scripts.length === 0) {
-    container.innerHTML = html + `<div class="empty-state"><i class="ph ph-database empty-icon"></i><p>Nenhum script SQL encontrado</p></div>`; 
+    container.innerHTML = html + `<div class="empty-state"><i class="ph ph-database empty-icon text-purple-500/50"></i><p>Nenhum script SQL encontrado</p></div>`; 
     return;
   }
 
@@ -346,18 +415,29 @@ export function renderSqlGrid(scripts, paginationConfig = null) {
                 Mostrando <strong>${scripts.length}</strong> de <strong>${paginationConfig.totalItems}</strong> scripts &mdash; Página ${paginationConfig.currentPage} de ${paginationConfig.totalPages}
             </span>
             <div class="pagination-controls">
-                <button onclick="window.__kcs.loadPage('prev')" class="btn-pagination" ${!paginationConfig.hasPrev ? 'disabled' : ''}>
-                    <i class="ph ph-caret-left"></i> Anterior
-                </button>
-                <button onclick="window.__kcs.loadPage('next')" class="btn-pagination" ${!paginationConfig.hasNext ? 'disabled' : ''}>
-                    Próxima <i class="ph ph-caret-right"></i>
-                </button>
+                <button onclick="window.__kcs.loadPage('prev')" class="btn-pagination" ${!paginationConfig.hasPrev ? 'disabled' : ''}><i class="ph ph-caret-left"></i> Anterior</button>
+                <button onclick="window.__kcs.loadPage('next')" class="btn-pagination" ${!paginationConfig.hasNext ? 'disabled' : ''}>Próxima <i class="ph ph-caret-right"></i></button>
             </div>
         </div>
     `;
   }
 
   container.innerHTML = html;
+
+  setTimeout(() => {
+      const authorFilter = document.getElementById('grid-sql-filter-author');
+      const opFilter = document.getElementById('grid-sql-filter-op');
+      
+      if (authorFilter && window.__kcs.applyGridFilters) {
+          if (window.__kcs.currentGridSqlAuthor) authorFilter.value = window.__kcs.currentGridSqlAuthor;
+          authorFilter.addEventListener('change', (e) => window.__kcs.applyGridFilters('sql-author', e.target.value));
+      }
+      
+      if (opFilter && window.__kcs.applyGridFilters) {
+          if (window.__kcs.currentGridSqlOp) opFilter.value = window.__kcs.currentGridSqlOp;
+          opFilter.addEventListener('change', (e) => window.__kcs.applyGridFilters('sql-op', e.target.value));
+      }
+  }, 50);
 }
 
 function renderSqlTable(scripts) {
@@ -420,56 +500,78 @@ export function renderSqlCard(script) {
   const canManage = hasPermission('manage_sql') || script.createdById === getCurrentUser().id;
 
   const opType = script.sqlCategory || 'SELECT';
-  const sqlNumHtml = script.scriptNumber ? `<div class="id-badge">#SQL-${script.scriptNumber}</div>` : '';
+  const sqlNumHtml = script.scriptNumber ? `<span class="bg-purple-500/10 text-purple-500 dark:text-purple-400 border border-purple-500/20 text-[10px] font-mono font-bold px-2 py-0.5 rounded">#SQL-${script.scriptNumber}</span>` : '<span></span>';
 
   const user = getCurrentUser();
   const userId = user?.uid || user?.id;
   const isFav = (script.favorites || []).includes(userId);
-  const starClass = isFav ? 'ph-fill ph-star fav-active' : 'ph ph-star';
+  const starClass = isFav ? 'ph-fill ph-star text-yellow-500' : 'ph ph-star text-gray-400 hover:text-yellow-500';
   const isLiked = (script.likes || []).includes(userId);
-  const heartClass = isLiked ? 'ph-fill ph-heart like-active' : 'ph ph-heart';
+  const heartClass = isLiked ? 'ph-fill ph-heart text-red-500' : 'ph ph-heart text-gray-400 hover:text-red-500';
+
+  const authorFullName = formatFullName(script.createdBy);
+
+  let opBadge = '';
+  if (opType === 'SELECT') opBadge = '<span class="bg-blue-500/10 text-blue-500 border border-blue-500/20 text-[9px] font-bold px-2 py-0.5 rounded-full">SELECT</span>';
+  else if (opType === 'UPDATE') opBadge = '<span class="bg-orange-500/10 text-orange-500 border border-orange-500/20 text-[9px] font-bold px-2 py-0.5 rounded-full">UPDATE</span>';
+  else if (opType === 'DELETE') opBadge = '<span class="bg-red-500/10 text-red-500 border border-red-500/20 text-[9px] font-bold px-2 py-0.5 rounded-full">DELETE</span>';
+  else opBadge = `<span class="bg-gray-500/10 text-gray-500 border border-gray-500/20 text-[9px] font-bold px-2 py-0.5 rounded-full">${escapeHtml(opType)}</span>`;
 
   return `
-    <div class="article-card" onclick="window.__kcs.viewSqlScript('${script.id}')">
-      <div class="card-header">
-          ${sqlNumHtml}
-          <div class="card-title-row">
-            <h3 class="card-title">${escapeHtml(script.name)}</h3>
-            <span class="op-badge op-${opType.toLowerCase()}">${opType}</span>
-          </div>
-      </div>
-      <div class="db-indicator"><span class="db-badge ${dbInfo.color}">${dbInfo.label}</span></div>
-      <pre class="code-preview">${escapeHtml(truncate(script.code || '', 150))}</pre>
-      
-      <div class="card-footer">
-        <div class="card-meta">
-            <span><i class="ph ph-user"></i> ${escapeHtml((script.createdBy || 'Sistema').split(' ')[0])} · ${formatDate(script.updatedAt)}</span>
-            <div class="card-interactions">
-                <button onclick="event.stopPropagation(); window.__kcs.toggleSqlLike('${script.id}')" class="btn-interaction">
-                    <i class="${heartClass}"></i>
-                    <span class="interaction-count">${(script.likes || []).length}</span>
-                </button>
-                <span class="interaction-stat"><i class="ph ph-chat-circle"></i> ${(script.comments || []).length}</span>
-                <button onclick="event.stopPropagation(); window.__kcs.toggleSqlFavorite('${script.id}')" class="btn-interaction" title="Favoritar"><i class="${starClass}"></i></button>
+    <div class="bg-white dark:bg-surface border border-gray-200 dark:border-border-subtle rounded-xl p-4 flex flex-col gap-3 hover:border-purple-500/50 hover:shadow-md transition-all cursor-pointer relative group" onclick="window.__kcs.viewSqlScript('${script.id}')">
+        
+        <div class="flex justify-between items-start">
+            ${sqlNumHtml}
+            ${opBadge}
+        </div>
+        
+        <div>
+            <h3 class="text-[13px] font-bold text-gray-900 dark:text-gray-100 leading-snug mb-1 line-clamp-2" title="${escapeHtml(script.name)}">${escapeHtml(script.name)}</h3>
+            <div class="text-[10px] text-gray-500 dark:text-gray-400 line-clamp-3 leading-relaxed font-mono mt-2 bg-gray-50 dark:bg-[#1e1e1e] p-2 rounded border border-gray-200 dark:border-[#3c3c3c]">
+                ${escapeHtml(truncate(script.code || '', 100))}
             </div>
         </div>
-      </div>
-      
-      <div class="card-buttons" onclick="event.stopPropagation()">
-        <button onclick="window.__kcs.explainSql('${script.id}')" class="btn-card-action btn-explain" title="A IA explicará o que este script faz"><i class="ph ph-lightbulb"></i> Explicar</button>
-        ${canManage ? `<button onclick="window.__kcs.editSqlScript('${script.id}')" class="btn-card-action">Editar</button>` : ''}
-        ${hasPermission('manage_sql') ? `<button onclick="window.__kcs.deleteSqlScript('${script.id}')" class="btn-card-action btn-delete">Excluir</button>` : ''}
-      </div>
+
+        <div class="flex flex-wrap gap-1.5 mt-auto pt-2">
+            <span class="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 text-[10px] px-2 py-0.5 rounded-full flex items-center gap-1"><i class="ph-bold ph-database"></i> ${escapeHtml(dbInfo.label)}</span>
+            ${script.visibility === 'private' ? `<span class="bg-red-500/10 text-red-500 border border-red-500/20 text-[10px] px-2 py-0.5 rounded-full" title="Privado"><i class="ph-bold ph-lock"></i></span>` : ''}
+        </div>
+
+        <div class="flex justify-between items-center pt-3 border-t border-gray-100 dark:border-border-subtle mt-1">
+            <div class="flex items-center gap-2 text-[11px] text-gray-500 dark:text-gray-400">
+                <div class="w-5 h-5 rounded-full bg-purple-500/10 flex items-center justify-center text-[9px] font-bold text-purple-600 dark:text-purple-400">${authorFullName.charAt(0).toUpperCase()}</div>
+                <span class="truncate max-w-[80px]">${escapeHtml(authorFullName)}</span>
+            </div>
+            
+            <div class="flex items-center gap-2.5" onclick="event.stopPropagation()">
+                <button onclick="window.__kcs.explainSql('${script.id}')" class="text-yellow-500 hover:text-yellow-400 transition-colors" title="Explicar com IA"><i class="ph-fill ph-lightbulb text-[14px]"></i></button>
+                <div class="flex items-center gap-2 mx-1 border-l border-r border-gray-200 dark:border-gray-700 px-2">
+                    <button onclick="window.__kcs.toggleSqlLike('${script.id}')" class="flex items-center gap-1 text-[11px] text-gray-400 transition-colors"><i class="${heartClass} text-sm"></i> ${(script.likes || []).length || ''}</button>
+                    <button onclick="window.__kcs.toggleSqlFavorite('${script.id}')" class="flex items-center text-[11px] transition-colors"><i class="${starClass} text-sm"></i></button>
+                </div>
+                ${canManage ? `<button onclick="window.__kcs.editSqlScript('${script.id}')" class="text-gray-400 hover:text-purple-500 transition-colors" title="Editar"><i class="ph-bold ph-pencil-simple text-[14px]"></i></button>` : ''}
+                ${hasPermission('manage_sql') ? `<button onclick="window.__kcs.deleteSqlScript('${script.id}')" class="text-gray-400 hover:text-red-500 transition-colors" title="Excluir"><i class="ph-bold ph-trash text-[14px]"></i></button>` : ''}
+            </div>
+        </div>
     </div>
   `;
 }
 
-function getIconHtml(iconRaw, isGroup = false) {
-    if (!iconRaw) return `<i class="ph ph-folder tree-icon"></i>`;
-    if (iconRaw.startsWith('ph-')) return `<i class="ph ${iconRaw.replace('ph-fill', 'ph')} tree-icon"></i>`;
-    return `<span class="tree-icon-text">${iconRaw}</span>`;
+/* ==========================================================================
+   FUNÇÃO: getIconHtml (Refatorada para ícones monocromáticos)
+   ========================================================================== */
+function getIconHtml(iconRaw) {
+    // Bloqueia emojis e força o padrão monocromático da biblioteca Phosphor
+    if (iconRaw && typeof iconRaw === 'string' && iconRaw.startsWith('ph-')) {
+        return `<i class="ph ${iconRaw.replace('ph-fill', 'ph')} tree-icon"></i>`;
+    }
+    // Ícone de pasta padrão do VS Code para categorias
+    return `<i class="ph ph-folder tree-icon"></i>`;
 }
 
+/* ==========================================================================
+   FUNÇÃO: renderSidebar (Com secções expandidas por defeito)
+   ========================================================================== */
 export function renderSidebar(articleCounts, sqlCounts, activeFilter = 'all', activeSqlFilter = 'all', activeView = 'articles', categoryTree = [], allArticles = [], allScripts = []) {
   const nav = document.getElementById('sidebar-nav');
   if (!nav) return;
@@ -479,12 +581,31 @@ export function renderSidebar(articleCounts, sqlCounts, activeFilter = 'all', ac
   
   const closeSidebarMobile = "if(window.innerWidth < 1024) { document.getElementById('sidebar').classList.add('-translate-x-full'); }";
   
-  let html = `<div class="sidebar-section-title"><span>Visão Geral</span></div>`;
-  html += `<button onclick="window.__kcs.switchToDashboard(); ${closeSidebarMobile}" class="sidebar-item ${activeView === 'dashboard' ? 'active' : ''}"><i class="ph ph-chart-pie-slice"></i><span>Dashboard</span></button>`;
-  html += `<button onclick="window.__kcs.startTour(); ${closeSidebarMobile}" class="sidebar-item"><i class="ph ph-rocket icon-highlight"></i><span>Rever Tour</span></button>`;
+  // 1. Visão Geral (Agora com 'open')
+  let html = `
+    <details class="sidebar-section-group" open>
+        <summary class="sidebar-section-title">
+            <div class="flex items-center gap-1.5">
+                <span class="section-indicator">▶</span>
+                <span>Visão Geral</span>
+            </div>
+        </summary>
+        <div class="section-children">
+            <button onclick="window.__kcs.switchToDashboard(); ${closeSidebarMobile}" class="sidebar-item ${activeView === 'dashboard' ? 'active' : ''}"><i class="ph ph-chart-pie-slice"></i><span class="sidebar-item-label">Dashboard</span></button>
+            <button onclick="window.__kcs.startTour(); ${closeSidebarMobile}" class="sidebar-item"><i class="ph ph-rocket icon-highlight"></i><span class="sidebar-item-label">Rever Tour</span></button>
+        </div>
+    </details>`;
   
-  html += `<div id="tour-base-conhecimento">`;
-  html += `<div class="sidebar-section-title"><span>Base de Conhecimento</span></div>`;
+  // 2. Base de Conhecimento (Agora com 'open')
+  html += `
+    <details id="tour-base-conhecimento" class="sidebar-section-group" open>
+        <summary class="sidebar-section-title">
+            <div class="flex items-center gap-1.5">
+                <span class="section-indicator">▶</span>
+                <span>Base de Conhecimento</span>
+            </div>
+        </summary>
+        <div class="section-children">`;
   
   const articleItems = [
       { key: 'all', label: 'Todos os Artigos', icon: 'ph-books', count: articleCounts.total },
@@ -501,19 +622,39 @@ export function renderSidebar(articleCounts, sqlCounts, activeFilter = 'all', ac
   );
 
   html += articleItems.map((item) => `<button onclick="window.__kcs.filterByStatus('${item.key}'); ${closeSidebarMobile}" class="sidebar-item ${activeView === 'articles' && activeFilter === item.key ? 'active' : ''}"><i class="ph ${item.icon}"></i><span class="sidebar-item-label">${item.label}</span><span class="count-badge">${item.count}</span></button>`).join('');
-  html += `</div>`;
+  html += `</div></details>`;
 
+  // 3. Categorias (Agora com 'open')
   if (categoryTree.length > 0 || hasRole('super_admin')) {
-      html += `<div id="tour-categorias" class="sidebar-separator"><div class="sidebar-section-title sidebar-title-flex"><span>Categorias</span>${hasRole('super_admin') ? `<button onclick="window.__kcs.openCategoryManager(); ${closeSidebarMobile}" class="btn-sidebar-action" title="Gerenciar Categorias"><i class="ph ph-gear"></i></button>` : ''}</div><div class="tree-container">`;
+      html += `
+        <details id="tour-categorias" class="sidebar-section-group sidebar-separator" open>
+            <summary class="sidebar-section-title">
+                <div class="flex items-center gap-1.5">
+                    <span class="section-indicator">▶</span>
+                    <span>Categorias</span>
+                </div>
+            </summary>
+            <div class="tree-container section-children">`;
       if (categoryTree.length > 0) {
+          // As subcategorias continuam a respeitar a sua própria lógica de abertura (geralmente fechadas)
           html += renderCategoryTree(categoryTree, activeFilter, 0, allArticles, closeSidebarMobile);
       } else {
-          html += `<div class="tree-empty-state">Nenhuma categoria cadastrada.</div>`;
+          html += `<div class="tree-empty-state px-4 py-2 text-xs text-gray-500 italic">Nenhuma categoria cadastrada.</div>`;
       }
-      html += `</div></div>`;
+      html += `</div></details>`;
   }
+  
+  // 4. Biblioteca SQL (Agora com 'open')
   if (hasPermission('manage_sql') || !canEdit) {
-    html += `<div id="tour-sql" class="sidebar-separator"><div class="sidebar-section-title"><span>Biblioteca SQL</span></div>`;
+    html += `
+    <details id="tour-sql" class="sidebar-section-group sidebar-separator" open>
+        <summary class="sidebar-section-title">
+            <div class="flex items-center gap-1.5">
+                <span class="section-indicator">▶</span>
+                <span>Biblioteca SQL</span>
+            </div>
+        </summary>
+        <div class="section-children">`;
     
     const sqlItems = [
       { key: 'all', label: 'Todos os Scripts', icon: 'ph-folders', count: sqlCounts.total || 0 },
@@ -531,18 +672,20 @@ export function renderSidebar(articleCounts, sqlCounts, activeFilter = 'all', ac
       </button>
     `).join('');
 
-    html += `</div>`;
+    html += `</div></details>`;
   }
 
   nav.innerHTML = html;
 }
 
+/* ==========================================================================
+   FUNÇÃO: renderCategoryTree (Ajustada para o novo Design System)
+   ========================================================================== */
 function renderCategoryTree(nodes, activeFilter, depth = 0, allArticles = [], closeScript = '') {
   return nodes.map((node) => {
     const hasChildren = node.children && node.children.length > 0;
     const nodeArticles = allArticles.filter(a => a.categoryId === node.id || a.category === node.id);
     const hasArticles = nodeArticles.length > 0;
-    const paddingLeft = depth * 12;
 
     let html = '';
 
@@ -557,11 +700,11 @@ function renderCategoryTree(nodes, activeFilter, depth = 0, allArticles = [], cl
 
     if (hasChildren || hasArticles) {
         html += `
-            <details class="tree-details" style="margin-left: ${paddingLeft}px;">
+            <details class="tree-details">
                 <summary class="tree-summary">
-                    ${getIconHtml(node.icon, true)}
-                    <span class="tree-summary-title">${escapeHtml(node.name)}</span>
                     <span class="tree-indicator">▶</span>
+                    ${getIconHtml(node.icon)}
+                    <span class="tree-summary-title">${escapeHtml(node.name)}</span>
                 </summary>
                 <div class="tree-children">
                     ${childrenHtml}
@@ -569,11 +712,11 @@ function renderCategoryTree(nodes, activeFilter, depth = 0, allArticles = [], cl
                 </div>
             </details>
         `;
-    } else if (depth === 0) {
+    } else {
          html += `
-            <div class="tree-empty">
-                ${getIconHtml(node.icon, false)}
-                <span class="tree-empty-title">${escapeHtml(node.name)} (Vazia)</span>
+            <div class="tree-article tree-empty">
+                ${getIconHtml(node.icon)}
+                <span class="tree-empty-title italic opacity-60">${escapeHtml(node.name)} (vazia)</span>
             </div>
         `;
     }

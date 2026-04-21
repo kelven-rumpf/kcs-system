@@ -469,18 +469,98 @@ main.workbench-editor {
     backdrop-filter: blur(2px);
 }
 
-/* Modais no centro da tela */
+/* ==========================================================================
+   CORREÇÃO DEFINITIVA: Remoção da "Caixa Dupla" no Overlay
+   Substitua o bloco .kcs-active-overlay anterior por este:
+   ========================================================================== */
 .kcs-active-overlay {
     pointer-events: auto;
-    width: 90vw;
-    max-width: 800px;
-    height: 85vh;
-    background-color: var(--color-editor-background);
-    border: 1px solid var(--color-border);
-    border-radius: var(--border-radius-xl);
-    box-shadow: var(--shadow-md);
+    width: 100%;
+    max-width: 850px;
+    max-height: 90vh;
+    background: transparent !important; /* Remove o fundo duplo do contêiner pai */
+    border: none !important;
+    box-shadow: none !important;
     display: flex;
     flex-direction: column;
+    margin: auto;
+}
+
+/* O fundo, a borda e a sombra real devem ficar APENAS na caixa interna */
+.kcs-active-overlay .modal-box {
+    background-color: var(--color-editor-background) !important;
+    border: 1px solid var(--color-border) !important;
+    border-radius: 8px !important; /* Canto mais técnico, menos arredondado */
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.15) !important; /* Sombra de elevação elegante */
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* ==========================================================================
+   CORREÇÃO 14: Polimento Pixel-Perfect de Formulários (VS Code Style)
+   Adicione este bloco ao final do style.css
+   ========================================================================== */
+/* Labels mais compactas, técnicas e espaçamento milimétrico */
+.form-label {
+    font-size: 10px !important;
+    font-weight: 600 !important;
+    color: var(--color-text-muted) !important;
+    margin-bottom: 4px !important;
+    letter-spacing: 0.05em;
+}
+
+/* Inputs com cantos precisos e focus-ring azul */
+.form-input, 
+.form-textarea, 
+.form-select {
+    border: 1px solid var(--color-border-subtle) !important; 
+    border-radius: 4px !important; /* Reduzindo o arredondamento */
+    padding: 6px 10px !important;
+    background-color: var(--color-editor-background);
+    box-shadow: inset 0 1px 2px rgba(0,0,0,0.02); /* Profundidade sutil interna */
+    transition: all 0.15s ease;
+}
+
+.form-input:focus, 
+.form-textarea:focus, 
+.form-select:focus {
+    border-color: var(--color-focus) !important;
+    box-shadow: 0 0 0 1px var(--color-focus) !important; /* Anel de foco exato do VS Code */
+}
+
+/* Ajuste fino na área do Piloto Automático IA */
+.alert-indigo {
+    background-color: rgba(99, 102, 241, 0.04) !important;
+    border: 1px solid rgba(99, 102, 241, 0.15) !important;
+    border-radius: 6px !important;
+    padding: 10px 14px !important;
+}
+
+.badge-indigo {
+    border-radius: 3px !important;
+    font-weight: 600 !important;
+    padding: 2px 6px !important;
+}
+
+/* Refinamento da Toolbar do Editor (Semelhante a abas do painel) */
+.editor-container {
+    border-radius: 4px !important;
+    border: 1px solid var(--color-border-subtle) !important;
+}
+
+.editor-toolbar {
+    background-color: var(--color-sidebar-background) !important;
+    border-bottom: 1px solid var(--color-border-subtle) !important;
+    padding: 4px 8px !important;
+}
+
+.btn-tool {
+    border-radius: 4px !important;
+    height: 24px !important;
+    width: 24px !important;
 }
 
 /* DOCK (Painel Inferior) */
@@ -884,4 +964,1678 @@ header.workbench-titlebar .text-sm.font-bold {
     background-color: var(--color-hover) !important;
     color: var(--color-focus) !important;
     box-shadow: var(--shadow-xs) !important;
+}
+
+/* ==========================================================================
+   CORREÇÃO 1: Transparência e Posicionamento (Modal e Chatbot)
+   ========================================================================== */
+/* Força a aplicação das variáveis de cor nos fundos, substituindo o Tailwind */
+.bg-surface, #chatbot-window, .modal-box {
+    background-color: var(--color-editor-background) !important;
+}
+
+.bg-bg-main {
+    background-color: var(--color-sidebar-background) !important;
+}
+
+/* Centralização exata do modal no Overlay e fundo sólido */
+#overlay-root {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    background-color: transparent;
+    transition: background-color 0.2s ease;
+}
+
+
+
+
+/* ==========================================================================
+   CORREÇÃO 2: Interação na Sidebar (Activity Bar)
+   ========================================================================== */
+/* Eleva a barra de atividades acima do fluxo bloqueado e reativa os cliques */
+.workbench-activitybar {
+    grid-area: activitybar;
+    background-color: var(--color-activitybar-background) !important;
+    border-right: 1px solid var(--color-border) !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+    padding-top: 8px;
+    padding-bottom: 8px;
+    z-index: 200 !important; 
+    pointer-events: auto !important; 
+}
+
+
+/* ==========================================================================
+   CORREÇÃO 3: Elementos Cortados e Responsividade
+   ========================================================================== */
+/* Container da tabela fluído no eixo X, bloqueando estouro da tela */
+.table-wrapper {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto !important;
+    background-color: var(--color-sidebar-background);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--border-radius-xl);
+    margin-bottom: 24px;
+    display: block; 
+}
+
+/* Grid de cards auto-ajustável sem forçar a largura do pai */
+.content-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)) !important;
+    gap: 16px;
+    width: 100%;
+}
+
+.article-card {
+    min-width: 0; /* Propriedade mágica para evitar estouro em Flex/Grid */
+    background-color: var(--color-sidebar-background);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--border-radius-xl);
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    box-shadow: var(--shadow-xs);
+    transition: transform 0.2s, box-shadow 0.2s;
+    cursor: pointer;
+}
+
+
+/* ==========================================================================
+   CORREÇÃO 4: Alinhamento da Marca (KCS Hub UNLIMITED)
+   ========================================================================== */
+header.workbench-titlebar .flex-col {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-start !important; /* Alinha o selo rente ao logo à esquerda */
+}
+
+/* Tipografia técnica refinada inspirada na Status Bar do VS Code */
+.kcs-plan-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 9px !important;
+    font-weight: 800 !important;
+    font-family: var(--font-family-mono);
+    text-transform: uppercase;
+    padding: 2px 6px !important;
+    border-radius: 3px !important;
+    border: 1px solid currentColor !important;
+    margin-top: 2px !important;
+    line-height: 1 !important;
+    letter-spacing: 0.05em;
+}
+
+/* ==========================================================================
+   CORREÇÃO 5: Isolamento da Tela de Login
+   ========================================================================== */
+/* Garante que o login cubra a Activity Bar (z-index 200) e tenha fundo sólido */
+#login-screen {
+    z-index: 9999 !important;
+    background-color: var(--color-editor-background) !important;
+}
+
+/* ==========================================================================
+   CORREÇÃO 6: Hierarquia de Modais e Activity Bar
+   ========================================================================== */
+/* Garante que qualquer modal abra ACIMA da Activity Bar, mas ABAIXO do Login */
+#overlay-root {
+    z-index: 9000 !important; 
+}
+
+/* ==========================================================================
+   CORREÇÃO 7: Cores do Header e Fontes do Chatbot (Light/Dark Mode)
+   ========================================================================== */
+/* O texto KCS Hub deve inverter de cor dependendo do tema, não ficar sempre branco */
+header.workbench-titlebar .text-sm.font-bold {
+    color: var(--color-text-primary) !important;
+}
+
+/* Força a cor primária no Chatbot para ser legível no modo claro */
+.chat-greet-title, 
+.chat-greet-subtitle, 
+.chat-greet-label,
+#chatbot-header-name span,
+#chatbot-input,
+.chat-bot-bubble {
+    color: var(--color-text-primary) !important;
+}
+
+/* ==========================================================================
+   CORREÇÃO 8: Restauração do Layout de Artigos e Tabelas (ATUALIZADA)
+   ========================================================================== */
+/* Garante o layout em bloco para não quebrar a tabela, mas respeita a classe 
+   .hidden para que a tela desapareça corretamente ao abrir o Dashboard */
+#articles-grid:not(.hidden) {
+    display: block !important;
+}
+
+/* ==========================================================================
+   CORREÇÃO 9: Padronização de Formulários (Design System VS Code)
+   ========================================================================== */
+/* Define as cores e as bordas de inputs e textareas dinamicamente para os temas */
+.form-input, 
+.form-textarea, 
+.form-select {
+    width: 100%;
+    background-color: var(--color-editor-background);
+    border: 1px solid var(--color-border);
+    color: var(--color-text-primary);
+    padding: 8px 12px;
+    border-radius: var(--border-radius-md);
+    font-family: var(--font-family-base);
+    font-size: var(--font-size-sm);
+    outline: none;
+    transition: border-color 0.2s ease;
+}
+
+.form-input:focus, 
+.form-textarea:focus, 
+.form-select:focus {
+    border-color: var(--color-focus);
+}
+
+.form-label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.form-group {
+    margin-bottom: 16px;
+}
+
+/* Utilitários estruturais de formulário que o JS utiliza */
+.form-row-split {
+    display: flex;
+    gap: 16px;
+}
+.form-row-split .form-group {
+    flex: 1;
+}
+
+.form-row-multi {
+    display: flex;
+    gap: 16px;
+}
+.form-row-multi .form-group {
+    flex: 1;
+}
+
+/* ==========================================================================
+   CORREÇÃO 10: Botões Globais (Footer e Ações)
+   ========================================================================== */
+.btn-primary, .btn-secondary, .btn-neutral {
+    padding: 8px 16px;
+    border-radius: var(--border-radius-md);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border: 1px solid transparent;
+}
+
+.btn-primary {
+    background-color: var(--color-focus) !important;
+    color: #ffffff !important;
+}
+.btn-primary:hover {
+    background-color: var(--color-selection) !important;
+}
+
+.btn-secondary {
+    background-color: transparent !important;
+    border-color: var(--color-border) !important;
+    color: var(--color-text-primary) !important;
+}
+.btn-secondary:hover {
+    background-color: var(--color-hover) !important;
+}
+
+.btn-neutral {
+    background-color: var(--color-hover) !important;
+    border-color: var(--color-border-subtle) !important;
+    color: var(--color-text-primary) !important;
+}
+.btn-neutral:hover {
+    background-color: var(--color-border) !important;
+}
+
+/* ==========================================================================
+   CORREÇÃO 11: Header Controls (Min, Max, Close)
+   ========================================================================== */
+.modal-controls {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+.btn-icon {
+    background: transparent;
+    border: none;
+    color: var(--color-text-secondary);
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--border-radius-sm);
+    cursor: pointer;
+    transition: background-color 0.2s, color 0.2s;
+}
+.btn-icon:hover {
+    background-color: var(--color-hover);
+    color: var(--color-text-primary);
+}
+.btn-icon.btn-close:hover {
+    background-color: #e81123; /* Vermelho característico de fechar aba do VS Code */
+    color: white;
+}
+
+/* ==========================================================================
+   CORREÇÃO 12: Toolbar do Editor e Área de Texto (Rich Text)
+   ========================================================================== */
+.editor-container {
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius-md);
+    overflow: hidden;
+    background-color: var(--color-editor-background);
+    display: flex;
+    flex-direction: column;
+}
+
+.editor-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background-color: var(--color-sidebar-background);
+    border-bottom: 1px solid var(--color-border);
+    padding: 6px 10px;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.toolbar-actions-left, .toolbar-actions-right {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.btn-tool {
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--color-text-primary);
+    width: 26px;
+    height: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--border-radius-sm);
+    cursor: pointer;
+    font-size: 14px;
+}
+.btn-tool:hover {
+    background-color: var(--color-hover);
+    border-color: var(--color-border-subtle);
+}
+
+.toolbar-divider {
+    width: 1px;
+    height: 16px;
+    background-color: var(--color-border);
+    margin: 0 4px;
+}
+
+/* Botões da IA na Toolbar */
+.btn-ia {
+    background-color: rgba(139, 92, 246, 0.1);
+    color: #8B5CF6;
+    border: 1px solid rgba(139, 92, 246, 0.2);
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.btn-ia:hover {
+    background-color: rgba(139, 92, 246, 0.2);
+}
+
+.editor-content {
+    min-height: 180px;
+    padding: 12px;
+    color: var(--color-text-primary);
+    font-size: var(--font-size-sm);
+    outline: none; /* <-- Mata a borda preta grossa do navegador */
+    overflow-y: auto;
+}
+.editor-content:focus {
+    background-color: rgba(0, 127, 212, 0.02);
+}
+
+/* ==========================================================================
+   CORREÇÃO 13: Metadados e Caixa de Alerta (Piloto Automático)
+   ========================================================================== */
+.form-row-metadata {
+    display: flex;
+    gap: 24px;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--color-border-subtle);
+}
+.meta-block {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.meta-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+    font-weight: 700;
+}
+.meta-value {
+    font-size: 13px;
+    color: var(--color-text-primary);
+    font-weight: 600;
+}
+.id-highlight {
+    color: var(--color-focus);
+    font-family: var(--font-family-mono);
+}
+
+.alert-box {
+    display: flex;
+    gap: 12px;
+    padding: 12px 16px;
+    border-radius: var(--border-radius-md);
+    margin-bottom: 16px;
+    align-items: flex-start;
+}
+.alert-indigo {
+    background-color: rgba(99, 102, 241, 0.1);
+    border: 1px solid rgba(99, 102, 241, 0.2);
+}
+.alert-indigo .alert-icon {
+    color: #6366f1;
+    font-size: 20px;
+    margin-top: 2px;
+}
+.alert-title {
+    font-weight: 700;
+    font-size: 13px;
+    color: var(--color-text-primary);
+    margin-bottom: 4px;
+}
+.alert-text {
+    font-size: 12px;
+    color: var(--color-text-secondary);
+    line-height: 1.4;
+}
+.badge-indigo {
+    background-color: #6366f1;
+    color: white;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 10px;
+}
+
+/* ==========================================================================
+   CORREÇÃO 15: Restauração do Layout Clássico (KCS Hub)
+   ========================================================================== */
+
+/* 1. Header e Controles de Janela (Alinhados à Direita) */
+.modal-header {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    padding: 16px 24px !important;
+    border-bottom: 1px solid var(--color-border-subtle) !important;
+}
+
+.modal-title {
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    font-size: 15px !important;
+    font-weight: 600 !important;
+    color: var(--color-text-primary) !important;
+}
+
+.modal-controls {
+    display: flex !important;
+    align-items: center !important;
+    gap: 4px !important;
+}
+
+.modal-controls .btn-icon {
+    font-size: 16px !important; /* Ícones dos controles de janela mais nítidos */
+}
+
+/* 2. Bloco de Metadados (Caixa Contornada e Divisória) */
+.form-row-metadata {
+    display: flex !important;
+    align-items: center !important;
+    gap: 32px !important;
+    margin-bottom: 20px !important;
+    padding: 12px 20px !important;
+    border: 1px solid var(--color-border-subtle) !important;
+    border-radius: 8px !important; /* Arredondamento clássico */
+}
+
+.meta-block {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 4px !important;
+    margin: 0 !important;
+}
+
+.meta-divider {
+    border-left: 1px solid var(--color-border-subtle) !important;
+    padding-left: 32px !important;
+}
+
+.meta-label {
+    font-size: 10px !important;
+    text-transform: uppercase !important;
+    color: var(--color-text-muted) !important;
+    font-weight: 600 !important;
+}
+
+.meta-value {
+    font-size: 14px !important;
+    color: var(--color-text-primary) !important;
+    font-weight: 500 !important;
+}
+
+.id-highlight {
+    color: var(--color-focus) !important;
+    font-weight: 600 !important;
+}
+
+/* 3. Alerta Piloto Automático KCS */
+.alert-indigo {
+    background-color: rgba(99, 102, 241, 0.05) !important;
+    border: 1px solid rgba(99, 102, 241, 0.2) !important;
+    border-radius: 8px !important;
+    padding: 14px 20px !important;
+    align-items: center !important;
+}
+
+.alert-title {
+    text-transform: uppercase !important;
+    font-size: 12px !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.5px !important;
+    color: #4f46e5 !important;
+    margin-bottom: 2px !important;
+}
+
+/* 4. Labels (Restaurando o texto Normal, sem uppercase forçado) */
+.form-label {
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    color: var(--color-text-secondary) !important;
+    text-transform: none !important; /* Reverte o uppercase */
+    margin-bottom: 8px !important;
+    letter-spacing: normal !important;
+}
+
+/* 5. Contorno e Arredondamento dos Inputs */
+.form-input, 
+.form-textarea, 
+.form-select {
+    border: 1px solid var(--color-border-subtle) !important; 
+    border-radius: 8px !important; /* Cantos mais suaves como na imagem referência */
+    padding: 10px 14px !important;
+    background-color: var(--color-editor-background) !important;
+    box-shadow: none !important;
+    font-size: 13px !important;
+    color: var(--color-text-primary) !important;
+}
+
+.form-input:focus, 
+.form-textarea:focus, 
+.form-select:focus {
+    border-color: var(--color-focus) !important;
+    box-shadow: 0 0 0 1px var(--color-focus) !important;
+}
+
+/* ==========================================================================
+   CORREÇÃO 16: Transparência do Modal de Visualização (View Modal)
+   ========================================================================== */
+/* Aplica o fundo sólido e as sombras também aos modais gerados dinamicamente pelo JS */
+.kcs-active-overlay .modal-content-box {
+    background-color: var(--color-editor-background) !important;
+    border: 1px solid var(--color-border) !important;
+    border-radius: 8px !important;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.15) !important;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.modal-content-box .modal-body {
+    padding: 24px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+/* ==========================================================================
+   CORREÇÃO 17: Contraste da Tabela (Light/Dark Mode)
+   ========================================================================== */
+/* Garante que o texto principal da tabela inverta corretamente a cor nos temas */
+.cell-title {
+    color: var(--color-text-primary) !important;
+    font-weight: 700 !important;
+}
+
+/* Conserta o hover da tabela que estava usando branco transparente no modo claro */
+.table-row:hover {
+    background-color: var(--color-hover) !important;
+}
+
+/* ==========================================================================
+   CORREÇÃO 18: Estilização do Rodapé de Paginação
+   ========================================================================== */
+.pagination-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 0;
+    border-top: 1px solid var(--color-border-subtle);
+    margin-top: 16px;
+    color: var(--color-text-secondary);
+    font-size: 12px;
+}
+
+.pagination-info strong {
+    color: var(--color-text-primary);
+}
+
+.pagination-controls {
+    display: flex;
+    gap: 8px;
+}
+
+.btn-pagination {
+    background-color: var(--color-editor-background);
+    border: 1px solid var(--color-border);
+    color: var(--color-text-primary);
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 12px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.btn-pagination:hover:not([disabled]) {
+    background-color: var(--color-hover);
+    border-color: var(--color-border-subtle);
+}
+
+.btn-pagination[disabled] {
+    opacity: 0.4;
+    cursor: not-allowed;
+    background-color: transparent;
+}
+
+/* ==========================================================================
+   CORREÇÃO 19: Estilização Interna do Visualizador de Artigos
+   ========================================================================== */
+.view-main-title {
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--color-text-primary);
+    margin-bottom: 12px;
+}
+
+.view-tags {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+}
+
+.tag-badge {
+    background-color: var(--color-hover);
+    color: var(--color-text-secondary);
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    border: 1px solid var(--color-border-subtle);
+    letter-spacing: 0.5px;
+}
+
+.field-group {
+    margin-bottom: 16px;
+    background-color: var(--color-editor-background);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.field-header {
+    background-color: var(--color-sidebar-background);
+    padding: 8px 16px;
+    border-bottom: 1px solid var(--color-border-subtle);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.field-title {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    letter-spacing: 0.5px;
+}
+
+.field-content {
+    padding: 16px;
+    font-size: 13px;
+    color: var(--color-text-primary);
+    line-height: 1.6;
+}
+
+.view-footer-actions {
+    display: flex;
+    justify-content: space-between;
+    padding-top: 20px;
+    margin-top: 24px;
+    border-top: 1px solid var(--color-border-subtle);
+}
+
+.btn-interaction {
+    background: var(--color-editor-background);
+    border: 1px solid var(--color-border);
+    color: var(--color-text-primary);
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: background 0.2s;
+}
+
+.btn-interaction:hover {
+    background-color: var(--color-hover);
+}
+
+/* ==========================================================================
+   CORREÇÃO 20: Grid 2x2 e Estilo Clássico dos Cards de Visualização
+   ========================================================================== */
+
+/* 1. Layout em Grid (2 colunas lado a lado) */
+.view-content-grid {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 16px !important;
+    margin-bottom: 24px !important;
+}
+
+/* Responsividade: Volta para 1 coluna em telas menores */
+@media screen and (max-width: 768px) {
+    .view-content-grid {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+/* 2. Caixas de Conteúdo (Sintoma, Causa, Ambiente, Solução) */
+.field-group {
+    background-color: var(--color-hover) !important; /* Fundo cinza super claro no tema Light */
+    border: 1px solid var(--color-border-subtle) !important;
+    border-radius: 8px !important;
+    margin-bottom: 0 !important; /* O espaçamento agora é controlado pelo 'gap' do grid */
+    display: flex;
+    flex-direction: column;
+    box-shadow: none !important;
+}
+
+/* Título das Caixas (Sem linha divisória, fundo transparente) */
+.field-header {
+    background-color: transparent !important;
+    border-bottom: none !important;
+    padding: 16px 16px 8px 16px !important;
+}
+
+.field-title {
+    font-size: 11px !important;
+    font-weight: 700 !important;
+    color: var(--color-text-secondary) !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.05em !important;
+}
+
+/* Texto interno */
+.field-content {
+    padding: 0 16px 16px 16px !important;
+    font-size: 13px !important;
+    color: var(--color-text-primary) !important;
+    line-height: 1.5 !important;
+}
+
+/* 3. Título Principal do Artigo */
+.view-main-title {
+    font-size: 24px !important;
+    font-weight: 800 !important;
+    color: var(--color-text-primary) !important;
+    margin-bottom: 12px !important;
+}
+
+/* 4. Estilização das Tags (Formato de Pílula) */
+.view-tags {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+}
+
+.tag-badge {
+    background-color: var(--color-hover) !important;
+    color: var(--color-text-secondary) !important;
+    border: none !important;
+    padding: 4px 12px !important;
+    border-radius: 12px !important; /* Deixa a tag bem arredondada (pill) */
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    text-transform: lowercase !important; /* Força minúscula como na imagem */
+}
+
+/* Cores dinâmicas para tags específicas */
+.tag-category {
+    background-color: rgba(99, 102, 241, 0.1) !important; /* Fundo Indigo claro */
+    color: #4f46e5 !important; /* Texto Indigo */
+}
+
+.tag-private {
+    background-color: rgba(239, 68, 68, 0.1) !important; /* Fundo Vermelho claro */
+    color: #ef4444 !important; /* Texto Vermelho */
+}
+
+.tag-public {
+    background-color: rgba(16, 185, 129, 0.1) !important; /* Fundo Verde claro */
+    color: #10b981 !important; /* Texto Verde */
+}
+
+/* 5. Cores dos Ícones de Tópico (Exatamente como no print) */
+.icon-red { color: #ef4444 !important; }
+.icon-blue { color: #3b82f6 !important; }
+.icon-yellow { color: #eab308 !important; }
+.icon-green { color: #10b981 !important; }
+
+/* ==========================================================================
+   CORREÇÃO 21: Alinhamento da Marca (Header)
+   ========================================================================== */
+header.workbench-titlebar .flex-col {
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    align-items: flex-start !important;
+    line-height: 1 !important;
+    gap: 4px !important; /* Respiro exato entre o título e o badge */
+}
+
+/* ==========================================================================
+   CORREÇÃO 22: Refino da Sidebar (Estilo Árvore de Arquivos VS Code)
+   ========================================================================== */
+/* Separação clara entre as seções (Categorias, SQL, etc) */
+.sidebar-section-title {
+    margin-top: 16px !important;
+    padding: 8px 16px 4px 16px !important;
+}
+
+/* O primeiro título da sidebar não precisa de margem extra no topo */
+.workbench-sidebar .sidebar-section-title:first-child {
+    margin-top: 0 !important;
+}
+
+/* Item de menu idêntico a um arquivo na Explorer Tree do VS Code */
+.sidebar-item {
+    padding: 4px 16px 4px 24px !important; /* Reduz padding vertical e indenta à esquerda */
+    margin: 0 !important; /* Remove margem lateral do estilo botão */
+    border-radius: 0 !important; /* Bordas retas, sem arredondamento excessivo */
+    width: 100% !important;
+    min-height: 28px !important; /* Altura padrão compacta */
+}
+
+/* ==========================================================================
+   CORREÇÃO 23: Usabilidade da Activity Bar (Z-index e Pointer Events)
+   ========================================================================== */
+/* Eleva a barra de atividades completa e seu rodapé para não serem engolidos pela sidebar */
+.workbench-activitybar {
+    position: relative !important;
+    z-index: 300 !important; 
+    pointer-events: auto !important; 
+}
+
+.activitybar-bottom {
+    position: relative !important;
+    z-index: 300 !important;
+    pointer-events: auto !important;
+}
+
+/* ==========================================================================
+   CORREÇÃO 24: Alinhamento de Itens (Visão Geral e Base) - Estilo VS Code
+   ========================================================================== */
+/* Força o alinhamento total à esquerda e ajusta o gap do ícone */
+.sidebar-item {
+    justify-content: flex-start !important;
+    gap: 6px !important;
+    font-size: 13px !important;
+    padding: 4px 16px 4px 20px !important; /* Indentação padrão da raiz */
+    border-radius: 0 !important; /* Sem bordas arredondadas no menu lateral */
+    min-height: 28px !important;
+}
+
+/* O texto empurra o badge de contagem para o final da linha */
+.sidebar-item-label {
+    flex: 1 !important;
+    text-align: left !important;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.sidebar-item i {
+    font-size: 16px !important;
+    width: 16px;
+    display: flex;
+    justify-content: center;
+    color: var(--color-text-secondary);
+}
+
+/* Estado "Selecionado" idêntico à cor de seleção do VS Code */
+.sidebar-item.active {
+    background-color: var(--color-selection) !important;
+    color: var(--color-text-inverse) !important;
+}
+.sidebar-item.active i {
+    color: var(--color-text-inverse) !important;
+}
+
+/* ==========================================================================
+   CORREÇÃO 25: Títulos de Seção (Semelhante a "EXPLORER", "OUTLINE")
+   ========================================================================== */
+.sidebar-section-title {
+    font-size: 11px !important;
+    font-weight: 700 !important;
+    color: var(--color-text-primary) !important;
+    background-color: transparent !important;
+    padding: 4px 8px 4px 16px !important;
+    margin-top: 10px !important; /* Separa as sessões */
+    cursor: default;
+}
+
+/* ==========================================================================
+   CORREÇÃO 26: Árvore de Diretórios (Categorias Collapsible VS Code)
+   ========================================================================== */
+/* Remove a margem injetada pelo JS para que o Hover ocupe a linha toda */
+.tree-details {
+    margin-left: 0 !important;
+}
+
+/* Container do título da pasta */
+.tree-summary {
+    display: flex !important;
+    align-items: center !important;
+    padding: 4px 16px 4px 20px !important;
+    cursor: pointer;
+    list-style: none !important; /* Oculta a seta padrão do HTML */
+    font-size: 13px !important;
+    color: var(--color-text-secondary);
+    transition: background 0.1s;
+}
+
+.tree-summary::-webkit-details-marker {
+    display: none;
+}
+
+.tree-summary:hover, .tree-article:hover {
+    background-color: var(--color-hover) !important;
+    color: var(--color-text-primary);
+}
+
+/* MÁGICA: Move a seta (▶) do final do HTML para o INÍCIO usando Flex Order */
+.tree-indicator {
+    order: -1 !important; 
+    font-size: 10px !important;
+    margin-right: 6px;
+    transition: transform 0.1s ease-in-out;
+    color: var(--color-text-muted);
+}
+
+/* Rotaciona a seta quando a pasta (details) estiver aberta */
+details[open] > .tree-summary .tree-indicator {
+    transform: rotate(90deg);
+}
+
+.tree-summary-title {
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Linha vertical de indentação (VS Code Indent Guide) */
+.tree-children {
+    margin-left: 26px; /* Alinha a linha guia exatamente no centro da pasta pai */
+    padding-left: 8px;
+    border-left: 1px solid var(--color-border-subtle);
+    display: flex;
+    flex-direction: column;
+}
+
+/* Estilo do arquivo final (Artigo KCS) na árvore */
+.tree-article {
+    display: flex !important;
+    align-items: center !important;
+    padding: 4px 16px 4px 8px !important;
+    font-size: 13px !important;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    text-decoration: none;
+    gap: 6px;
+}
+
+/* Ícone de arquivo dentro da pasta (Simulando um arquivo TS/JS no VS Code) */
+.tree-article i {
+    font-size: 15px;
+    color: var(--color-focus); 
+}
+
+.tree-article-title {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ==========================================================================
+   CORREÇÃO 27: Painéis Recolhíveis Principais (Sidebar Sections)
+   ========================================================================== */
+.sidebar-section-group {
+    margin-bottom: 2px;
+}
+
+/* Transformando os títulos de sessão em elementos clicáveis */
+summary.sidebar-section-title {
+    display: flex !important;
+    align-items: center !important;
+    cursor: pointer !important; /* Muda de texto selecionável para "Mãozinha" */
+    list-style: none !important;
+    user-select: none;
+}
+
+/* Garante o alinhamento da Engrenagem (Painel de Categorias) */
+.sidebar-title-flex {
+    justify-content: space-between !important;
+}
+
+/* Oculta seta nativa do navegador para o <details> */
+summary.sidebar-section-title::-webkit-details-marker {
+    display: none !important;
+}
+
+/* Seta (Chevron) idêntica à árvore do VS Code */
+.section-indicator {
+    font-size: 9px !important;
+    color: var(--color-text-muted);
+    transition: transform 0.15s ease-in-out;
+    display: inline-block;
+}
+
+/* Rotaciona a seta para baixo quando a sessão está expandida (open) */
+details[open] > summary .section-indicator {
+    transform: rotate(90deg);
+}
+
+.section-children {
+    padding-bottom: 8px; /* Respiro antes do próximo bloco */
+}
+
+/* ==========================================================================
+   CORREÇÃO 28: Interatividade da Activity Bar (Rodapé)
+   ========================================================================== */
+/* Eleva a barra inteira e os botões acima de qualquer "camada fantasma" da Sidebar */
+.workbench-activitybar, 
+.activitybar-bottom {
+    position: relative !important;
+    z-index: 9990 !important; 
+    pointer-events: auto !important;
+}
+
+.activitybar-btn {
+    position: relative !important;
+    z-index: 9999 !important; /* Garante que o botão seja o elemento mais alto para o clique */
+}
+
+/* ==========================================================================
+   CORREÇÃO 29: Menu de Perfil Ancora na Activity Bar
+   ========================================================================== */
+/* Faz com que o dropdown do perfil abra no canto inferior esquerdo, ao lado da conta */
+@media screen and (min-width: 1025px) {
+    #profile-dropdown {
+        position: fixed !important;
+        top: auto !important;
+        bottom: 50px !important; /* Altura exata para alinhar com o ícone de Conta */
+        left: 48px !important;   /* Largura exata da Activity Bar */
+        right: auto !important;
+        z-index: 10000 !important; /* Acima de tudo para não ser cortado */
+        transform-origin: bottom left !important;
+    }
+}
+
+/* ==========================================================================
+   CORREÇÃO 30: Menus de Contexto do VS Code (Activity Bar)
+   ========================================================================== */
+.vscode-context-menu {
+    position: fixed;
+    bottom: 56px; /* Fica exatamente acima dos ícones inferiores */
+    left: 56px;   /* Fica rente à Activity Bar */
+    width: 240px;
+    background-color: var(--color-sidebar-background);
+    border: 1px solid var(--color-border);
+    border-radius: 4px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+    z-index: 10000;
+    padding: 6px 0;
+    color: var(--color-text-primary);
+    font-family: var(--font-family-base);
+}
+
+.vscode-context-menu ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.vscode-context-menu li {
+    padding: 6px 20px;
+    font-size: 13px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: none; /* VS Code não tem fade no hover, é instantâneo */
+}
+
+/* O fundo azul focado do VS Code */
+.vscode-context-menu li:hover:not(.menu-info):not(.menu-separator) {
+    background-color: var(--color-focus);
+    color: #ffffff;
+}
+
+/* Linha separadora milimétrica */
+.vscode-context-menu .menu-separator {
+    height: 1px;
+    background-color: var(--color-border-subtle);
+    margin: 6px 12px;
+    padding: 0;
+    cursor: default;
+}
+
+/* Bloco não clicável com as informações do usuário */
+.vscode-context-menu .menu-info {
+    cursor: default;
+    padding: 10px 20px;
+    display: block;
+}
+
+/* ==========================================================================
+   CORREÇÃO 31: Harmonização do Tema Claro (VS Code Light+)
+   ========================================================================== */
+html.light {
+    /* Harmoniza a Activity Bar com a Titlebar/Sidebar */
+    --color-activitybar-background: #f3f3f3 !important;
+    --color-titlebar-background: #f3f3f3 !important;
+    --color-border: #cccccc !important;
+}
+
+/* Ajusta a cor dos ícones da Activity Bar no Modo Claro para dar contraste */
+html.light .activitybar-btn {
+    color: #616161 !important;
+}
+html.light .activitybar-btn:hover {
+    color: #3b3b3b !important;
+}
+html.light .activitybar-btn.active {
+    color: #007fd4 !important;
+}
+
+/* ==========================================================================
+   CORREÇÃO 32: Alinhamento Milimétrico da Barra de Pesquisa (Header)
+   ========================================================================== */
+/* Força os elementos do cabeçalho a se alinharem pela esquerda, 
+   respeitando o cálculo de 292px da Logo para cravar com a Sidebar */
+header.workbench-titlebar {
+    justify-content: flex-start !important;
+}
+
+/* Opcional: Garante que o contêiner de busca não encolha demais em telas normais */
+.workbench-titlebar .max-w-3xl {
+    max-width: 768px !important;
+    width: 100%;
+}
+
+/* ==========================================================================
+   CORREÇÃO 33: Botões de Ação de Barra de Ferramentas (VS Code Style)
+   ========================================================================== */
+/* Remove o arredondamento excessivo e padroniza a altura com o input */
+#btn-new-article, #btn-new-sql {
+    border-radius: 2px !important; /* Quase reto, padrão VS Code */
+    height: 28px !important;       /* Alinhado com a altura do input */
+    padding: 0 12px !important;
+    font-size: 12px !important;
+    border: none !important;
+    box-shadow: none !important;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    transition: background 0.1s;
+}
+
+/* Botão KCS (Primário do Sistema) */
+#btn-new-article {
+    background-color: var(--color-focus) !important;
+    color: #ffffff !important;
+}
+#btn-new-article:hover {
+    background-color: #007fd4cc !important;
+}
+
+/* Botão SQL (Integrado ao Painel) */
+#btn-new-sql {
+    background-color: var(--color-active-item) !important;
+    color: var(--color-text-primary) !important;
+}
+#btn-new-sql:hover {
+    background-color: var(--color-hover) !important;
+}
+
+/* Ajuste do Input de Pesquisa para combinar */
+#search-input {
+    border-radius: 2px !important;
+    height: 28px !important;
+    border: 1px solid var(--color-border) !important;
+}
+
+/* ==========================================================================
+   CORREÇÃO 34: Tipografia e Efeito Hover na Marca (Logo)
+   ========================================================================== */
+/* Container da logo com transição para interatividade */
+.workbench-brand-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    transition: opacity 0.2s ease;
+    user-select: none;
+}
+
+/* Efeito ao passar o mouse: Brilho sutil e leve aumento de opacidade */
+.workbench-brand-container:hover {
+    opacity: 0.85;
+}
+
+.workbench-brand-container:hover .brand-icon-wrapper {
+    background-color: rgba(59, 130, 246, 0.3) !important;
+    transform: scale(1.02);
+}
+
+.workbench-brand-container:active {
+    transform: scale(0.98); /* Feedback de clique */
+}
+
+/* Ajuste fino do texto da marca */
+.brand-text {
+    font-size: 13px !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.4px !important;
+    color: var(--color-text-primary) !important;
+    font-family: var(--font-family-base);
+}
+
+/* Wrapper do ícone para animação suave */
+.brand-icon-wrapper {
+    transition: all 0.2s ease-in-out;
+}
+
+/* ==========================================================================
+   CORREÇÃO 35: Dashboard de Governança (Cards, Tabelas e Badges)
+   ========================================================================== */
+
+/* 1. Títulos de Seção do Dashboard (Linha divisória estilo VS Code) */
+.dash-title {
+    font-size: 14px !important;
+    font-weight: 700 !important;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--color-text-primary) !important;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--color-border-subtle);
+    margin-top: 24px;
+    margin-bottom: 16px;
+}
+
+/* 2. Grid para dividir as tabelas de Ranking lado a lado */
+.dash-tables-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-top: 16px;
+}
+
+@media screen and (max-width: 1024px) {
+    .dash-tables-row { grid-template-columns: 1fr; }
+}
+
+/* 3. Cabeçalho das Tabelas (Alinhamento do Título + Botão de Copiar) */
+.widget-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.widget-title-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.widget-header {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0;
+}
+
+/* Cores padronizadas para os títulos das tabelas */
+.header-red { color: #f87171; }
+.header-purple { color: #a78bfa; }
+.header-green { color: #34d399; }
+.header-blue { color: #60a5fa; }
+
+/* Botão de Copiar Tabela minimalista */
+.copy-btn {
+    background: transparent;
+    border: 1px solid var(--color-border-subtle);
+    color: var(--color-text-secondary);
+    border-radius: 4px;
+    padding: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    transition: all 0.2s;
+}
+.copy-btn:hover {
+    background: var(--color-hover);
+    color: var(--color-text-primary);
+}
+
+/* 4. Correção do Empilhamento nas Linhas de Usuário (Rankings) */
+.user-cell {
+    display: flex !important;
+    align-items: center !important;
+    gap: 12px !important;
+    padding: 12px 16px !important;
+}
+
+.rank-number {
+    font-size: 11px;
+    color: var(--color-text-muted);
+    font-family: var(--font-family-mono);
+    font-weight: 700;
+    width: 20px; /* Largura fixa para alinhar os avatares */
+}
+
+/* Alinha a contagem para a extrema direita da célula */
+.stat-cell {
+    text-align: right !important;
+    vertical-align: middle !important;
+    padding-right: 24px !important;
+}
+
+/* 5. Alinhamentos Auxiliares de Tabela */
+.col-center { text-align: center !important; }
+.col-right { text-align: right !important; }
+
+.title-cell-truncate {
+    max-width: 250px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding: 12px 16px !important;
+}
+
+/* 6. Badges (Pílulas Sólidas, substituindo bordas feias) */
+.badge-alert, .badge-purple, .badge-green, .badge-neutral {
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    white-space: nowrap;
+    border: none !important; /* Remove o contorno do sistema antigo */
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    letter-spacing: 0.5px;
+}
+
+.badge-alert { background-color: rgba(239, 68, 68, 0.15); color: #ef4444; }
+.badge-purple { background-color: rgba(139, 92, 246, 0.15); color: #a78bfa; }
+.badge-green { background-color: rgba(16, 185, 129, 0.15); color: #10b981; }
+.badge-neutral { background-color: var(--color-hover); color: var(--color-text-secondary); border: 1px solid var(--color-border-subtle) !important; }
+
+/* 7. Botão de Ação "Revisar" (Fila Crítica) */
+.btn-review {
+    background-color: var(--color-focus);
+    color: #ffffff;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.btn-review:hover {
+    background-color: var(--color-selection);
+}
+
+/* 8. Textos informativos e Estados Vazios (Empty States) */
+.info-box {
+    font-size: 11px;
+    color: var(--color-text-muted);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background-color: var(--color-sidebar-background);
+    padding: 4px 12px;
+    border-radius: 4px;
+    border: 1px solid var(--color-border-subtle);
+}
+
+.empty-cell {
+    text-align: center !important;
+    padding: 32px !important;
+    color: var(--color-text-muted) !important;
+    font-size: 12px;
+    font-style: italic;
+}
+.empty-cell-success {
+    text-align: center !important;
+    padding: 32px !important;
+    color: #10b981 !important;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+/* ==========================================================================
+   CORREÇÃO 36: Contraste dos Números do Dashboard no Modo Claro
+   ========================================================================== */
+/* Garante que os números base adaptem a cor de acordo com o tema (Light/Dark) */
+.metric-card .metric-value {
+    color: var(--color-text-primary);
+}
+
+/* Reforça as cores de destaque para não serem sobrescritas pela regra acima */
+.metric-card .value-approved { 
+    color: #10B981 !important; 
+}
+.metric-card .value-views { 
+    color: #3B82F6 !important; 
+}
+.metric-card .value-alert { 
+    color: #EF4444 !important; 
+}
+
+/* ==========================================================================
+   CORREÇÃO 37: Painel de Procedimentos (Cards, Tabela e Filtros)
+   ========================================================================== */
+
+/* 1. Estilo VS Code para os Dropdowns de Filtro */
+.vscode-select {
+    background-color: var(--color-sidebar-background);
+    color: var(--color-text-primary);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: 3px;
+    padding: 4px 24px 4px 8px;
+    font-size: 12px;
+    appearance: none;
+    background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23888888%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    background-size: 8px auto;
+    cursor: pointer;
+    transition: border-color 0.2s;
+    height: 28px;
+}
+
+.vscode-select:focus, .vscode-select:hover {
+    border-color: var(--color-focus);
+    outline: none;
+}
+
+/* 2. Refinamento Visual dos Cards (Grid View) */
+#articles-grid.view-cards > div {
+    background-color: var(--color-surface) !important;
+    border: 1px solid var(--color-border-subtle) !important;
+    border-radius: 6px !important;
+    padding: 16px !important;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    transition: all 0.2s ease;
+}
+
+#articles-grid.view-cards > div:hover {
+    border-color: var(--color-focus) !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+/* Fix do ID ocupando tela inteira no Card */
+#articles-grid.view-cards .bg-blue-900\/20 {
+    width: fit-content !important;
+    padding: 2px 8px !important;
+    border-radius: 4px !important;
+}
+
+/* Espaçamento das Ações (Editar/Excluir) no final do Card */
+#articles-grid.view-cards .flex.gap-2.mt-4 {
+    margin-top: auto !important;
+    padding-top: 12px !important;
+    border-top: 1px dashed var(--color-border-subtle);
+    justify-content: flex-end;
+}
+
+/* 3. Força as Pílulas Sólidas (Badges) na Tabela de Procedimentos */
+#articles-grid table .border-green-500,
+#articles-grid table .text-green-500 {
+    border: none !important;
+    background-color: rgba(16, 185, 129, 0.15) !important;
+    color: #10b981 !important;
+}
+
+#articles-grid table .border-orange-500,
+#articles-grid table .text-orange-500 {
+    border: none !important;
+    background-color: rgba(245, 158, 11, 0.15) !important;
+    color: #f59e0b !important;
+}
+
+/* ==========================================================================
+   CORREÇÃO 38: Fundo dos Cards no Modo Escuro
+   ========================================================================== */
+/* Substitui o branco ofuscante pela cor de superfície correta do VS Code */
+.content-grid > div {
+    background-color: var(--color-sidebar-background) !important;
+    border-color: var(--color-border-subtle) !important;
+}
+
+/* Garante que o título fique com alto contraste (Branco no Dark, Preto no Light) */
+.content-grid > div h3 {
+    color: var(--color-text-inverse) !important;
+}
+
+/* Garante que o texto de resumo fique com cinza de leitura agradável */
+.content-grid > div p {
+    color: var(--color-text-secondary) !important;
+}
+
+/* Escurece as tags "cinzas" (ex: "teste 4000") que também estavam claras demais */
+html.dark .content-grid > div .bg-gray-100 {
+    background-color: var(--color-editor-background) !important;
+    border-color: var(--color-border) !important;
+    color: var(--color-text-muted) !important;
+}
+
+/* Efeito de Hover sofisticado respeitando o tema */
+.content-grid > div:hover {
+    border-color: var(--color-focus) !important;
+    background-color: var(--color-hover) !important;
+}
+
+/* ==========================================================================
+   TAB MANAGER: Estilo VS Code (Abas Superiores)
+   ========================================================================== */
+#workbench-tabs-bar {
+    height: 35px;
+    background-color: var(--color-sidebar-background);
+}
+#workbench-tabs-bar::-webkit-scrollbar { height: 2px; }
+
+.editor-tab {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0 10px 0 16px;
+    background-color: var(--color-sidebar-background);
+    color: var(--color-text-secondary);
+    border-right: 1px solid var(--color-border);
+    border-top: 1px solid transparent;
+    cursor: pointer;
+    min-width: 140px;
+    max-width: 220px;
+    transition: background 0.1s;
+}
+
+.editor-tab:hover {
+    background-color: var(--color-hover);
+}
+
+.editor-tab.active {
+    background-color: var(--color-editor-background);
+    color: var(--color-text-primary);
+    border-top: 1px solid var(--color-focus);
+}
+
+.editor-tab-title {
+    flex: 1;
+    font-size: 13px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Controles da Aba (Escondidos por padrão, revelados no hover/active) */
+.editor-tab-actions {
+    display: flex;
+    gap: 2px;
+    opacity: 0;
+    transition: opacity 0.1s;
+}
+.editor-tab:hover .editor-tab-actions, 
+.editor-tab.active .editor-tab-actions {
+    opacity: 1;
+}
+
+.editor-tab-btn {
+    background: transparent;
+    border: none;
+    color: var(--color-text-secondary);
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+.editor-tab-btn:hover {
+    background-color: var(--color-active-item);
+    color: var(--color-text-primary);
+}
+
+/* MÁGICA DO DIRTY STATE (Não salvo) */
+.editor-tab.is-dirty .btn-close-tab i { display: none; }
+.editor-tab.is-dirty .btn-close-tab::after {
+    content: '';
+    display: block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: var(--color-text-primary); /* Bolinha do VS Code */
+}
+/* Se o usuário passar o mouse no botão, troca a bolinha pelo 'X' para fechar */
+.editor-tab.is-dirty .btn-close-tab:hover i { display: block; }
+.editor-tab.is-dirty .btn-close-tab:hover::after { display: none; }
+
+/* Paineis de Conteúdo */
+.tab-content-panel {
+    display: none; /* Mantém o DOM vivo, mas invisível */
+    position: absolute;
+    inset: 0;
+    overflow-y: auto;
+    background-color: var(--color-editor-background);
+}
+.tab-content-panel.active {
+    display: block;
+    z-index: 10;
 }

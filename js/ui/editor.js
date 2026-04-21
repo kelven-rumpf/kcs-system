@@ -1,6 +1,6 @@
 /**
  * editor.js — Motor de Rich Text, IA e Renderização Visual
- * Versão SRE Refatorada: Classes Semânticas & Workbench Integration
+ * Versão SRE Refatorada: Classes Semânticas & Workbench Integration (MDI / Tabs Support)
  */
 
 import { showToast, showLoading } from './render.js';
@@ -13,7 +13,8 @@ export function initEditor(editorId = 'article-body') {
     if (!editor) return;
     
     const form = editor.closest('form');
-    const btnSave = document.getElementById('btn-save-article') || document.querySelector('form button[type="submit"]');
+    // MODIFICADO: Procura o botão de guardar apenas dentro deste formulário (Isolamento de abas)
+    const btnSave = form ? form.querySelector('button[type="submit"]') : null;
     const toolbar = editor.previousElementSibling;
 
     // 1. BLINDAGEM VISUAL INICIAL
@@ -23,14 +24,14 @@ export function initEditor(editorId = 'article-body') {
         form.style.transition = 'opacity 0.2s ease-in-out';
     }
 
-    // CAPTURA DO ID DO PROCEDIMENTO
+    // CAPTURA DO ID DO PROCEDIMENTO (Adaptado para procurar no formulário atual)
     let articleId = null;
-    const idInput = document.getElementById('article-id') || document.querySelector('input[name="id"]') || document.querySelector('input[name="articleId"]');
+    const idInput = form ? (form.querySelector('input[name="id"]') || form.querySelector('input[name="articleId"]')) : null;
     
     if (idInput && idInput.value) {
         articleId = idInput.value;
     } else {
-        const hiddenInputs = Array.from(document.querySelectorAll('input[type="hidden"]'));
+        const hiddenInputs = Array.from((form || document).querySelectorAll('input[type="hidden"]'));
         const possibleId = hiddenInputs.find(i => i.value && (i.value.startsWith('kcs_') || i.value.length > 15));
         if (possibleId) articleId = possibleId.value;
     }
@@ -93,7 +94,8 @@ export function initEditor(editorId = 'article-body') {
                 }
                 
                 const unlockFn = () => releaseArticleLock(articleId);
-                const btnCancel = document.getElementById('btn-cancel-article') || document.querySelector('[data-modal-close]');
+                const btnCancel = form ? form.querySelector('.btn-cancel-tab') : document.querySelector('[data-modal-close]');
+                
                 if (btnCancel && !btnCancel._lockListener) {
                     btnCancel.addEventListener('click', unlockFn);
                     btnCancel._lockListener = true;
@@ -141,22 +143,26 @@ export function initEditor(editorId = 'article-body') {
         form._imageInterceptorAdded = true;
     }
 
-    // INICIALIZAÇÃO DA TOOLBAR
-    const toolbarBtns = document.querySelectorAll('[data-format]');
-    toolbarBtns.forEach(btn => {
-        const newBtn = btn.cloneNode(true);
-        btn.parentNode.replaceChild(newBtn, btn);
-        newBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            if (editor.getAttribute('contenteditable') === 'false') return; 
-            const format = newBtn.getAttribute('data-format');
-            if (format === 'image') handleImageUpload(editor);
-            else insertFormatting(format, editor);
+    // INICIALIZAÇÃO DA TOOLBAR (Isolada)
+    if (toolbar) {
+        // MODIFICADO: querySelectorAll restrito apenas à barra de ferramentas deste editor
+        const toolbarBtns = toolbar.querySelectorAll('[data-format]');
+        toolbarBtns.forEach(btn => {
+            const newBtn = btn.cloneNode(true);
+            btn.parentNode.replaceChild(newBtn, btn);
+            newBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                if (editor.getAttribute('contenteditable') === 'false') return; 
+                const format = newBtn.getAttribute('data-format');
+                if (format === 'image') handleImageUpload(editor);
+                else insertFormatting(format, editor);
+            });
         });
-    });
+    }
 
-    // IA: REESCREVER TEXTO TECNICO
-    const btnReescrever = document.getElementById('btn-ia-reescrever');
+    // IA: REESCREVER TEXTO TÉCNICO (Isolado)
+    // MODIFICADO: Procura o botão apenas dentro deste formulário
+    const btnReescrever = form ? form.querySelector('.btn-ia-reescrever') : null;
     if (btnReescrever) {
         const newBtnR = btnReescrever.cloneNode(true);
         btnReescrever.parentNode.replaceChild(newBtnR, btnReescrever);
@@ -254,7 +260,11 @@ async function processImageFile(file, editor) {
         const imgHtml = `<br><img id="${tempId}" src="${localPreviewUrl}" class="img-uploading" data-uploading="true" style="max-height:240px; display:block;" contenteditable="false" /><br>`;
         insertHtmlAtCursor(imgHtml, editor);
 
-        const articleId = document.getElementById('article-id')?.value || 'drafts';
+        // MODIFICADO: Procura o ID apenas neste editor
+        const form = editor.closest('form');
+        const idInput = form ? (form.querySelector('input[name="id"]') || form.querySelector('input[name="articleId"]')) : null;
+        const articleId = idInput?.value || 'drafts';
+        
         const publicUrl = await uploadImageToCloud(compressedBlob, articleId);
 
         const imgEl = document.getElementById(tempId);

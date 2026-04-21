@@ -65,73 +65,36 @@
 
   <div id="app-screen" class="hidden h-[100dvh] w-full relative overflow-hidden workbench-grid">
     
-    <header class="workbench-titlebar bg-surface border-b border-border-subtle px-4 py-2 flex items-center gap-3 sm:gap-4 shrink-0 relative z-30 h-16">
-      <button id="btn-toggle-sidebar" onclick="document.getElementById('sidebar').classList.remove('-translate-x-full');" class="lg:hidden text-gray-400 hover:text-gray-900 dark:hover:text-white p-2 transition-colors touch-target">
+<header class="workbench-titlebar bg-surface border-b border-border-subtle px-4 py-2 flex items-center shrink-0 relative z-30 h-16">
+      
+      <button id="btn-toggle-sidebar" onclick="document.getElementById('sidebar').classList.remove('-translate-x-full');" class="lg:hidden text-gray-400 hover:text-gray-900 dark:hover:text-white p-2 transition-colors touch-target mr-2">
         <i class="ph ph-list text-[24px]"></i>
       </button>
       
-      <div class="flex items-center gap-2 shrink-0 hidden sm:flex">
-        <div class="w-8 h-8 rounded-lg bg-blue-600/20 flex items-center justify-center"><i class="ph ph-book-open text-blue-400 text-[20px]"></i></div>
-        <div class="flex flex-col justify-center">
-            <span class="text-sm font-bold text-gray-900 dark:text-white leading-none">KCS Hub</span>
-            <div id="company-plan-badge" class="mt-1 flex items-center overflow-hidden"></div>
-        </div>
-      </div>
+    <div class="workbench-brand-container hidden sm:flex" onclick="window.__kcs.switchToDashboard()" style="width: 292px;">
+    <div class="brand-icon-wrapper w-8 h-8 rounded-lg bg-blue-600/20 flex items-center justify-center">
+        <i class="ph ph-book-open text-blue-400 text-[20px]"></i>
+    </div>
+    <div class="flex flex-col justify-center">
+        <span class="brand-text">KCS Hub</span>
+    </div>
+</div>  
       
-      <div class="flex-1 max-w-xl sm:mx-4 w-full">
-        <div class="relative">
-          <i class="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-[18px] pointer-events-none"></i>
-          <input type="text" id="search-input" class="w-full bg-gray-50 dark:bg-bg-main border border-gray-300 dark:border-border-subtle rounded-xl pl-10 pr-4 py-2 text-sm text-gray-900 dark:text-white placeholder-gray-500 transition-colors focus:ring-2 focus:ring-blue-500/20 outline-none" placeholder="Buscar na base..." />
-        </div>
-      </div>
-      
-      <div class="ml-auto flex items-center gap-1 sm:gap-3 shrink-0">
-        <div class="relative" id="notif-dropdown-container">
-            <button id="btn-notif" class="p-2.5 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-all relative">
-                <i class="ph ph-bell text-[22px]"></i>
-                <span id="notif-badge" class="hidden absolute top-2 right-2 w-2.5 h-2.5 bg-red-500 border-2 border-white dark:border-surface rounded-full"></span>
-            </button>
-            <div id="notif-dropdown" class="hidden absolute right-0 mt-2 w-80 bg-white dark:bg-surface border border-gray-200 dark:border-border-subtle rounded-2xl shadow-2xl overflow-hidden z-50">
-                <div class="px-4 py-3 border-b border-border-subtle flex justify-between items-center bg-gray-50 dark:bg-bg-main">
-                    <span class="text-xs font-bold uppercase tracking-wider text-gray-500">Notificações</span>
-                    <button onclick="window.__kcs.clearNotifs()" class="text-[10px] text-blue-500 hover:underline">Limpar tudo</button>
-                </div>
-                <div id="notif-list" class="max-h-64 overflow-y-auto custom-scrollbar flex flex-col">
-                    <div class="p-8 text-center text-xs text-gray-500 italic">Nenhuma atualização recente.</div>
-                </div>
-            </div>
-        </div>
+<div class="flex-1 max-w-3xl w-full flex items-center gap-2">
+  <div class="relative flex-1">
+    <i class="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-[14px] pointer-events-none"></i>
+    <input type="text" id="search-input" class="w-full bg-white dark:bg-bg-main border border-gray-300 dark:border-border-subtle pl-9 pr-4 py-1 text-sm text-gray-900 dark:text-white placeholder-gray-500 transition-colors focus:ring-1 focus:ring-blue-500 outline-none" placeholder="Pesquisar na base de conhecimento..." />
+  </div>
+  
+  <button id="btn-new-article" title="Novo Procedimento KCS">
+      <i class="ph-bold ph-plus"></i> KCS
+  </button>
+  
+  <button id="btn-new-sql" title="Novo Script SQL">
+      <i class="ph ph-database"></i> SQL
+  </button>
+</div>
 
-        <div class="relative" id="profile-dropdown-container">
-            <button id="btn-profile" class="flex items-center gap-2 p-1 pr-2 sm:pr-3 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-all border border-transparent hover:border-gray-200 dark:hover:border-border-subtle">
-                <div id="user-avatar" class="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-600 to-purple-600 flex items-center justify-center text-white text-xs font-bold uppercase border-2 border-white dark:border-surface shadow-sm">?</div>
-                <i class="ph ph-caret-down text-[12px] text-gray-500"></i>
-            </button>
-            <div id="profile-dropdown" class="hidden absolute right-0 mt-2 w-64 bg-white dark:bg-surface border border-gray-200 dark:border-border-subtle rounded-2xl shadow-2xl overflow-hidden z-50 animate-fade-in">
-                <div class="p-4 border-b border-gray-100 dark:border-border-subtle bg-gray-50/50 dark:bg-bg-main/50">
-                    <p id="user-name-display" class="text-sm font-bold text-gray-900 dark:text-white truncate">Usuário</p>
-                    <div class="flex items-center gap-2 mt-0.5">
-                        <span id="user-role-display" class="text-[9px] font-bold px-1.5 py-0.5 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded uppercase tracking-wider">Membro</span>
-                    </div>
-                </div>
-                <div class="p-2 flex flex-col gap-0.5">
-                    <button id="btn-admin-panel" onclick="window.__kcs.openSettings()" class="hidden items-center gap-3 w-full px-3 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-colors">
-                        <i class="ph ph-gear-six text-lg"></i> Administração
-                    </button>
-                    <button id="btn-company-settings" onclick="window.__kcs.openCompanySettings()" class="hidden items-center gap-3 w-full px-3 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-colors">
-                        <i class="ph ph-buildings text-lg"></i> Planos e Limites
-                    </button>
-                    <button onclick="window.__kcs.toggleTheme()" class="flex items-center gap-3 w-full px-3 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-colors">
-                        <i id="theme-toggle-icon" class="ph ph-moon text-lg"></i> Alternar Tema
-                    </button>
-                    <hr class="my-1.5 border-gray-100 dark:border-border-subtle">
-                    <button onclick="window.__kcs.logout()" class="flex items-center gap-3 w-full px-3 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-colors">
-                        <i class="ph ph-sign-out text-lg"></i> Sair do Sistema
-                    </button>
-                </div>
-            </div>
-        </div>
-      </div>
     </header>
 
     <div class="workbench-activitybar">
@@ -139,9 +102,7 @@
             <button type="button" class="activitybar-btn active" data-view="articles" title="Artigos (Base de Conhecimento)">
                 <i class="ph ph-files"></i>
             </button>
-            <button type="button" class="activitybar-btn" data-view="semantic-search" title="Busca Semântica">
-                <i class="ph ph-magnifying-glass"></i>
-            </button>
+           
             <button type="button" class="activitybar-btn" data-view="sql" title="Biblioteca SQL">
                 <i class="ph ph-database"></i>
             </button>
@@ -157,22 +118,24 @@
         </div>
     </div>
     <aside id="sidebar" class="workbench-sidebar bg-surface border-r border-border-subtle flex flex-col shrink-0 overflow-y-auto z-50 lg:z-0">
-       <div class="p-3 space-y-2 border-b border-border-subtle">
-          <button id="btn-new-article" class="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2.5 rounded-xl transition-colors shadow-lg shadow-blue-500/20 touch-target">
-            <i class="ph ph-plus-circle text-[18px]"></i> Novo Procedimento
-          </button>
-          <div class="flex gap-2">
-            <button id="btn-new-sql" class="flex-1 flex items-center justify-center gap-2 bg-gray-100 dark:bg-bg-main hover:bg-gray-200 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-200 text-sm font-medium px-4 py-2 rounded-xl transition-colors border border-gray-300 dark:border-border-subtle shadow-sm touch-target">
-              <i class="ph ph-database text-purple-600 dark:text-purple-400 text-[18px]"></i> Novo SQL
-            </button>
-          </div>
-        </div>
+    
        <nav id="sidebar-nav" class="flex-1 p-2 space-y-0.5 overflow-y-auto"></nav>
     </aside>
 
-    <main class="workbench-editor flex-1 overflow-y-auto p-4 md:p-6 relative">
-        <div id="dashboard-container" class="hidden space-y-6"></div>
-        <div id="articles-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4"></div>
+    <main class="workbench-editor flex-1 flex flex-col relative overflow-hidden p-0 bg-editor-background">
+        
+        <div id="workbench-tabs-bar" class="flex overflow-x-auto bg-[#252526] dark:bg-sidebar-background border-b border-[#3c3c3c] dark:border-border hidden shrink-0 select-none">
+            </div>
+
+        <div id="workbench-tab-contents" class="flex-1 relative bg-editor-background">
+            
+            <div id="home-view-container" class="tab-content-panel active w-full h-full p-4 md:p-6 overflow-y-auto">
+                <div id="dashboard-container" class="hidden space-y-6"></div>
+                <div id="articles-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4"></div>
+            </div>
+
+            </div>
+
     </main>
 
     <div id="kcs-dock" class="workbench-panel"></div>
@@ -249,5 +212,70 @@
   </div>
 
   <script type="module" src="js/main.js"></script>
+
+<div id="settings-modal" class="hidden fixed inset-0 bg-black/70 z-[100] items-center justify-center p-4 modal-backdrop">
+    <div class="bg-surface border border-border-subtle rounded-2xl w-full max-w-5xl max-h-[90vh] flex flex-col shadow-2xl modal-box">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-border-subtle shrink-0">
+            <h2 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                <i class="ph-fill ph-gear"></i> Painel de Administração
+            </h2>
+            <button id="btn-close-settings-modal" class="text-gray-400 hover:text-gray-900 dark:hover:text-white touch-target btn-icon btn-close">
+                <i class="ph ph-x text-[20px]"></i>
+            </button>
+        </div>
+        <div class="flex-1 overflow-y-auto p-4 sm:p-6 custom-scrollbar bg-gray-50 dark:bg-[#0f0f12]">
+            <div id="users-list" class="space-y-6"></div>
+        </div>
+    </div>
+  </div>
+
+  <div id="vscode-settings-menu" class="hidden vscode-context-menu">
+      <ul>
+          <li onclick="window.__kcs.openSettings()">Administração</li>
+          <li onclick="window.__kcs.openCategoryManager()">Gerenciar Categorias</li>
+          <li class="menu-separator"></li>
+          <li onclick="window.__kcs.toggleTheme()">Alternar Tema</li>
+      </ul>
+  </div>
+
+  <div id="vscode-account-menu" class="hidden vscode-context-menu">
+      <ul>
+          <li class="menu-info">
+              <span id="user-name-display" class="font-bold block text-[13px]">Usuário</span>
+              <span id="user-role-display" class="text-[11px] text-gray-500 dark:text-gray-400 mt-1 uppercase tracking-wider">Membro</span>
+          </li>
+          <li class="menu-separator"></li>
+          <li onclick="window.__kcs.logout()">Sair do Sistema</li>
+      </ul>
+  </div>
+
+  <div id="vscode-settings-menu" class="hidden vscode-context-menu">
+      <ul>
+          <li onclick="window.__kcs.openSettings()">Administração</li>
+          <li onclick="window.__kcs.openCompanySettings()">Planos e Limites</li>
+          <li onclick="window.__kcs.openCategoryManager()">Gerenciar Categorias</li>
+          <li class="menu-separator"></li>
+          <li onclick="window.__kcs.showReadme()">Documentação do Sistema</li>
+          <li class="menu-separator"></li>
+          <li onclick="window.__kcs.toggleTheme()">Alternar Tema</li>
+      </ul>
+  </div>
+
+  <div id="vscode-account-menu" class="hidden vscode-context-menu">
+      <ul>
+          <li class="menu-info">
+              <span id="user-name-display" class="font-bold block text-[13px]">Usuário</span>
+              <div class="flex items-center gap-2 mt-1">
+                  <span id="user-role-display" class="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider">Membro</span>
+                  <div id="company-plan-badge"></div> </div>
+          </li>
+          <li class="menu-separator"></li>
+          <li onclick="window.__kcs.logout()">Sair do Sistema</li>
+      </ul>
+  </div>
+
 </body>
 </html>
+
+
+
