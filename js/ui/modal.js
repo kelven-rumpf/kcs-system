@@ -1004,94 +1004,132 @@ export function openHistoryModal(item, type) {
     });
 }
 
-export function openCategoryModal(refreshCallback) {
+// ==========================================
+// MDI TAB: GERENCIADOR DE CATEGORIAS (BLINDADO E MINIMALISTA)
+// ==========================================
+export async function openCategoryModal(refreshCallback) {
     const idUnico = 'tab-category-manager';
     const container = document.createElement('div');
     container.className = 'flex flex-col h-full';
     container.id = `view-container-${idUnico}`;
     container.style.backgroundColor = 'var(--color-editor-background)';
     
-    container.innerHTML = `
-        <div class="flex-1 overflow-y-auto p-6 md:p-10 custom-scrollbar">
-            <div class="max-w-4xl mx-auto">
-                <div class="mb-8 pb-6" style="border-bottom: 1px solid var(--color-border-subtle);">
-                    <h2 class="text-3xl font-extrabold mb-2 flex items-center gap-3" style="color: var(--color-text-inverse);">
-                        <i class="ph-bold ph-folders text-orange-500"></i> Gerenciar Categorias
-                    </h2>
-                    <p class="text-sm" style="color: var(--color-text-secondary);">Organize a árvore de navegação lateral da sua base de conhecimento.</p>
-                </div>
-                
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-                    <div class="md:col-span-2 space-y-3">
-                        <h3 class="text-[11px] font-bold uppercase tracking-widest mb-4" style="color: var(--color-text-muted);">Categorias Existentes</h3>
-                        <div id="category-list-${idUnico}" class="space-y-2"></div>
-                    </div>
+    // Abre a aba imediatamente para feedback visual
+    container.innerHTML = `<div class="p-10 flex items-center gap-3 text-orange-500"><i class="ph-bold ph-spinner animate-spin text-2xl"></i> Carregando estrutura de categorias...</div>`;
+    window.TabManager.openTab(idUnico, 'Categorias', 'ph-folders', container);
 
-                    <div class="md:col-span-1">
-                        <form id="category-form-${idUnico}" class="p-6 rounded-xl sticky top-0 shadow-sm" style="background-color: var(--color-sidebar-background); border: 1px solid var(--color-border-subtle);">
-                            <h3 class="text-[11px] font-bold uppercase tracking-widest mb-5" style="color: var(--color-text-muted);">Nova Categoria</h3>
-                            <div class="space-y-4">
-                                <div>
-                                    <label class="block text-[11px] font-bold uppercase tracking-wider mb-1.5" style="color: var(--color-text-muted);">Nome da Categoria</label>
-                                    <input type="text" id="cat-name-${idUnico}" required class="w-full px-4 py-2.5 rounded-lg text-sm outline-none focus:ring-1 focus:ring-orange-500 transition-all" style="background-color: var(--color-editor-background); color: var(--color-text-primary); border: 1px solid var(--color-border);" />
-                                </div>
-                                <div>
-                                    <label class="block text-[11px] font-bold uppercase tracking-wider mb-1.5" style="color: var(--color-text-muted);">Ícone (Phosphor)</label>
-                                    <input type="text" id="cat-icon-${idUnico}" value="ph-folder" class="w-full px-4 py-2.5 rounded-lg text-sm outline-none focus:ring-1 focus:ring-orange-500 transition-all font-mono" style="background-color: var(--color-editor-background); color: var(--color-text-primary); border: 1px solid var(--color-border);" />
-                                </div>
-                                <div>
-                                    <label class="block text-[11px] font-bold uppercase tracking-wider mb-1.5" style="color: var(--color-text-muted);">Hierarquia (Pai)</label>
-                                    <select id="cat-parent-${idUnico}" class="w-full px-4 py-2.5 rounded-lg text-sm outline-none focus:ring-1 focus:ring-orange-500 transition-all cursor-pointer" style="background-color: var(--color-editor-background); color: var(--color-text-primary); border: 1px solid var(--color-border);">
-                                        <option value="">Raiz (Principal)</option>
-                                    </select>
-                                </div>
-                                <button type="submit" class="w-full mt-4 bg-orange-600 hover:bg-orange-700 text-white text-sm font-bold py-3 rounded-lg transition-colors shadow-sm">
-                                    Adicionar
-                                </button>
-                            </div>
-                        </form>
+    try {
+        const { getFlatCategories, addCategory, removeCategory, updateCategory } = await import('../services/categories.js');
+
+        // Montagem do HTML com Layout aprimorado e formulário enxuto
+        container.innerHTML = `
+            <div class="flex-1 overflow-y-auto p-6 md:p-10 custom-scrollbar">
+                <div class="max-w-4xl mx-auto">
+                    <div class="mb-8 pb-6" style="border-bottom: 1px solid var(--color-border-subtle);">
+                        <h2 class="text-3xl font-extrabold mb-2 flex items-center gap-3" style="color: var(--color-text-inverse);">
+                            <i class="ph-bold ph-folders text-orange-500"></i> Gerenciar Categorias
+                        </h2>
+                        <p class="text-sm" style="color: var(--color-text-secondary);">Organize a árvore de navegação lateral da sua base de conhecimento.</p>
                     </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-5 gap-8">
+                        
+                        <div class="md:col-span-3 space-y-3">
+                            <h3 class="text-[11px] font-bold uppercase tracking-widest mb-4" style="color: var(--color-text-muted);">Categorias Existentes</h3>
+                            <div id="category-list-${idUnico}" class="space-y-2"></div>
+                        </div>
+
+                        <div class="md:col-span-2">
+                            <form id="category-form-${idUnico}" class="p-6 rounded-xl sticky top-0 shadow-sm flex flex-col gap-6" style="background-color: var(--color-sidebar-background); border: 1px solid var(--color-border-subtle);">
+                                <div class="flex items-center gap-2" style="color: var(--color-text-muted);">
+                                    <i class="ph-bold ph-folder-plus text-lg"></i>
+                                    <h3 class="text-[12px] font-bold uppercase tracking-widest">Nova Categoria</h3>
+                                </div>
+                                
+                                <div class="space-y-5">
+                                    <div>
+                                        <label class="block text-[11px] font-bold uppercase tracking-wider mb-2" style="color: var(--color-text-muted);">Nome da Categoria *</label>
+                                        <input type="text" id="cat-name-${idUnico}" placeholder="Ex: Financeiro" required class="w-full px-4 py-2.5 rounded-lg text-sm font-semibold outline-none focus:ring-1 focus:ring-orange-500 transition-all" style="background-color: var(--color-editor-background); color: var(--color-text-primary); border: 1px solid var(--color-border);" />
+                                    </div>
+                                    
+                                    <div>
+                                        <label class="block text-[11px] font-bold uppercase tracking-wider mb-2" style="color: var(--color-text-muted);">Hierarquia (Onde ela ficará?)</label>
+                                        <select id="cat-parent-${idUnico}" class="w-full px-4 py-2.5 rounded-lg text-sm font-semibold outline-none focus:ring-1 focus:ring-orange-500 transition-all cursor-pointer" style="background-color: var(--color-editor-background); color: var(--color-text-primary); border: 1px solid var(--color-border);">
+                                            <option value="">Raiz (Categoria Principal)</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                
+                                <button type="submit" class="w-full mt-2 bg-orange-600 hover:bg-orange-700 text-white text-sm font-bold py-3 rounded-lg transition-colors shadow-sm flex items-center justify-center gap-2">
+                                    Adicionar Categoria
+                                </button>
+                            </form>
+                        </div>
+
+                    </div>
+                    <div class="h-12"></div>
                 </div>
             </div>
-        </div>
-    `;
+        `;
 
+        function renderList() {
+            const select = container.querySelector(`#cat-parent-${idUnico}`);
+            const list = container.querySelector(`#category-list-${idUnico}`);
+            const categories = getFlatCategories();
+            
+            select.innerHTML = '<option value="">Raiz (Categoria Principal)</option>' + categories.map(c => `<option value="${c.id}">${c.path}</option>`).join('');
+            
+            list.innerHTML = categories.map(c => `
+                <div class="flex items-center justify-between px-4 py-3 rounded-lg transition-colors group" style="background-color: var(--color-sidebar-background); border: 1px solid var(--color-border-subtle);" onmouseover="this.style.borderColor='var(--color-border)'" onmouseout="this.style.borderColor='var(--color-border-subtle)'">
+                    <span class="text-[13.5px] font-bold flex items-center gap-3" style="color: var(--color-text-inverse);"><i class="ph-fill ph-folder text-orange-500 text-lg"></i> ${c.path}</span>
+                    <div class="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button class="px-3 py-1.5 text-xs font-bold rounded transition-colors" style="color: var(--color-text-primary); background-color: var(--color-editor-background); border: 1px solid var(--color-border);" onmouseover="this.style.borderColor='var(--color-focus)'; this.style.color='var(--color-focus)';" onmouseout="this.style.borderColor='var(--color-border)'; this.style.color='var(--color-text-primary)';" data-action="edit-category" data-id="${c.id}" data-name="${c.name}" data-icon="${c.icon || ''}">Editar</button>
+                        <button class="px-3 py-1.5 text-xs font-bold rounded text-red-500 transition-colors" style="background-color: var(--color-editor-background); border: 1px solid var(--color-border);" onmouseover="this.style.backgroundColor='rgba(239,68,68,0.1)';" onmouseout="this.style.backgroundColor='var(--color-editor-background)';" data-action="delete-category" data-id="${c.id}">Excluir</button>
+                    </div>
+                </div>
+            `).join('') || '<p class="text-sm italic" style="color: var(--color-text-muted);">Nenhuma categoria cadastrada.</p>';
 
-    window.__kcs.deleteCategory = (id) => { 
-        removeCategory(id); 
-        renderList(); 
-        if (refreshCallback) refreshCallback(); 
-    };
-    
-    window.__kcs.editCategory = async (id, currentName, currentIcon) => { 
-        const newName = await asyncPrompt('Novo nome da categoria:', currentName); 
-        if (!newName) return; 
-        const newIcon = await asyncPrompt('Ícone Phosphor (ex: ph-folder):', currentIcon); 
-        updateCategory(id, { name: newName, icon: newIcon || 'ph-folder' }); 
-        renderList(); 
-        if (refreshCallback) refreshCallback(); 
-    };
+            list.querySelectorAll('[data-action="edit-category"]').forEach(btn => {
+                btn.addEventListener('click', () => window.__kcs.editCategory(btn.dataset.id, btn.dataset.name, btn.dataset.icon));
+            });
+            list.querySelectorAll('[data-action="delete-category"]').forEach(btn => {
+                btn.addEventListener('click', () => window.__kcs.deleteCategory(btn.dataset.id));
+            });
+        }
 
-    renderList();
-
-    safeBindEvent(form, 'submit', (e) => { 
-        e.preventDefault(); 
-        const name = document.getElementById('cat-name').value; 
-        const icon = document.getElementById('cat-icon').value; 
-        const parentId = select.value || null; 
-        const res = addCategory(parentId, name, icon); 
-        if (res.success) { 
-            document.getElementById('cat-name').value = ''; 
-            document.getElementById('cat-icon').value = 'ph-folder'; 
+        // Funções atreladas ao objeto global para evitar vazamento
+        window.__kcs.deleteCategory = (id) => { removeCategory(id); renderList(); if (refreshCallback) refreshCallback(); };
+        window.__kcs.editCategory = async (id, currentName, currentIcon) => { 
+            const newName = await window.__kcs.prompt('Novo nome da categoria:', currentName); 
+            if (!newName) return; 
+            // O ícone do prompt foi removido, preseramos o atual ou setamos o folder.
+            updateCategory(id, { name: newName, icon: currentIcon || 'ph-folder' }); 
             renderList(); 
             if (refreshCallback) refreshCallback(); 
-        } else { 
-            asyncAlert(res.message); 
-        } 
-    });
-    
-    if (btnClose) {
-        safeBindEvent(btnClose, 'click', () => window.__kcs.closeModal('category-modal', false));
+        };
+
+        renderList();
+
+        const form = container.querySelector(`#category-form-${idUnico}`);
+        form.addEventListener('submit', (e) => { 
+            e.preventDefault(); 
+            const name = container.querySelector(`#cat-name-${idUnico}`).value; 
+            const parentId = container.querySelector(`#cat-parent-${idUnico}`).value || null; 
+            // Fixamos o ícone como ph-folder na criação
+            const res = addCategory(parentId, name, 'ph-folder'); 
+            
+            if (res.success) { 
+                container.querySelector(`#cat-name-${idUnico}`).value = ''; 
+                renderList(); 
+                if (refreshCallback) refreshCallback(); 
+            } else { 
+                window.__kcs.alert(res.message); 
+            } 
+        });
+
+    } catch (e) {
+        container.innerHTML = `<div class="p-10 text-red-500 font-bold">Erro fatal ao carregar o módulo de Categorias: <br><br>${e.message}</div>`;
+        console.error(e);
     }
 }
 
