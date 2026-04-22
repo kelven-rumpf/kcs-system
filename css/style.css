@@ -62,6 +62,13 @@ html.dark {
 
     --bg-canvas: #1e1e1e;
     --bg-surface: #252526;
+
+    --color-success-bg: rgba(16, 185, 129, 0.15);
+    --color-success-text: #34d399;
+    --color-warning-bg: rgba(245, 158, 11, 0.15);
+    --color-warning-text: #fbbf24;
+    --color-info-bg: rgba(59, 130, 246, 0.15);
+    --color-info-text: #60a5fa;
 }
   
 html.light {
@@ -86,6 +93,13 @@ html.light {
 
     --bg-canvas: #ffffff;
     --bg-surface: #f3f3f3;
+
+    --color-success-bg: rgba(16, 185, 129, 0.15);
+    --color-success-text: #059669; /* Verde mais escuro para contraste no branco */
+    --color-warning-bg: rgba(245, 158, 11, 0.15);
+    --color-warning-text: #d97706; /* Laranja mais escuro para legibilidade */
+    --color-info-bg: rgba(59, 130, 246, 0.15);
+    --color-info-text: #2563eb; /* Azul mais forte */
 }
 
 body {
@@ -2638,4 +2652,311 @@ html.dark .content-grid > div .bg-gray-100 {
 .tab-content-panel.active {
     display: block;
     z-index: 10;
+}
+
+/* Alterações 21/04 */ 
+
+/* ==========================================================================
+   KCS HUB - DESIGN SYSTEM FOUNDATION (SEMANTIC CLASSES)
+   ========================================================================== */
+
+/* ==========================================================================
+   1. SUPERFÍCIES
+   Controlam a cor de fundo e a elevação (z-index visual) para Light/Dark Mode
+   ========================================================================== */
+
+/* Superfície base (Fundo da tela principal, áreas vazias) */
+.kcs-surface-base {
+    background-color: var(--color-editor-background);
+    color: var(--color-text-primary);
+}
+
+/* Superfície nível 1 (Sidebars, Cards, Painéis encaixados) */
+.kcs-surface-elevated {
+    background-color: var(--color-sidebar-background);
+    border: 1px solid var(--color-border-subtle);
+    color: var(--color-text-primary);
+}
+
+/* Superfície flutuante (Dropdowns, Menus de Contexto, Modais Livres) */
+.kcs-surface-floating {
+    background-color: var(--color-sidebar-background);
+    border: 1px solid var(--color-border);
+    box-shadow: var(--shadow-md);
+    color: var(--color-text-primary);
+}
+
+/* ==========================================================================
+   2. MODAIS E DIALOGS
+   Containers sobrepostos ao overlay escuro
+   ========================================================================== */
+
+/* Base compartilhada para todos os modais */
+.kcs-modal-base {
+    background-color: var(--color-sidebar-background);
+    border: 1px solid var(--color-border);
+    color: var(--color-text-primary);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+/* Modais pequenos (Alertas, Confirmações, Prompts) */
+.kcs-modal-dialog {
+    border-radius: var(--border-radius-xl);
+    box-shadow: var(--shadow-md);
+}
+
+/* Modais grandes (Editor KCS, SQL, Painel Administrativo) */
+.kcs-modal-panel {
+    border-radius: var(--border-radius-lg);
+    box-shadow: var(--shadow-md);
+}
+
+/* Modal de Histórico de Versões */
+.kcs-modal-history {
+    border-radius: var(--border-radius-xl);
+    box-shadow: var(--shadow-md);
+}
+
+/* ==========================================================================
+   3. CARDS
+   Superfícies iteráveis para exibição de conteúdo nas Grids
+   ========================================================================== */
+
+/* Estrutura base de Cards */
+.kcs-card-base {
+    background-color: var(--color-sidebar-background);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--border-radius-xl);
+    box-shadow: var(--shadow-xs);
+    transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+/* Cards interativos (Grid de Artigos KCS e Scripts SQL) */
+.kcs-card-content {
+    cursor: pointer;
+}
+.kcs-card-content:hover {
+    border-color: var(--color-focus);
+    background-color: var(--color-hover);
+    box-shadow: var(--shadow-sm);
+}
+
+/* Cards estáticos de métricas (KPIs do Dashboard) */
+.kcs-card-metric {
+    display: flex;
+    flex-direction: column;
+    color: var(--color-text-primary);
+}
+
+/* Containers amplos que englobam Tabelas ou Listas (Widgets) */
+.kcs-card-widget {
+    overflow: hidden;
+    padding: 0; /* Padding interno é delegado aos elementos filhos */
+}
+
+/* ==========================================================================
+   4. TABELAS
+   Apresentação de dados tabulares (Fila de Revisão, Administração SaaS)
+   ========================================================================== */
+
+/* Wrapper que engloba a tabela para lidar com bordas e overflow (scroll X) */
+.kcs-table-wrapper {
+    background-color: var(--color-sidebar-background);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--border-radius-xl);
+    overflow-x: auto;
+    width: 100%;
+}
+
+/* Reset semântico e aplicação de cor base na estrutura da tabela */
+.kcs-table-base {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+    color: var(--color-text-primary);
+}
+
+/* ==========================================================================
+   5. BADGES E TAGS
+   Indicadores visuais de status, IDs e Categorias
+   ========================================================================== */
+
+/* Base estrutural da pílula */
+.kcs-badge-base {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--border-radius-xl); /* Formato Pílula */
+    font-size: var(--font-size-xs);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border: 1px solid transparent;
+}
+
+/* Identificadores sistêmicos (ex: #KCS-123456) */
+.kcs-badge-id {
+    font-family: var(--font-family-mono);
+    background-color: var(--color-info-bg);
+    color: var(--color-info-text);
+    border: none;
+}
+
+/* Tags dinâmicas e Categorias */
+.kcs-badge-tag {
+    text-transform: lowercase;
+    background-color: var(--color-editor-background);
+    color: var(--color-text-muted);
+    border-color: var(--color-border);
+}
+
+/* Semântica: Sucesso / Aprovado */
+.kcs-badge-success {
+    background-color: var(--color-success-bg); 
+    color: var(--color-success-text);
+    border: none;
+}
+
+/* Semântica: Alerta / Revisão Pendente / Reportado */
+.kcs-badge-warning {
+    background-color: var(--color-warning-bg);
+    color: var(--color-warning-text);
+    border: none;
+}
+
+/* Semântica: Neutro / Rascunho */
+.kcs-badge-neutral {
+    background-color: var(--color-editor-background);
+    color: var(--color-text-muted);
+    border-color: var(--color-border-subtle);
+}
+
+/* ==========================================================================
+   6. CAMPOS DE LEITURA E FORMULÁRIO
+   Inputs e blocos de visualização de conteúdo (VS Code Style)
+   ========================================================================== */
+
+/* Blocos de leitura do Visualizador de Artigos (Sintoma, Causa, Solução) */
+.kcs-view-field-box {
+    background-color: var(--color-hover);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--border-radius-lg);
+    display: flex;
+    flex-direction: column;
+    color: var(--color-text-primary);
+    overflow: hidden;
+}
+
+/* Inputs, Selects e Textareas interativos */
+.kcs-form-input {
+    width: 100%;
+    background-color: var(--color-editor-background);
+    border: 1px solid var(--color-border);
+    color: var(--color-text-primary);
+    border-radius: var(--border-radius-md);
+    font-family: var(--font-family-base);
+    font-size: var(--font-size-sm);
+    outline: none;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.kcs-form-input:focus {
+    border-color: var(--color-focus);
+    box-shadow: 0 0 0 1px var(--color-focus);
+}
+
+/* ==========================================================================
+   7. CHATBOT (IA ASSISTANT)
+   Componentes das mensagens (RAG Local)
+   ========================================================================== */
+
+/* Balão do Usuário: Alinhado à direita, cor de destaque */
+.kcs-chat-bubble-user {
+    background-color: var(--color-focus);
+    color: var(--color-text-inverse);
+    border-radius: 16px 16px 2px 16px;
+    font-size: var(--font-size-sm);
+    line-height: 1.4;
+    word-break: break-word;
+    box-shadow: var(--shadow-xs);
+}
+
+/* Balão da IA (Nissei Sensei): Alinhado à esquerda, cor de superfície limpa */
+.kcs-chat-bubble-bot {
+    background-color: var(--color-sidebar-background);
+    border: 1px solid var(--color-border);
+    color: var(--color-text-primary);
+    border-radius: 16px 16px 16px 2px;
+    font-size: var(--font-size-sm);
+    line-height: 1.5;
+    box-shadow: var(--shadow-xs);
+}
+
+/* ==========================================================================
+   CORREÇÃO RÁPIDA: CONTRASTE DE TÍTULOS E ALINHAMENTO DE TABELAS
+   ========================================================================== */
+
+/* 1. Restaura a cor do texto para Dinâmico (Preto no Claro, Branco no Escuro) */
+.view-title, 
+.dash-title,
+.content-grid > div h3, 
+.modal-title,
+.metric-value:not(.value-approved):not(.value-views):not(.value-alert) {
+    color: var(--color-text-primary) !important;
+}
+
+/* 2. Restaura o layout, espaçamento e cabeçalho das Tabelas Semânticas */
+.kcs-table-base th {
+    background-color: var(--color-hover) !important;
+    padding: 12px 16px !important;
+    font-size: 11px !important;
+    font-weight: 700 !important;
+    color: var(--color-text-muted) !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.05em !important;
+    border-bottom: 1px solid var(--color-border-subtle) !important;
+}
+
+.kcs-table-base td {
+    padding: 16px !important;
+    vertical-align: middle !important;
+    border-bottom: 1px solid var(--color-border-subtle) !important;
+    color: var(--color-text-primary) !important;
+}
+
+.kcs-table-base tbody tr {
+    transition: background-color 0.2s ease !important;
+}
+
+.kcs-table-base tbody tr:hover {
+    background-color: var(--color-hover) !important;
+}
+
+/* ==========================================================================
+   CORREÇÃO DE CACHE: FORÇAR CONTRASTE EM STYLES INLINE (MODO CLARO)
+   ========================================================================== */
+/* Se o JavaScript em cache tentar forçar a cor 'inverse' (branco) no Modo Claro, 
+   o CSS intercepta a declaração inline e força a cor escura correta. */
+html.light [style*="color: var(--color-text-inverse)"] {
+    color: var(--color-text-primary) !important;
+}
+
+/* Aproveitando para clarear os textos "mutados" que ficaram invisíveis (ex: "Nenhum convite") */
+html.light [style*="color: var(--color-text-muted)"] {
+    color: var(--color-text-secondary) !important;
+}
+
+/* ==========================================================================
+   CORREÇÃO RÁPIDA: FUNDO DOS MODAIS (REMOVENDO TRANSPARÊNCIA)
+   ========================================================================== */
+/* Garante que todos os tipos de modais puxem a cor de fundo sólida correta */
+.kcs-modal-dialog,
+.kcs-modal-panel,
+.kcs-modal-history {
+    background-color: var(--color-sidebar-background) !important;
+    border: 1px solid var(--color-border) !important;
+    color: var(--color-text-primary) !important;
 }

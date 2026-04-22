@@ -347,71 +347,72 @@ export function openViewModal(article, currentUser) {
     container.style.backgroundColor = 'var(--color-editor-background)';
 
     // 2. Montar o HTML com Layout Full Width e Grid
+ // 2. Montar o HTML com Layout Full Width e Grid
     container.innerHTML = `
-        <div class="flex-1 overflow-y-auto p-6 md:p-8 custom-scrollbar modal-zoomable relative" style="background-color: var(--color-editor-background);">
+        <div class="flex-1 overflow-y-auto p-6 md:p-8 custom-scrollbar modal-zoomable relative">
             
             ${article.status === 'review' || article.status === 'pendente_revisao' ? `
-            <div class="w-full mb-8 bg-yellow-500/10 border border-yellow-500/20 text-yellow-500 px-5 py-4 rounded-lg flex items-center gap-3 text-sm shadow-sm" data-html2pdf-ignore>
+            <div class="w-full mb-8 kcs-badge-warning px-5 py-4 rounded-lg flex items-center gap-3 text-sm shadow-sm" data-html2pdf-ignore>
                 <i class="ph-fill ph-warning-circle text-2xl"></i>
                 <span><strong>Atenção:</strong> Este procedimento está em revisão ou foi sinalizado pela equipe.</span>
             </div>` : ''}
 
             <div id="kcs-print-area-${article.id}" class="print-area w-full">
                 
-                <div class="mb-8 pb-6" style="border-bottom: 1px solid var(--color-border-subtle);">
-                    <h1 class="text-3xl sm:text-4xl font-extrabold mb-5 leading-tight tracking-tight" style="color: var(--color-text-inverse);">${safeText(article.title)}</h1>
+                <div class="mb-8 pb-6 border-b border-border-subtle">
+                    <h1 class="text-3xl sm:text-4xl font-extrabold mb-5 leading-tight tracking-tight" style="color: var(--color-text-primary);">${safeText(article.title)}</h1>
                     
                     <div class="flex flex-wrap items-center gap-2.5">
-                        ${article.articleNumber ? `<span class="px-2.5 py-1 bg-blue-500/10 text-blue-500 font-mono text-[12px] font-bold rounded">#KCS-${article.articleNumber}</span>` : ''}
-                        ${article.categoryId || article.category ? `<span class="px-3 py-1 bg-purple-500/10 text-purple-400 text-[11px] font-bold uppercase tracking-wider rounded-full">${safeText(article.categoryId || article.category)}</span>` : ''}
-                        ${article.visibility === VISIBILITY.PRIVATE ? `<span class="px-2.5 py-1 bg-red-500/10 text-red-400 text-[12px] font-bold rounded flex items-center gap-1.5"><i class="ph-bold ph-lock"></i> Privado</span>` : `<span class="px-2.5 py-1 bg-green-500/10 text-green-400 text-[12px] font-bold rounded flex items-center gap-1.5"><i class="ph-bold ph-globe"></i> Público</span>`}
-                        ${article.tags ? article.tags.map(t => `<span class="px-3 py-1 text-[11px] rounded-full" style="background-color: var(--color-hover); color: var(--color-text-secondary); border: 1px solid var(--color-border);">${safeText(t)}</span>`).join('') : ''}
+                        ${article.articleNumber ? `<span class="kcs-badge-id px-2.5 py-1 text-[12px] rounded">#KCS-${article.articleNumber}</span>` : ''}
+                        ${article.categoryId || article.category ? `<span class="kcs-badge-tag px-3 py-1 text-[11px] rounded-full uppercase tracking-wider" style="color: var(--color-focus); border-color: var(--color-focus);">${safeText(article.categoryId || article.category)}</span>` : ''}
+                        ${article.visibility === VISIBILITY.PRIVATE ? `<span class="kcs-badge-warning px-2.5 py-1 text-[12px] rounded flex items-center gap-1.5"><i class="ph-bold ph-lock"></i> Privado</span>` : `<span class="kcs-badge-success px-2.5 py-1 text-[12px] rounded flex items-center gap-1.5"><i class="ph-bold ph-globe"></i> Público</span>`}
+                        ${article.tags ? article.tags.map(t => `<span class="kcs-badge-tag px-3 py-1 text-[11px] rounded-full">${safeText(t)}</span>`).join('') : ''}
                     </div>
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-4 gap-6 mb-12">
                     ${article.symptom ? `
-                    <div class="border-l-4 border-red-500 pl-4 pr-3 py-3 relative group rounded-r-lg flex flex-col h-full" style="background-color: var(--color-sidebar-background);">
+                    <div class="kcs-view-field-box border-l-4 border-red-500 pl-4 pr-3 py-3 relative group rounded-r-lg h-full">
                         <h4 class="text-[12px] font-bold text-red-500 uppercase tracking-widest mb-2 flex items-center gap-2"><i class="ph-fill ph-warning-circle text-base"></i> Sintoma</h4>
-                        <div class="text-[13.5px] leading-relaxed flex-1" style="color: var(--color-text-primary);">${safeText(article.symptom)}</div>
+                        <div class="text-[13.5px] leading-relaxed flex-1">${safeText(article.symptom)}</div>
                         <button class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded hover:bg-black/10 dark:hover:bg-white/10" style="color: var(--color-text-muted);" title="Copiar" data-action="copy-field"><i class="ph ph-copy text-lg"></i></button>
                     </div>` : ''}
                     
                     ${article.environment ? `
-                    <div class="border-l-4 border-blue-500 pl-4 pr-3 py-3 relative group rounded-r-lg flex flex-col h-full" style="background-color: var(--color-sidebar-background);">
+                    <div class="kcs-view-field-box border-l-4 border-blue-500 pl-4 pr-3 py-3 relative group rounded-r-lg h-full">
                         <h4 class="text-[12px] font-bold text-blue-500 uppercase tracking-widest mb-2 flex items-center gap-2"><i class="ph-fill ph-desktop text-base"></i> Ambiente</h4>
-                        <div class="text-[13.5px] leading-relaxed flex-1" style="color: var(--color-text-primary);">${safeText(article.environment)}</div>
+                        <div class="text-[13.5px] leading-relaxed flex-1">${safeText(article.environment)}</div>
                         <button class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded hover:bg-black/10 dark:hover:bg-white/10" style="color: var(--color-text-muted);" title="Copiar" data-action="copy-field"><i class="ph ph-copy text-lg"></i></button>
                     </div>` : ''}
                     
                     ${article.cause ? `
-                    <div class="border-l-4 border-yellow-500 pl-4 pr-3 py-3 relative group rounded-r-lg flex flex-col h-full" style="background-color: var(--color-sidebar-background);">
+                    <div class="kcs-view-field-box border-l-4 border-yellow-500 pl-4 pr-3 py-3 relative group rounded-r-lg h-full">
                         <h4 class="text-[12px] font-bold text-yellow-500 uppercase tracking-widest mb-2 flex items-center gap-2"><i class="ph-fill ph-magnifying-glass text-base"></i> Causa</h4>
-                        <div class="text-[13.5px] leading-relaxed flex-1" style="color: var(--color-text-primary);">${safeText(article.cause)}</div>
+                        <div class="text-[13.5px] leading-relaxed flex-1">${safeText(article.cause)}</div>
                         <button class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded hover:bg-black/10 dark:hover:bg-white/10" style="color: var(--color-text-muted);" title="Copiar" data-action="copy-field"><i class="ph ph-copy text-lg"></i></button>
                     </div>` : ''}
                     
                     ${article.solution ? `
-                    <div class="border-l-4 border-green-500 pl-4 pr-3 py-3 relative group rounded-r-lg flex flex-col h-full" style="background-color: var(--color-sidebar-background);">
+                    <div class="kcs-view-field-box border-l-4 border-green-500 pl-4 pr-3 py-3 relative group rounded-r-lg h-full">
                         <h4 class="text-[12px] font-bold text-green-500 uppercase tracking-widest mb-2 flex items-center gap-2"><i class="ph-fill ph-check-circle text-base"></i> Solução</h4>
-                        <div class="text-[13.5px] leading-relaxed flex-1" style="color: var(--color-text-primary);">${safeText(article.solution)}</div>
+                        <div class="text-[13.5px] leading-relaxed flex-1">${safeText(article.solution)}</div>
                         <button class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded hover:bg-black/10 dark:hover:bg-white/10" style="color: var(--color-text-muted);" title="Copiar" data-action="copy-field"><i class="ph ph-copy text-lg"></i></button>
                     </div>` : ''}
                 </div>
 
                 ${article.steps || article.body ? `
-                <div class="pt-8" style="border-top: 1px solid var(--color-border-subtle);">
+                <div class="pt-8 border-t border-border-subtle">
                     <h4 class="text-[12px] font-bold uppercase tracking-widest mb-6 flex items-center gap-2" style="color: var(--color-text-muted);"><i class="ph-bold ph-list-numbers text-base"></i> Passo a Passo Detalhado</h4>
                     <div class="markdown-body max-w-none text-[15px] leading-relaxed" style="color: var(--color-text-primary);">${formatContentForView(article.steps || article.body)}</div>
                 </div>` : ''}
             </div>
 
-            <div class="w-full mt-16 pt-8" style="border-top: 1px solid var(--color-border-subtle);" data-html2pdf-ignore>
+            <div class="w-full mt-16 pt-8 border-t border-border-subtle" data-html2pdf-ignore>
                 <h4 class="text-[12px] font-bold uppercase tracking-widest mb-6 flex items-center gap-2" style="color: var(--color-text-muted);"><i class="ph-fill ph-chats text-base text-blue-500"></i> Comentários da Equipe</h4>
                 
-                <div class="mb-8 rounded-xl overflow-hidden shadow-sm focus-within:ring-1 focus-within:ring-blue-500 transition-all" style="background-color: var(--color-sidebar-background); border: 1px solid var(--color-border);">
+                <div class="kcs-surface-elevated mb-8 rounded-xl overflow-hidden shadow-sm focus-within:ring-1 focus-within:ring-blue-500 transition-all">
                     <textarea id="inline-comment-input-${idUnico}" rows="2" placeholder="Adicione uma observação, dúvida ou sugestão de melhoria..." class="w-full bg-transparent p-4 outline-none resize-y min-h-[70px] text-[14px]" style="color: var(--color-text-inverse);"></textarea>
-                    <div class="flex justify-end p-3" style="background-color: rgba(0,0,0,0.1); border-top: 1px solid var(--color-border-subtle);">
+                    <div class="flex justify-end p-3 border-t border-border-subtle" style="background-color: rgba(0,0,0,0.05);">
                         <button type="button" id="btn-send-comment-${idUnico}" class="flex items-center gap-2 px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg shadow-sm transition-colors">
                             <i class="ph-bold ph-paper-plane-right"></i> Publicar Comentário
                         </button>
@@ -420,7 +421,7 @@ export function openViewModal(article, currentUser) {
 
                 <div id="inline-comments-list-${idUnico}" class="space-y-4">
                     ${article.comments && article.comments.length > 0 ? article.comments.map(c => `
-                        <div class="p-5 rounded-xl shadow-sm" style="background-color: var(--color-sidebar-background); border: 1px solid var(--color-border-subtle);">
+                        <div class="kcs-surface-elevated p-5 rounded-xl shadow-sm">
                             <div class="flex items-center justify-between mb-3">
                                 <span class="text-[13px] font-bold" style="color: var(--color-text-inverse);">${safeText(c.userName)}</span>
                                 <span class="text-[11px]" style="color: var(--color-text-muted);">${new Date(c.date).toLocaleString('pt-BR')}</span>
@@ -434,7 +435,7 @@ export function openViewModal(article, currentUser) {
             <div class="h-12"></div>
         </div>
 
-        <div class="flex flex-col sm:flex-row justify-between items-center gap-3 px-6 py-3.5 shrink-0 shadow-[0_-4px_12px_rgba(0,0,0,0.05)]" style="background-color: var(--color-sidebar-background); border-top: 1px solid var(--color-border);" data-html2pdf-ignore>
+        <div class="kcs-surface-elevated flex flex-col sm:flex-row justify-between items-center gap-3 px-6 py-3.5 shrink-0 shadow-[0_-4px_12px_rgba(0,0,0,0.05)] border-l-0 border-r-0 border-b-0" data-html2pdf-ignore>
             <div class="flex items-center gap-2">
                 <button class="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-colors" style="color: var(--color-text-primary);" onmouseover="this.style.backgroundColor='var(--color-hover)'" onmouseout="this.style.backgroundColor='transparent'" data-action="toggle-like">
                     <i class="${isLiked ? 'ph-fill text-red-500' : 'ph text-gray-400'} ph-heart text-lg"></i> Curtir (<span id="like-count-${idUnico}">${(article.likes || []).length}</span>)
@@ -771,50 +772,50 @@ export function openSqlViewModal(script) {
     container.style.backgroundColor = 'var(--color-editor-background)';
 
     container.innerHTML = `
-        <div class="flex-1 overflow-y-auto p-6 md:p-8 custom-scrollbar modal-zoomable relative" style="background-color: var(--color-editor-background);">
+        <div class="flex-1 overflow-y-auto p-6 md:p-8 custom-scrollbar modal-zoomable relative">
             
             ${script.status === 'review' || script.status === 'pendente_revisao' ? `
-            <div class="w-full mb-8 bg-yellow-500/10 border border-yellow-500/20 text-yellow-500 px-5 py-4 rounded-lg flex items-center gap-3 text-sm shadow-sm">
+            <div class="w-full mb-8 kcs-badge-warning px-5 py-4 rounded-lg flex items-center gap-3 text-sm shadow-sm">
                 <i class="ph-fill ph-warning-circle text-2xl"></i>
                 <span><strong>Atenção:</strong> Este script foi sinalizado ou está em revisão. Execute com cautela.</span>
             </div>` : ''}
 
             <div class="w-full">
                 
-                <div class="mb-8 pb-6" style="border-bottom: 1px solid var(--color-border-subtle);">
+                <div class="mb-8 pb-6 border-b border-border-subtle">
                     <div class="flex items-center gap-3 mb-4">
                         <i class="ph-bold ph-database text-purple-500 text-3xl"></i>
-                        <h1 class="text-3xl sm:text-4xl font-extrabold leading-tight tracking-tight" style="color: var(--color-text-inverse);">${safeText(script.name)}</h1>
+                        <h1 class="text-3xl sm:text-4xl font-extrabold leading-tight tracking-tight" style="color: var(--color-text-primary);">${safeText(script.name)}</h1>
                     </div>
                     
                     <div class="flex flex-wrap items-center gap-2.5 mb-4">
-                        ${script.scriptNumber ? `<span class="px-2.5 py-1 bg-purple-500/10 text-purple-500 font-mono text-[12px] font-bold rounded">#SQL-${script.scriptNumber}</span>` : ''}
-                        <span class="px-3 py-1 text-[11px] rounded-full border bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-300 dark:border-gray-700">${safeText(script.dbType)}</span>
-                        ${script.visibility === VISIBILITY.PRIVATE ? `<span class="px-2.5 py-1 bg-red-500/10 text-red-400 text-[12px] font-bold rounded flex items-center gap-1.5"><i class="ph-bold ph-lock"></i> Privado</span>` : `<span class="px-2.5 py-1 bg-green-500/10 text-green-400 text-[12px] font-bold rounded flex items-center gap-1.5"><i class="ph-bold ph-globe"></i> Público</span>`}
+                        ${script.scriptNumber ? `<span class="kcs-badge-id px-2.5 py-1 text-[12px] rounded">#SQL-${script.scriptNumber}</span>` : ''}
+                        <span class="kcs-badge-tag px-3 py-1 text-[11px] rounded-full">${safeText(script.dbType)}</span>
+                        ${script.visibility === VISIBILITY.PRIVATE ? `<span class="kcs-badge-warning px-2.5 py-1 text-[12px] rounded flex items-center gap-1.5"><i class="ph-bold ph-lock"></i> Privado</span>` : `<span class="kcs-badge-success px-2.5 py-1 text-[12px] rounded flex items-center gap-1.5"><i class="ph-bold ph-globe"></i> Público</span>`}
                     </div>
                     <p class="text-[14.5px] leading-relaxed" style="color: var(--color-text-secondary);">${safeText(script.description)}</p>
                 </div>
                 
-                <div class="rounded-xl overflow-hidden shadow-sm mb-12" style="background-color: #1e1e1e; border: 1px solid #3c3c3c;">
-                    <div class="flex justify-between items-center px-4 py-2" style="background-color: #2d2d2d; border-bottom: 1px solid #3c3c3c;">
+                <div class="kcs-surface-elevated rounded-xl overflow-hidden shadow-sm mb-12">
+                    <div class="flex justify-between items-center px-4 py-2 border-b border-border-subtle" style="background-color: rgba(0,0,0,0.05);">
                         <div class="flex items-center gap-2">
                             <i class="ph-fill ph-file-code text-gray-400"></i>
-                            <span class="text-xs font-mono text-gray-300">query.sql</span>
+                            <span class="text-xs font-mono text-gray-500">query.sql</span>
                         </div>
-                        <button id="btn-copy-code-${idUnico}" class="flex items-center gap-1.5 text-xs text-gray-400 hover:text-white transition-colors">
+                        <button id="btn-copy-code-${idUnico}" class="flex items-center gap-1.5 text-xs text-gray-500 hover:text-blue-500 transition-colors">
                             <i class="ph-bold ph-copy"></i> Copiar Código
                         </button>
                     </div>
-                    <pre class="p-6 overflow-x-auto text-sm font-mono text-[#d4d4d4] leading-relaxed"><code>${safeText(script.code)}</code></pre>
+                    <pre class="p-6 overflow-x-auto text-sm font-mono leading-relaxed" style="color: var(--color-text-primary);"><code>${safeText(script.code)}</code></pre>
                 </div>
             </div>
 
-            <div class="w-full mt-16 pt-8" style="border-top: 1px solid var(--color-border-subtle);">
+            <div class="w-full mt-16 pt-8 border-t border-border-subtle">
                 <h4 class="text-[12px] font-bold uppercase tracking-widest mb-6 flex items-center gap-2" style="color: var(--color-text-muted);"><i class="ph-fill ph-chats text-base text-purple-500"></i> Observações Técnicas</h4>
                 
-                <div class="mb-8 rounded-xl overflow-hidden shadow-sm focus-within:ring-1 focus-within:ring-purple-500 transition-all" style="background-color: var(--color-sidebar-background); border: 1px solid var(--color-border);">
+                <div class="kcs-surface-elevated mb-8 rounded-xl overflow-hidden shadow-sm focus-within:ring-1 focus-within:ring-purple-500 transition-all">
                     <textarea id="inline-sql-comment-${idUnico}" rows="2" placeholder="Comente sobre a eficácia, segurança ou melhorias nesta query..." class="w-full bg-transparent p-4 outline-none resize-y min-h-[70px] text-[14px]" style="color: var(--color-text-inverse);"></textarea>
-                    <div class="flex justify-end p-3" style="background-color: rgba(0,0,0,0.1); border-top: 1px solid var(--color-border-subtle);">
+                    <div class="flex justify-end p-3 border-t border-border-subtle" style="background-color: rgba(0,0,0,0.05);">
                         <button type="button" id="btn-send-sql-comment-${idUnico}" class="flex items-center gap-2 px-5 py-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-lg shadow-sm transition-colors">
                             <i class="ph-bold ph-paper-plane-right"></i> Publicar Observação
                         </button>
@@ -823,7 +824,7 @@ export function openSqlViewModal(script) {
 
                 <div id="inline-sql-list-${idUnico}" class="space-y-4">
                     ${script.comments && script.comments.length > 0 ? script.comments.map(c => `
-                        <div class="p-5 rounded-xl shadow-sm" style="background-color: var(--color-sidebar-background); border: 1px solid var(--color-border-subtle);">
+                        <div class="kcs-surface-elevated p-5 rounded-xl shadow-sm">
                             <div class="flex items-center justify-between mb-3">
                                 <span class="text-[13px] font-bold" style="color: var(--color-text-inverse);">${safeText(c.userName)}</span>
                                 <span class="text-[11px]" style="color: var(--color-text-muted);">${new Date(c.date).toLocaleString('pt-BR')}</span>
@@ -837,7 +838,7 @@ export function openSqlViewModal(script) {
             <div class="h-12"></div>
         </div>
 
-        <div class="flex flex-col sm:flex-row justify-between items-center gap-3 px-6 py-3.5 shrink-0 shadow-[0_-4px_12px_rgba(0,0,0,0.05)]" style="background-color: var(--color-sidebar-background); border-top: 1px solid var(--color-border);">
+        <div class="kcs-surface-elevated flex flex-col sm:flex-row justify-between items-center gap-3 px-6 py-3.5 shrink-0 shadow-[0_-4px_12px_rgba(0,0,0,0.05)] border-l-0 border-r-0 border-b-0">
             <div class="flex items-center gap-2">
                 <button class="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-colors" style="color: var(--color-text-primary);" onmouseover="this.style.backgroundColor='var(--color-hover)'" onmouseout="this.style.backgroundColor='transparent'" data-action="toggle-sql-like">
                     <i class="${isLiked ? 'ph-fill text-red-500' : 'ph text-gray-400'} ph-heart text-lg"></i> Útil (<span id="sql-like-count-${idUnico}">${(script.likes || []).length}</span>)
@@ -964,7 +965,7 @@ export function openHistoryModal(item, type) {
         historyListHtml = reversedHistory.map((h, reversedIndex) => {
             const originalIndex = totalVersions - 1 - reversedIndex;
             return `
-            <div class="mb-4 bg-[#1e1e1e] border border-[#3c3c3c] rounded-lg p-4 shadow-sm hover:border-blue-500/50 transition-colors">
+            <div class="kcs-card-base mb-4 p-4 hover:border-blue-500/50">
                 <div class="flex justify-between items-start mb-3">
                     <div>
                         <h4 class="text-sm font-bold text-gray-200">Versão ${originalIndex + 1}</h4>
@@ -981,12 +982,12 @@ export function openHistoryModal(item, type) {
     }
 
     overlay.innerHTML = `
-        <div class="bg-[#252526] border border-[#3c3c3c] rounded-xl shadow-2xl max-w-2xl w-full h-[85vh] flex flex-col transform scale-100 transition-transform">
+            <div class="kcs-modal-history max-w-2xl w-full h-[85vh] flex flex-col transform scale-100 transition-transform">
             <div class="p-5 border-b border-[#3c3c3c] flex justify-between items-center shrink-0 bg-[#2d2d2d] rounded-t-xl">
                 <h2 class="text-lg font-bold text-gray-100 flex items-center gap-2"><i class="ph-bold ph-clock-counter-clockwise text-blue-500 text-xl"></i> Histórico de Versões</h2>
                 <button class="text-gray-400 hover:text-red-500 transition-colors" id="btn-close-history"><i class="ph-bold ph-x text-xl"></i></button>
             </div>
-            <div class="p-6 overflow-y-auto flex-1 custom-scrollbar bg-[#252526] rounded-b-xl">
+            <div class="p-6 overflow-y-auto flex-1 custom-scrollbar rounded-b-xl">
                 ${historyListHtml}
             </div>
         </div>
@@ -1371,7 +1372,7 @@ export function asyncAlert(message) {
     const overlay = document.createElement('div');
     overlay.className = 'fixed inset-0 bg-black/60 z-[9999] flex items-center justify-center backdrop-blur-sm animate-fade-in p-4';
     overlay.innerHTML = `
-        <div class="bg-[#252526] border border-[#3c3c3c] rounded-xl shadow-2xl max-w-sm w-full p-6 text-center transform scale-100">
+            <div class="kcs-modal-dialog max-w-sm w-full p-6 text-center transform scale-100">
             <i class="ph-fill ph-info text-5xl text-blue-500 mb-4 drop-shadow-lg"></i>
             <h2 class="text-lg font-bold text-gray-100 mb-2">Aviso</h2>
             <p class="text-[14px] text-gray-300 mb-8 leading-relaxed">${message}</p>
@@ -1387,13 +1388,13 @@ export function asyncPrompt(message, defaultVal = '') {
         const overlay = document.createElement('div');
         overlay.className = 'fixed inset-0 bg-black/60 z-[9999] flex items-center justify-center backdrop-blur-sm animate-fade-in p-4';
         overlay.innerHTML = `
-            <div class="bg-[#252526] border border-[#3c3c3c] rounded-xl shadow-2xl max-w-md w-full p-6 transform scale-100">
+                <div class="kcs-modal-dialog max-w-md w-full p-6 transform scale-100">    
                 <div class="flex items-center gap-3 mb-4">
                     <i class="ph-fill ph-pencil-simple text-2xl text-blue-500"></i>
                     <h2 class="text-base font-bold text-gray-100">Entrada Necessária</h2>
                 </div>
                 <label class="block text-sm text-gray-300 mb-3">${message}</label>
-                <input type="text" id="dynamic-prompt-input" class="w-full bg-[#1e1e1e] border border-[#3c3c3c] rounded-lg px-4 py-3 text-white outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 mb-6 transition-all" value="${defaultVal}">
+                <input type="text" id="dynamic-prompt-input" class="kcs-form-input px-4 py-3 mb-6" value="${defaultVal}">
                 <div class="flex justify-end gap-3">
                     <button class="px-5 py-2.5 rounded-lg text-sm font-semibold text-gray-400 hover:text-white hover:bg-[#333333] transition-colors" id="btn-prompt-cancel">Cancelar</button>
                     <button class="px-5 py-2.5 rounded-lg text-sm font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-md transition-colors" id="btn-prompt-confirm">Confirmar</button>
@@ -1422,7 +1423,7 @@ export function openConfirmModal(msg, onConfirm) {
     const overlay = document.createElement('div');
     overlay.className = 'fixed inset-0 bg-black/60 z-[9999] flex items-center justify-center backdrop-blur-sm animate-fade-in p-4';
     overlay.innerHTML = `
-        <div class="bg-[#252526] border border-[#3c3c3c] rounded-xl shadow-2xl max-w-md w-full p-6 transform scale-100">
+        <div class="kcs-modal-dialog max-w-md w-full p-6 transform scale-100">  
             <div class="flex items-center gap-3 mb-4">
                 <i class="ph-fill ph-warning-circle text-3xl text-yellow-500"></i>
                 <h2 class="text-lg font-bold text-gray-100">Confirmação</h2>

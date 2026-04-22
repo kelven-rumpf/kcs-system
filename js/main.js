@@ -202,7 +202,7 @@ window.TabManager = (() => {
             const overlay = document.createElement('div');
             overlay.className = 'fixed inset-0 bg-black/60 z-[9999] flex items-center justify-center backdrop-blur-sm animate-fade-in';
             overlay.innerHTML = `
-                <div class="bg-[#252526] dark:bg-surface border border-[#3c3c3c] dark:border-border-subtle rounded-xl shadow-2xl max-w-md w-full p-6 mx-4 transform transition-all scale-100">
+                <div class="kcs-modal-dialog max-w-md w-full p-6 mx-4 transform transition-all scale-100">
                     <div class="flex items-center gap-3 mb-4">
                         <i class="ph-fill ph-warning-circle text-3xl text-yellow-500"></i>
                         <h2 class="text-lg font-bold text-gray-100">Alterações não salvas</h2>
@@ -1085,7 +1085,7 @@ function exposeGlobalAPI() {
             const overlay = document.createElement('div');
             overlay.className = 'fixed inset-0 bg-black/60 z-[9999] flex items-center justify-center backdrop-blur-sm animate-fade-in p-4';
             overlay.innerHTML = `
-                <div class="border rounded-xl shadow-2xl max-w-md w-full p-6 md:p-8 transform scale-100" style="background-color: var(--color-sidebar-background); border-color: var(--color-border-subtle);">
+                <div class="kcs-modal-dialog max-w-md w-full p-6 md:p-8 transform scale-100">
                     <div class="flex items-center gap-3 mb-6">
                         <i class="ph-bold ph-buildings text-3xl text-purple-500"></i>
                         <h2 class="text-xl font-bold" style="color: var(--color-text-inverse);">Editar Cliente (SaaS)</h2>
@@ -1093,15 +1093,15 @@ function exposeGlobalAPI() {
                     <div class="space-y-5 mb-8">
                         <div>
                             <label class="block text-[11px] font-bold uppercase tracking-wider mb-2" style="color: var(--color-text-muted);">Nome da Empresa</label>
-                            <input type="text" id="edit-comp-name" value="${currentName}" class="w-full px-4 py-3 rounded-lg text-sm outline-none focus:ring-1 focus:ring-purple-500 transition-all" style="background-color: var(--color-editor-background); color: var(--color-text-primary); border: 1px solid var(--color-border);">
+                            <input type="text" id="edit-comp-name" value="${currentName}" class="kcs-form-input py-3">
                         </div>
                         <div>
                             <label class="block text-[11px] font-bold uppercase tracking-wider mb-2" style="color: var(--color-text-muted);">Domínios (Ex: nissei.com)</label>
-                            <input type="text" id="edit-comp-domains" value="${currentDomains}" class="w-full px-4 py-3 rounded-lg text-sm font-mono outline-none focus:ring-1 focus:ring-purple-500 transition-all" style="background-color: var(--color-editor-background); color: var(--color-text-primary); border: 1px solid var(--color-border);">
+                            <input type="text" id="edit-comp-domains" value="${currentDomains}" class="kcs-form-input font-mono py-3">
                         </div>
                         <div>
                             <label class="block text-[11px] font-bold uppercase tracking-wider mb-2" style="color: var(--color-text-muted);">Plano Contratado</label>
-                            <select id="edit-comp-plan" class="w-full px-4 py-3 rounded-lg text-sm font-semibold outline-none focus:ring-1 focus:ring-purple-500 transition-all cursor-pointer" style="background-color: var(--color-editor-background); color: var(--color-text-primary); border: 1px solid var(--color-border);">
+                            <select id="edit-comp-plan" class="kcs-form-input py-3 font-semibold cursor-pointer">
                                 <option value="Starter" ${currentPlan === 'Starter' ? 'selected' : ''}>Starter (Básico)</option>
                                 <option value="Teams" ${currentPlan === 'Teams' ? 'selected' : ''}>Teams (Profissional)</option>
                                 <option value="Unlimited" ${currentPlan === 'Unlimited' ? 'selected' : ''}>Unlimited (Enterprise)</option>
