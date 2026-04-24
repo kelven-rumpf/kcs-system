@@ -32,6 +32,7 @@ import {
     initArticleNotifications,
     logArticleRead
 } from './services/kcsCore.js';
+
 import { 
     listSqlScripts, 
     createSqlScript, 
@@ -90,6 +91,43 @@ import { initTour } from './tour.js';
 import { triggerCloudBackup } from './services/cloud.js';
 
 import { getTopAnalysts, getTopCollaborators } from './services/dashboard.js';
+
+let authStatus = 'checking';
+
+function setAuthStatus(status) {
+    authStatus = status;
+    window.__kcsAuthStatus = authStatus;
+    window.__AUTH_CHECKING__ = status === 'checking';
+    if (status !== 'checking') {
+        window.__APP_BOOTING__ = false;
+    }
+
+    const body = document.body;
+    if (!body) return;
+
+    body.classList.remove('auth-checking', 'auth-authenticated', 'auth-unauthenticated');
+    body.classList.add(`auth-${status}`);
+
+    const loginScreen = document.getElementById('login-screen');
+    const appScreen = document.getElementById('app-screen');
+
+    if (status === 'checking') {
+        loginScreen?.setAttribute('aria-hidden', 'true');
+        loginScreen?.setAttribute('inert', '');
+        appScreen?.setAttribute('aria-hidden', 'true');
+        appScreen?.setAttribute('inert', '');
+    } else if (status === 'unauthenticated') {
+        loginScreen?.removeAttribute('aria-hidden');
+        loginScreen?.removeAttribute('inert');
+        appScreen?.setAttribute('aria-hidden', 'true');
+        appScreen?.setAttribute('inert', '');
+    } else if (status === 'authenticated') {
+        appScreen?.removeAttribute('aria-hidden');
+        appScreen?.removeAttribute('inert');
+        loginScreen?.setAttribute('aria-hidden', 'true');
+        loginScreen?.setAttribute('inert', '');
+    }
+}
 
 // ==========================================================================
 // TAB MANAGER: MOTOR DE GERENCIAMENTO DE ABAS (VS CODE STYLE)
@@ -282,6 +320,8 @@ const appState = {
 
 async function init() {
     try {
+        document.body.classList.add('auth-loading');
+
         const savedTheme = localStorage.getItem('kcs_theme') || 'dark';
         if (savedTheme === 'light') { 
             document.documentElement.classList.remove('dark'); 
@@ -379,13 +419,15 @@ async function init() {
         }
 
         if (loadingMsg) loadingMsg.textContent = "Verificando sessão...";
+        setAuthStatus('checking');
         
         await initAuth((user) => {
             if (user) {
+                setAuthStatus('authenticated');
                 enterApp(user);
             } else {
-                toggleLoginScreen(true);
-                showLoading(false); 
+                setAuthStatus('unauthenticated');
+                showLoading(false);
             }
         });
 

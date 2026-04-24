@@ -1,3 +1,174 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 /* ==========================================================================
    KCS HUB - STYLE.CSS (VS CODE ARCHITECTURE + KCS V1 POLISH)
    ========================================================================== */
@@ -7,10 +178,12 @@
    ========================================================================== */
 :root {
     /* TIPOGRAFIA */
+
     --font-family-base: -apple-system, BlinkMacSystemFont, "Segoe UI", "Inter", "Roboto", system-ui, sans-serif;
     --font-family-mono: "Cascadia Code", "Fira Code", "JetBrains Mono", Consolas, monospace;
     
     --font-size-xs: 11px;
+    --chatbot-width: 360px;
     --font-size-sm: 13px;
     --font-size-md: 14px;
     --font-size-lg: 16px;
@@ -62,6 +235,7 @@ html.dark {
 
     --bg-canvas: #1e1e1e;
     --bg-surface: #252526;
+    --surface-color: var(--bg-surface);
 
     --color-success-bg: rgba(16, 185, 129, 0.15);
     --color-success-text: #34d399;
@@ -93,6 +267,7 @@ html.light {
 
     --bg-canvas: #ffffff;
     --bg-surface: #f3f3f3;
+    --surface-color: var(--bg-surface);
 
     --color-success-bg: rgba(16, 185, 129, 0.15);
     --color-success-text: #059669; /* Verde mais escuro para contraste no branco */
@@ -297,21 +472,5468 @@ main.workbench-editor {
     color: #ffffff !important;
     font-size: 12px !important;
     padding: 0 10px !important;
+
+
+
+
+
+
+
+
+
+
+
+    display: flex;
+    align-items: center;
+
+
+    justify-content: space-between; /* Para espaçar os itens do status bar */
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* Itens da Status Bar */
+.workbench-statusbar > div {
+    display: flex;
+    align-items: center;
+
+    gap: 8px; /* Espaçamento entre os itens da barra */
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+.workbench-statusbar > div > span,
+.workbench-statusbar > div > button {
+    display: flex;
+    align-items: center;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    gap: 4px;
+    color: var(--color-text-inverse) !important; /* Cor do texto no tema inverso (branco) */
+    background: transparent;
+    border: none;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    outline: none;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    padding: 0 8px; /* Ajustado para consistência */
+    height: 22px; /* Altura padrão para itens do statusbar */
+    border-radius: var(--border-radius-sm); /* Canto sutil */
+    cursor: pointer;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    transition: background-color 0.2s ease;
+    font-size: 12px !important; /* Tamanho da fonte padrão da statusbar */
+    line-height: 1;
+    white-space: nowrap; /* Garante que o texto não quebre */
+}
+
+.workbench-statusbar > div > span:hover,
+.workbench-statusbar > div > button:hover,
+.workbench-statusbar > div > span:focus-visible,
+.workbench-statusbar > div > button:focus-visible {
+    background-color: rgba(255, 255, 255, 0.14) !important; /* Efeito hover branco/20 */
+    outline: none !important;
+    box-shadow: none !important;
+
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* Removendo estilos conflitantes específicos do footer-chat-button */
+.footer-chat-button {
+    border: none !important;
+
+
+
+
+
+    outline: none !important;
+    box-shadow: none !important;
+    transform: none !important;
+    background: transparent !important; /* Garante fundo transparente por padrão */
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+.footer-chat-button:hover,
+.footer-chat-button:focus-visible {
+    background-color: rgba(255, 255, 255, 0.14) !important; /* Efeito hover branco/20 */
+    border-color: transparent !important;
+    transform: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+}
 /* ==========================================================================
+
    4. UI COMPONENTS (O RESGATE DO ESTILO POLIDO - MIX)
    ========================================================================== */
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 /* DASHBOARD */
 .dash-title {
+
+
+
+
+
+
+
+
+
+
+
     font-size: 18px;
     font-weight: 700;
     margin-bottom: 16px;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     display: flex;
     align-items: center;
+
+
+
+
+
+
     gap: 8px;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     color: var(--color-text-inverse);
+
+
+
+
+
+
+
+
+
 }
 .dash-icon-main { color: var(--color-focus); font-size: 24px; }
 .dash-metrics {
@@ -322,21 +5944,331 @@ main.workbench-editor {
 }
 .metric-card {
     background-color: var(--color-sidebar-background);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     border: 1px solid var(--color-border-subtle);
     border-radius: var(--border-radius-xl);
     padding: 20px;
     display: flex;
     flex-direction: column;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     gap: 8px;
+
     box-shadow: var(--shadow-sm);
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 .metric-label {
     font-size: 12px;
     font-weight: 600;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     text-transform: uppercase;
     color: var(--color-text-muted);
     display: flex;
     align-items: center;
+
+
+
+
+
+
+
+
+
+
+
     gap: 6px;
 }
 .metric-value {
@@ -363,6 +6295,7 @@ main.workbench-editor {
 }
 .table-default th {
     background-color: var(--color-hover);
+
     padding: 12px 16px;
     font-size: 11px;
     font-weight: 700;
@@ -371,11 +6304,17 @@ main.workbench-editor {
     letter-spacing: 0.05em;
     border-bottom: 1px solid var(--color-border-subtle);
 }
+
+
+
 .table-row {
     border-bottom: 1px solid var(--color-border-subtle);
     transition: background-color 0.2s;
     cursor: pointer;
 }
+
+
+
 .table-row:hover {
     background-color: rgba(255, 255, 255, 0.03);
 }
@@ -424,6 +6363,10 @@ main.workbench-editor {
     font-weight: 500;
 }
 
+
+
+
+
 /* BADGES DE STATUS */
 .status-badge {
     padding: 4px 10px;
@@ -459,6 +6402,10 @@ main.workbench-editor {
 }
 .status-icon-approved { color: #10B981; font-size: 16px; }
 
+
+
+
+
 /* ==========================================================================
    5. OVERLAY, DOCK E CHATBOT
    ========================================================================== */
@@ -476,12 +6423,17 @@ main.workbench-editor {
     transition: background-color 0.2s ease;
 }
 
+
+
+
 /* Quando o JS injeta a classe, o fundo escuro aparece e bloqueia cliques */
 #overlay-root.overlay-visible {
     pointer-events: auto;
     background-color: rgba(0, 0, 0, 0.6);
     backdrop-filter: blur(2px);
 }
+
+
 
 /* ==========================================================================
    CORREÇÃO DEFINITIVA: Remoção da "Caixa Dupla" no Overlay
@@ -527,10 +6479,10 @@ main.workbench-editor {
 }
 
 /* Inputs com cantos precisos e focus-ring azul */
-.form-input, 
-.form-textarea, 
+.form-input,
+.form-textarea,
 .form-select {
-    border: 1px solid var(--color-border-subtle) !important; 
+    border: 1px solid var(--color-border-subtle) !important;
     border-radius: 4px !important; /* Reduzindo o arredondamento */
     padding: 6px 10px !important;
     background-color: var(--color-editor-background);
@@ -538,8 +6490,8 @@ main.workbench-editor {
     transition: all 0.15s ease;
 }
 
-.form-input:focus, 
-.form-textarea:focus, 
+.form-input:focus,
+.form-textarea:focus,
 .form-select:focus {
     border-color: var(--color-focus) !important;
     box-shadow: 0 0 0 1px var(--color-focus) !important; /* Anel de foco exato do VS Code */
@@ -592,7 +6544,7 @@ main.workbench-editor {
 
 /* Ativado via JavaScript quando houver abas */
 #kcs-dock.dock-visible {
-    height: 36px; 
+    height: 36px;
     border-top-color: var(--color-border);
 }
 
@@ -648,31 +6600,315 @@ main.workbench-editor {
     color: #ff5f56;
 }
 
-/* CHATBOT IA (O Esférico Azul) */
-#chatbot-container > button, 
-.btn-toggle-chatbot {
-    position: fixed !important;
-    bottom: calc(22px + 24px) !important; /* Respeita a altura da Status Bar (22px) + respiro (24px) */
-    right: 24px !important;
-    width: 56px !important;
-    height: 56px !important;
-    border-radius: 50% !important; /* Esférico */
-    background-color: #0056D2 !important; /* Azul Vibrante */
-    color: white !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    box-shadow: 0 8px 24px rgba(0, 86, 210, 0.4) !important;
-    border: none !important;
-    z-index: 90 !important;
-    cursor: pointer !important;
-    transition: transform 0.2s ease !important;
+/* CHATBOT IA NO RODAPÉ */
+.footer-chat-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 42px;
+    height: 36px;
+    padding: 0 10px;
+    border-radius: 999px;
+    border: none !important; /* Removido para integrar o botão à barra */
+    background: transparent; /* Alterado para transparente */
+    color: #f8fafc;
+    font-size: 0.9rem;
+    line-height: 1;
+    transition: background-color 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
+    cursor: pointer;
+    outline: none !important;
+    box-shadow: none !important;
 }
-#chatbot-container > button:hover {
-    transform: translateY(-4px) !important;
+.footer-chat-button:hover,
+.footer-chat-button:focus-visible {
+    background-color: rgba(255, 255, 255, 0.14) !important; /* Corrigido para semi-transparente como UTF-8 */
+    border-color: transparent !important;
+    transform: none !important; /* Removido deslocamento */
+    outline: none !important;
+    box-shadow: none !important;
 }
-#chatbot-container > button i {
-    font-size: 28px !important;
+.footer-chat-button i {
+    font-size: 1.05rem;
+}
+.footer-chat-button-text {
+    display: inline-block;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+.footer-chat-badge {
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    background: #f97316;
+    display: inline-flex;
+}
+
+#chatbot-container {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    pointer-events: none;
+}
+
+.chatbot-overlay {
+    position: fixed;
+    inset: 0;
+    background: transparent;
+    backdrop-filter: none;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s ease, visibility 0.2s ease;
+    z-index: 49;
+    pointer-events: none !important;
+}
+.chatbot-overlay.active {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none !important;
+}
+
+.chatbot-container,
+.chatbot-panel {
+    position: fixed;
+    right: 0;
+    top: 0;
+    width: 360px;
+    max-width: 100%;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    z-index: 50;
+    background: var(--surface-color) !important;
+    color: var(--color-text-primary);
+    transform: translateX(100%);
+    transition: transform 0.25s ease;
+    box-shadow: -24px 0 60px rgba(15, 23, 42, 0.2);
+    pointer-events: auto;
+}
+.chatbot-container.active,
+.chatbot-panel.active {
+    transform: translateX(0);
+}
+
+body.chatbot-open .workbench-titlebar,
+body.chatbot-open .workbench-editor {
+    padding-right: var(--chatbot-width);
+    box-sizing: border-box;
+    transition: padding-right 180ms ease;
+}
+
+@media (max-width: 900px) {
+    body.chatbot-open .workbench-titlebar,
+    body.chatbot-open .workbench-editor {
+        margin-right: 0;
+    }
+    .chatbot-container,
+    .chatbot-panel {
+        width: min(100vw, var(--chatbot-width));
+        max-width: min(100vw, var(--chatbot-width));
+    }
+}
+
+.chatbot-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.75rem 1rem 0.5rem; /* Ajuste para ter mais padding vertical em cima e menos embaixo */
+    border-bottom: 1px solid var(--color-border) !important; /* Forçado com !important */
+    background: var(--color-sidebar-background) !important; /* Forçado com !important */
+}
+.chatbot-panel-header h2 {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--color-text-primary);
+}
+.chatbot-panel-header button {
+    width: 28px; /* Reduzido o tamanho dos botões do header */
+    height: 28px; /* Reduzido o tamanho dos botões do header */
+    border-radius: var(--border-radius-sm); /* Canto suave */
+    color: var(--color-text-secondary);
+    background: transparent;
+    transition: background-color 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px; /* Ajuste o tamanho do ícone */
+}
+.chatbot-panel-header button:hover {
+    background: var(--color-hover) !important; /* Forçado com !important */
+    color: var(--color-text-primary) !important;
+}
+
+#chatbot-messages,
+.chatbot-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    min-height: 0;
+}
+
+.chatbot-input-area {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px;
+    border-top: 1px solid var(--color-border);
+    background: inherit;
+}
+
+.chatbot-input-area input {
+    flex: 1;
+    height: 40px;
+    box-sizing: border-box;
+    width: 100%;
+    padding: 0 12px;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    background: var(--color-editor-background);
+    color: var(--color-text-primary);
+    outline: none;
+}
+
+.chatbot-input-area input:focus {
+    border-color: var(--color-focus);
+    box-shadow: 0 0 0 1px rgba(0, 143, 241, 0.16);
+}
+
+.chatbot-send {
+    width: 40px;
+    height: 40px;
+    display: grid;
+    place-items: center;
+    border: none;
+    border-radius: 8px;
+    background: var(--color-focus);
+    color: var(--color-text-inverse);
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.chatbot-send:hover {
+    background: rgba(0, 143, 241, 0.9);
+}
+
+/* Estilização dos Smart Prompts */
+.chat-smart-prompts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 8px;
+}
+.btn-smart-prompt {
+    background-color: var(--color-sidebar-background) !important;
+    color: var(--color-text-primary) !important;
+    font-size: var(--font-size-sm) !important;
+    font-weight: 500 !important;
+    padding: 6px 12px !important;
+    border-radius: var(--border-radius-md) !important;
+    border: 1px solid var(--color-border) !important;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    box-shadow: none !important;
+    outline: none !important;
+}
+.btn-smart-prompt:hover {
+    background-color: var(--color-hover) !important;
+}
+
+/* Estilo do Avatar do Bot */
+.chat-bot-avatar {
+    width: 28px; /* Reduzido o tamanho do avatar */
+    height: 28px; /* Reduzido o tamanho do avatar */
+    border-radius: var(--border-radius-sm) !important; /* Canto mais técnico */
+    background-color: var(--color-info-bg) !important; /* Cor de fundo baseada no tema */
+    color: var(--color-info-text) !important; /* Cor do ícone baseada no tema */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: var(--font-size-md); /* Tamanho do ícone */
+}
+
+/* Balões de Mensagem */
+.chat-user-bubble {
+    background-color: var(--color-focus) !important;
+    color: var(--color-text-inverse) !important;
+    font-size: var(--font-size-sm) !important;
+    padding: 8px 16px !important;
+    border-radius: 16px 16px 2px 16px !important;
+    max-width: 85%;
+    line-height: 1.4;
+    word-break: break-word;
+    box-shadow: var(--shadow-xs);
+}
+
+.chat-bot-bubble {
+    background-color: var(--color-editor-background) !important;
+    border: 1px solid var(--color-border) !important;
+    padding: 12px !important;
+    border-radius: 16px 16px 16px 2px !important;
+    font-size: var(--font-size-sm) !important;
+    color: var(--color-text-primary) !important;
+    line-height: 1.5;
+    box-shadow: var(--shadow-xs);
+}
+
+/* Indicador de Digitação */
+.chat-typing-indicator {
+    display: flex;
+    gap: 8px;
+    padding: 8px;
+    color: var(--color-focus); /* Mantém a cor de foco para o indicador */
+    font-size: 20px; /* Reduzido o tamanho */
+    animation: pulseChat 1.5s infinite;
+}
+
+/* Feedback de Resposta */
+.btn-chat-feedback {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--color-text-muted) !important;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition: color 0.2s;
+    padding: 4px 8px;
+    border-radius: var(--border-radius-sm);
+}
+.btn-chat-feedback:hover {
+    background-color: var(--color-hover) !important;
+    color: var(--color-text-primary) !important;
+}
+.btn-chat-feedback.useful:hover { color: var(--color-success-text) !important; }
+.btn-chat-feedback.not-useful:hover { color: var(--color-warning-text) !important; }
+
+.chat-feedback-saved {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--color-text-muted) !important;
+    background-color: var(--color-sidebar-background) !important;
+    padding: 4px 12px !important;
+    border-radius: var(--border-radius-md) !important;
+    border: 1px solid var(--color-border) !important;
+}
+
+@media (max-width: 640px) {
+    .footer-chat-button-text {
+        display: none;
+    }
+    .chatbot-panel {
+        width: 100%;
+    }
+    /* Ajuste para botões do header em telas pequenas */
+    .chatbot-panel-header button {
+        width: 36px;
+        height: 36px;
+        font-size: 18px;
+    }
 }
 
 /* ==========================================================================
@@ -695,6 +6931,9 @@ main.workbench-editor {
     background-color: rgba(100, 100, 100, 0.7) !important;
 }
 .workbench-sidebar ::-webkit-scrollbar-thumb {
+    border-color: var(--color-sidebar-background) !important;
+}
+#chatbot-messages::-webkit-scrollbar-thumb { /* Scrollbar do painel de mensagens */
     border-color: var(--color-sidebar-background) !important;
 }
 
@@ -740,12 +6979,84 @@ main.workbench-editor {
 /* ==========================================================================
    7. EXCEÇÕES LEGADAS (LOGIN E TOUR)
    ========================================================================== */
-.login-page-bg { background-color: var(--color-editor-background) !important; }
+.login-page-bg {
+    position: relative !important;
+    background-color: rgba(12, 14, 17, 1) !important;
+    background-image:
+        radial-gradient(circle at 12% 12%, rgba(56, 161, 255, 0.12), transparent 18%),
+        radial-gradient(circle at 88% 18%, rgba(59, 130, 246, 0.08), transparent 14%),
+        linear-gradient(180deg, rgba(12, 14, 17, 1), rgba(18, 20, 25, 0.98));
+    overflow: hidden !important;
+}
+.login-page-bg::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+        linear-gradient(0deg, rgba(255,255,255,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+    background-size: 44px 44px;
+    opacity: 0.2;
+    pointer-events: none;
+}
+.login-page-bg::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 50% 15%, rgba(59, 130, 246, 0.08), transparent 20%);
+    pointer-events: none;
+}
 .login-container {
-    background-color: var(--color-sidebar-background) !important;
-    border: 1px solid var(--color-border) !important;
-    border-radius: var(--border-radius-xl) !important;
-    box-shadow: var(--shadow-md) !important;
+    position: relative;
+    background: rgba(20, 23, 30, 0.96) !important;
+    border: 1px solid rgba(255,255,255,0.08) !important;
+    border-radius: 26px !important;
+    box-shadow: 0 32px 90px rgba(0, 0, 0, 0.36) !important;
+    backdrop-filter: blur(22px);
+    min-width: 320px;
+}
+.login-container::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: linear-gradient(135deg, rgba(255,255,255,0.08), transparent 60%);
+    pointer-events: none;
+}
+.login-text-primary {
+    color: #F8FAFC !important;
+}
+.login-text-secondary {
+    color: rgba(226, 232, 240, 0.7) !important;
+}
+.login-border-subtle {
+    border-color: rgba(255,255,255,0.1) !important;
+}
+#login-screen {
+    z-index: 9999 !important;
+    background-color: transparent !important;
+}
+#login-screen .login-container {
+    padding: 2.5rem 2rem !important;
+}
+#login-screen #login-form input {
+    background-color: rgba(255,255,255,0.05) !important;
+    border-color: rgba(255,255,255,0.12) !important;
+    color: #F8FAFC !important;
+}
+#login-screen #login-form input::placeholder {
+    color: rgba(255,255,255,0.45) !important;
+}
+#login-screen #login-form button {
+    box-shadow: 0 14px 30px rgba(0, 122, 255, 0.16) !important;
+}
+#login-screen #login-form .btn-google-login,
+#login-screen #login-form .btn-microsoft-login {
+    color: #F8FAFC !important;
+}
+#login-screen .login-action-note {
+    color: rgba(255,255,255,0.6) !important;
+    font-size: 11px;
 }
 .kcs-plan-badge {
     display: inline-flex;
@@ -900,10 +7211,10 @@ header.workbench-titlebar .text-sm.font-bold {
 /* 2. MENU DE PERFIL NA ACTIVITY BAR (Imagens 2 e 3) */
 @media screen and (min-width: 1025px) {
     /* Esconde o botão do topo (A Activity Bar fará o disparo) */
-    #btn-profile { 
-        display: none !important; 
+    #btn-profile {
+        display: none !important;
     }
-    
+
     /* Desprende o dropdown do header e ancora ao lado da Activity Bar */
     #profile-dropdown {
         position: fixed !important;
@@ -1021,8 +7332,8 @@ header.workbench-titlebar .text-sm.font-bold {
     justify-content: space-between !important;
     padding-top: 8px;
     padding-bottom: 8px;
-    z-index: 200 !important; 
-    pointer-events: auto !important; 
+    z-index: 200 !important;
+    pointer-events: auto !important;
 }
 
 
@@ -1038,7 +7349,7 @@ header.workbench-titlebar .text-sm.font-bold {
     border: 1px solid var(--color-border-subtle);
     border-radius: var(--border-radius-xl);
     margin-bottom: 24px;
-    display: block; 
+    display: block;
 }
 
 /* Grid de cards auto-ajustável sem forçar a largura do pai */
@@ -1064,6 +7375,9 @@ header.workbench-titlebar .text-sm.font-bold {
 }
 
 
+
+
+
 /* ==========================================================================
    CORREÇÃO 4: Alinhamento da Marca (KCS Hub UNLIMITED)
    ========================================================================== */
@@ -1073,6 +7387,8 @@ header.workbench-titlebar .flex-col {
     justify-content: center;
     align-items: flex-start !important; /* Alinha o selo rente ao logo à esquerda */
 }
+
+
 
 /* Tipografia técnica refinada inspirada na Status Bar do VS Code */
 .kcs-plan-badge {
@@ -1091,13 +7407,49 @@ header.workbench-titlebar .flex-col {
     letter-spacing: 0.05em;
 }
 
+
+
 /* ==========================================================================
-   CORREÇÃO 5: Isolamento da Tela de Login
+   CORREÇÃO 5: Isolamento da Tela de Login + BARREIRA DE AUTENTICAÇÃO
    ========================================================================== */
-/* Garante que o login cubra a Activity Bar (z-index 200) e tenha fundo sólido */
+/* BARREIRA ABSOLUTA: Por padrão tudo é invisível até autenticação decidir */
+#app-screen,
 #login-screen {
-    z-index: 9999 !important;
-    background-color: var(--color-editor-background) !important;
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    transition: visibility 0.2s ease, opacity 0.3s ease !important;
+}
+
+body.auth-checking #loading-overlay {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
+
+body.auth-unauthenticated #login-screen {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+}
+
+body.auth-unauthenticated #app-screen,
+body.auth-authenticated #login-screen,
+body.auth-authenticated #loading-overlay {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
+
+body.auth-authenticated #app-screen {
+    display: grid !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
 }
 
 /* ==========================================================================
@@ -1105,8 +7457,17 @@ header.workbench-titlebar .flex-col {
    ========================================================================== */
 /* Garante que qualquer modal abra ACIMA da Activity Bar, mas ABAIXO do Login */
 #overlay-root {
-    z-index: 9000 !important; 
+    z-index: 9000 !important;
+    pointer-events: none !important;
 }
+
+#overlay-root.visible {
+    pointer-events: auto !important;
+}
+
+
+
+
 
 /* ==========================================================================
    CORREÇÃO 7: Cores do Header e Fontes do Chatbot (Light/Dark Mode)
@@ -1116,9 +7477,12 @@ header.workbench-titlebar .text-sm.font-bold {
     color: var(--color-text-primary) !important;
 }
 
+
+
+
 /* Força a cor primária no Chatbot para ser legível no modo claro */
-.chat-greet-title, 
-.chat-greet-subtitle, 
+.chat-greet-title,
+.chat-greet-subtitle,
 .chat-greet-label,
 #chatbot-header-name span,
 #chatbot-input,
@@ -1126,10 +7490,12 @@ header.workbench-titlebar .text-sm.font-bold {
     color: var(--color-text-primary) !important;
 }
 
+
+
 /* ==========================================================================
    CORREÇÃO 8: Restauração do Layout de Artigos e Tabelas (ATUALIZADA)
    ========================================================================== */
-/* Garante o layout em bloco para não quebrar a tabela, mas respeita a classe 
+/* Garante o layout em bloco para não quebrar a tabela, mas respeita a classe
    .hidden para que a tela desapareça corretamente ao abrir o Dashboard */
 #articles-grid:not(.hidden) {
     display: block !important;
@@ -1139,8 +7505,8 @@ header.workbench-titlebar .text-sm.font-bold {
    CORREÇÃO 9: Padronização de Formulários (Design System VS Code)
    ========================================================================== */
 /* Define as cores e as bordas de inputs e textareas dinamicamente para os temas */
-.form-input, 
-.form-textarea, 
+.form-input,
+.form-textarea,
 .form-select {
     width: 100%;
     background-color: var(--color-editor-background);
@@ -1154,8 +7520,8 @@ header.workbench-titlebar .text-sm.font-bold {
     transition: border-color 0.2s ease;
 }
 
-.form-input:focus, 
-.form-textarea:focus, 
+.form-input:focus,
+.form-textarea:focus,
 .form-select:focus {
     border-color: var(--color-focus);
 }
@@ -1509,19 +7875,27 @@ header.workbench-titlebar .text-sm.font-bold {
 
 /* 4. Labels (Restaurando o texto Normal, sem uppercase forçado) */
 .form-label {
-    font-size: 12px !important;
-    font-weight: 600 !important;
-    color: var(--color-text-secondary) !important;
+    font-size: 14px !important;
+    font-weight: 500 !important;
+    color: #e0e0e0 !important;
     text-transform: none !important; /* Reverte o uppercase */
     margin-bottom: 8px !important;
     letter-spacing: normal !important;
+    display: block;
+}
+
+/* Estilo para asterisco de campo obrigatório */
+.form-group label.form-label::after {
+    content: attr(data-required);
+    color: #ff6b6b;
+    margin-left: 2px;
 }
 
 /* 5. Contorno e Arredondamento dos Inputs */
-.form-input, 
-.form-textarea, 
+.form-input,
+.form-textarea,
 .form-select {
-    border: 1px solid var(--color-border-subtle) !important; 
+    border: 1px solid var(--color-border-subtle) !important;
     border-radius: 8px !important; /* Cantos mais suaves como na imagem referência */
     padding: 10px 14px !important;
     background-color: var(--color-editor-background) !important;
@@ -1530,8 +7904,17 @@ header.workbench-titlebar .text-sm.font-bold {
     color: var(--color-text-primary) !important;
 }
 
-.form-input:focus, 
-.form-textarea:focus, 
+/* Placeholder com cor suave e sem itálico */
+.form-input::placeholder,
+.form-textarea::placeholder,
+.form-select::placeholder {
+    color: #6b7280 !important;
+    font-style: normal !important;
+    opacity: 1 !important;
+}
+
+.form-input:focus,
+.form-textarea:focus,
 .form-select:focus {
     border-color: var(--color-focus) !important;
     box-shadow: 0 0 0 1px var(--color-focus) !important;
@@ -1857,8 +8240,8 @@ header.workbench-titlebar .flex-col {
 /* Eleva a barra de atividades completa e seu rodapé para não serem engolidos pela sidebar */
 .workbench-activitybar {
     position: relative !important;
-    z-index: 300 !important; 
-    pointer-events: auto !important; 
+    z-index: 300 !important;
+    pointer-events: auto !important;
 }
 
 .activitybar-bottom {
@@ -1950,7 +8333,7 @@ header.workbench-titlebar .flex-col {
 
 /* MÁGICA: Move a seta (▶) do final do HTML para o INÍCIO usando Flex Order */
 .tree-indicator {
-    order: -1 !important; 
+    order: -1 !important;
     font-size: 10px !important;
     margin-right: 6px;
     transition: transform 0.1s ease-in-out;
@@ -1993,7 +8376,7 @@ details[open] > .tree-summary .tree-indicator {
 /* Ícone de arquivo dentro da pasta (Simulando um arquivo TS/JS no VS Code) */
 .tree-article i {
     font-size: 15px;
-    color: var(--color-focus); 
+    color: var(--color-focus);
 }
 
 .tree-article-title {
@@ -2049,10 +8432,10 @@ details[open] > summary .section-indicator {
    CORREÇÃO 28: Interatividade da Activity Bar (Rodapé)
    ========================================================================== */
 /* Eleva a barra inteira e os botões acima de qualquer "camada fantasma" da Sidebar */
-.workbench-activitybar, 
+.workbench-activitybar,
 .activitybar-bottom {
     position: relative !important;
-    z-index: 9990 !important; 
+    z-index: 9990 !important;
     pointer-events: auto !important;
 }
 
@@ -2082,8 +8465,8 @@ details[open] > summary .section-indicator {
    ========================================================================== */
 .vscode-context-menu {
     position: fixed;
-    bottom: 56px; /* Fica exatamente acima dos ícones inferiores */
-    left: 56px;   /* Fica rente à Activity Bar */
+    bottom: 56px; /* Fita exatamente acima dos ícones inferiores */
+    left: 56px;   /* Fita rente à Activity Bar */
     width: 240px;
     background-color: var(--color-sidebar-background);
     border: 1px solid var(--color-border);
@@ -2157,7 +8540,7 @@ html.light .activitybar-btn.active {
 /* ==========================================================================
    CORREÇÃO 32: Alinhamento Milimétrico da Barra de Pesquisa (Header)
    ========================================================================== */
-/* Força os elementos do cabeçalho a se alinharem pela esquerda, 
+/* Força os elementos do cabeçalho a se alinharem pela esquerda,
    respeitando o cálculo de 292px da Logo para cravar com a Sidebar */
 header.workbench-titlebar {
     justify-content: flex-start !important;
@@ -2440,14 +8823,14 @@ header.workbench-titlebar {
 }
 
 /* Reforça as cores de destaque para não serem sobrescritas pela regra acima */
-.metric-card .value-approved { 
-    color: #10B981 !important; 
+.metric-card .value-approved {
+    color: #10B981 !important;
 }
-.metric-card .value-views { 
-    color: #3B82F6 !important; 
+.metric-card .value-views {
+    color: #3B82F6 !important;
 }
-.metric-card .value-alert { 
-    color: #EF4444 !important; 
+.metric-card .value-alert {
+    color: #EF4444 !important;
 }
 
 /* ==========================================================================
@@ -2605,7 +8988,7 @@ html.dark .content-grid > div .bg-gray-100 {
     opacity: 0;
     transition: opacity 0.1s;
 }
-.editor-tab:hover .editor-tab-actions, 
+.editor-tab:hover .editor-tab-actions,
 .editor-tab.active .editor-tab-actions {
     opacity: 1;
 }
@@ -2654,7 +9037,7 @@ html.dark .content-grid > div .bg-gray-100 {
     z-index: 10;
 }
 
-/* Alterações 21/04 */ 
+/* Alterações 21/04 */
 
 /* ==========================================================================
    KCS HUB - DESIGN SYSTEM FOUNDATION (SEMANTIC CLASSES)
@@ -2815,7 +9198,7 @@ html.dark .content-grid > div .bg-gray-100 {
 
 /* Semântica: Sucesso / Aprovado */
 .kcs-badge-success {
-    background-color: var(--color-success-bg); 
+    background-color: var(--color-success-bg);
     color: var(--color-success-text);
     border: none;
 }
@@ -2900,9 +9283,9 @@ html.dark .content-grid > div .bg-gray-100 {
    ========================================================================== */
 
 /* 1. Restaura a cor do texto para Dinâmico (Preto no Claro, Branco no Escuro) */
-.view-title, 
+.view-title,
 .dash-title,
-.content-grid > div h3, 
+.content-grid > div h3,
 .modal-title,
 .metric-value:not(.value-approved):not(.value-views):not(.value-alert) {
     color: var(--color-text-primary) !important;
@@ -2938,7 +9321,7 @@ html.dark .content-grid > div .bg-gray-100 {
 /* ==========================================================================
    CORREÇÃO DE CACHE: FORÇAR CONTRASTE EM STYLES INLINE (MODO CLARO)
    ========================================================================== */
-/* Se o JavaScript em cache tentar forçar a cor 'inverse' (branco) no Modo Claro, 
+/* Se o JavaScript em cache tentar forçar a cor 'inverse' (branco) no Modo Claro,
    o CSS intercepta a declaração inline e força a cor escura correta. */
 html.light [style*="color: var(--color-text-inverse)"] {
     color: var(--color-text-primary) !important;
@@ -2950,7 +9333,7 @@ html.light [style*="color: var(--color-text-muted)"] {
 }
 
 /* ==========================================================================
-   CORREÇÃO RÁPIDA: FUNDO DOS MODAIS (REMOVENDO TRANSPARÊNCIA)
+   CORREÇÃO RÁPIDA: FUNDO DOS MODAIS (REMOVENDO TRANSPARENCIA)
    ========================================================================== */
 /* Garante que todos os tipos de modais puxem a cor de fundo sólida correta */
 .kcs-modal-dialog,
@@ -2960,3 +9343,291 @@ html.light [style*="color: var(--color-text-muted)"] {
     border: 1px solid var(--color-border) !important;
     color: var(--color-text-primary) !important;
 }
+/* ==========================================================================
+   MENTION SYSTEM: SQL Reference Chips & Sidebar Panel
+   ========================================================================== */
+
+/* Mention Dropdown */
+.mention-dropdown {
+    position: absolute;
+    background-color: var(--color-sidebar-background);
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius-md);
+    box-shadow: var(--shadow-md);
+    max-height: 250px;
+    overflow-y: auto;
+    width: 300px;
+    z-index: 10000; /* Increased z-index to ensure it's above modals */
+    color: var(--color-text-primary);
+    font-size: var(--font-size-sm);
+}
+
+.mention-item {
+    padding: 8px 12px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    transition: background-color 0.1s;
+}
+
+.mention-item:hover, .mention-item.selected {
+    background-color: var(--color-focus);
+    color: var(--color-text-inverse);
+}
+
+.mention-item-name {
+    font-weight: 600;
+    margin-bottom: 2px;
+}
+
+.mention-item-description {
+    font-size: 11px;
+    color: var(--color-text-secondary);
+}
+
+.mention-item:hover .mention-item-description, .mention-item.selected .mention-item-description {
+    color: var(--color-text-inverse);
+}
+
+.mention-empty {
+    padding: 12px;
+    text-align: center;
+    color: var(--color-text-muted);
+    font-style: italic;
+}
+
+/* SQL Mention Chip in Editor */
+.sql-mention-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    margin: 0 2px;
+    background-color: rgba(99, 102, 241, 0.15); /* Indigo light */
+    color: #8B5CF6; /* Indigo primary */
+    border: 1px solid rgba(99, 102, 241, 0.3);
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.2s, border-color 0.2s;
+    white-space: nowrap;
+}
+.sql-mention-chip:hover {
+    background-color: rgba(99, 102, 241, 0.25);
+    border-color: #8B5CF6;
+}
+
+/* SQL Detail Panel */
+.sql-detail-panel {
+    position: fixed;
+    top: 48px; /* Below titlebar */
+    right: 0;
+    bottom: 22px; /* Above statusbar */
+    width: 0;
+    background-color: var(--color-editor-background);
+    border-left: 1px solid var(--color-border);
+    box-shadow: -4px 0 16px rgba(0, 0, 0, 0.2);
+    z-index: 9000;
+    transition: width 0.2s ease-out;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.sql-detail-panel.active {
+    width: 400px; /* Standard width when active */
+}
+
+@media screen and (max-width: 768px) {
+    .sql-detail-panel.active {
+        width: 100%;
+    }
+    /* Ensures the main editor content is pushed off-screen when panel is open */
+    body.sql-panel-open main.workbench-editor {
+        margin-right: 100%;
+    }
+}
+
+.sql-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--color-border-subtle);
+    background-color: var(--color-sidebar-background);
+    color: var(--color-text-primary);
+}
+
+.sql-panel-header h3 {
+    font-size: 14px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+}
+
+.sql-panel-close-btn {
+    background: transparent;
+    border: none;
+    color: var(--color-text-secondary);
+    font-size: 18px;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+.sql-panel-close-btn:hover {
+    color: var(--color-text-primary);
+}
+
+.sql-panel-content {
+    flex: 1;
+    padding: 16px;
+    overflow-y: auto;
+}
+
+.sql-panel-section {
+    margin-bottom: 16px;
+}
+
+.sql-panel-section-title {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+    margin-bottom: 6px;
+}
+
+.sql-panel-section p {
+    font-size: 13px;
+    color: var(--color-text-primary);
+    line-height: 1.5;
+}
+
+.sql-panel-code-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: var(--color-sidebar-background); /* Darker background for header */
+    border: 1px solid var(--color-border);
+    border-bottom: none;
+    border-radius: var(--border-radius-md) var(--border-radius-md) 0 0;
+    padding: 8px 12px;
+    margin-top: 8px;
+    color: var(--color-text-secondary);
+    position: relative; /* Needed for absolute positioning of copy button */
+}
+
+.sql-panel-code-title {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-text-primary);
+}
+
+.sql-panel-code-title i { color: var(--color-focus); }
+
+.sql-panel-code-container {
+    background-color: var(--color-editor-background);
+    border: 1px solid var(--color-border);
+    border-radius: 0 0 var(--border-radius-md) var(--border-radius-md);
+    overflow-y: auto; /* Changed to auto for both x and y */
+    padding: 10px;
+    max-height: 400px; /* Limit height to enable vertical scroll */
+}
+
+.sql-panel-code-container pre {
+    margin: 0;
+}
+
+.sql-panel-code-container code {
+    font-family: var(--font-family-mono);
+    font-size: 12px;
+    line-height: 1.4;
+    color: #e0e0e0; /* Default code color for dark theme */
+    display: block; /* Ensure code block takes full width */
+}
+
+/* Syntax Highlighting (Basic - Refined for SQL Server) */
+.sql-keyword { color: #569cd6; font-weight: 600; } /* Blue for keywords */
+.sql-function { color: #dcdcaa; } /* Yellow for functions */
+.sql-string { color: #ce9178; } /* Orange for strings */
+.sql-comment { color: #6a9955; font-style: italic; } /* Green for comments */
+.sql-operator { color: #c586c0; } /* Purple for operators */
+.sql-number { color: #b5cea8; } /* Light green for numbers */
+.sql-variable { color: #9cdcfe; } /* Light blue for variables */
+
+/* Also support with language-sql parent class */
+.language-sql .sql-keyword { color: #569cd6; font-weight: 600; } /* Blue for keywords */
+.language-sql .sql-function { color: #dcdcaa; } /* Yellow for functions */
+.language-sql .sql-string { color: #ce9178; } /* Orange for strings */
+.language-sql .sql-comment { color: #6a9955; font-style: italic; } /* Green for comments */
+.language-sql .sql-operator { color: #c586c0; } /* Purple for operators */
+.language-sql .sql-number { color: #b5cea8; } /* Light green for numbers */
+.language-sql .sql-variable { color: #9cdcfe; } /* Light blue for variables */
+
+.btn-copy-code {
+    background: transparent;
+    border: none;
+    color: var(--color-text-secondary);
+    font-size: 16px; /* Icon size */
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px;
+    border-radius: var(--border-radius-sm);
+    transition: all 0.2s;
+    position: absolute; /* Position absolutely within the header */
+    top: 50%;
+    right: 8px;
+    transform: translateY(-50%);
+    z-index: 10; /* Ensure it's above other elements if any */
+}
+.btn-copy-code:hover {
+    background-color: var(--color-hover);
+    color: var(--color-text-primary);
+}
+
+body.sql-panel-open {
+    overflow: hidden; /* Prevent body scroll when panel is open */
+}
+
+body.sql-panel-open .workbench-grid {
+    grid-template-columns: 48px 260px 1fr 400px; /* Adjust grid to make space for panel */
+}
+
+body.sql-panel-open .workbench-activitybar,
+body.sql-panel-open .workbench-sidebar,
+body.sql-panel-open .workbench-editor {
+    transition: margin-right 0.2s ease-out; /* Smooth transition for shifting content */
+}
+
+html.light .sql-mention-chip {
+    background-color: rgba(99, 102, 241, 0.08); /* Light mode color */
+    color: #4f46e5;
+    border-color: rgba(99, 102, 241, 0.2);
+}
+html.light .sql-mention-chip:hover {
+    background-color: rgba(99, 102, 241, 0.15);
+    border-color: #4f46e5;
+}
+
+html.light .sql-panel-code-container code {
+    color: #3b3b3b; /* Darker code for light theme */
+}
+
+/* Refined Light Theme SQL Syntax Highlighting */
+html.light .language-sql .sql-keyword { color: #0000ff; }
+html.light .language-sql .sql-function { color: #8f0000; }
+html.light .language-sql .sql-string { color: #a31515; }
+html.light .language-sql .sql-comment { color: #008000; }
+html.light .language-sql .sql-operator { color: #800080; }
+html.light .language-sql .sql-number { color: #2a2a2a; }
+html.light .language-sql .sql-variable { color: #0070c1; }
+
+
+
+

@@ -154,12 +154,8 @@ export function initChatbot() {
     if (isPopout) {
         container.className = 'fixed inset-0 z-[9999] w-full h-full';
     } else {
-        container.className = 'fixed bottom-0 right-0 sm:bottom-6 sm:right-6 z-[9999] pointer-events-none w-full sm:w-auto';
+        container.className = 'fixed inset-0 z-[50] hidden';
     }
-    
-    const windowClasses = isPopout 
-        ? 'flex flex-col bg-surface w-full h-full pointer-events-auto z-[9999]'
-        : 'hidden flex-col bg-surface border-0 sm:border border-border-strong rounded-none sm:rounded-[1.5rem] shadow-float w-full sm:w-[400px] h-[100dvh] sm:h-[600px] max-h-[100dvh] overflow-hidden pointer-events-auto transition-all duration-400 ease-out absolute bottom-0 sm:bottom-24 sm:right-6 origin-bottom-right z-[9999] scale-95 opacity-0 [&:not(.hidden)]:scale-100 [&:not(.hidden)]:opacity-100';
 
     const headerButtons = isPopout 
         ? `<div class="absolute right-3 top-[env(safe-area-inset-top,0.5rem)] sm:top-3.5 flex items-center gap-1">
@@ -167,39 +163,28 @@ export function initChatbot() {
                <div class="w-px h-5 bg-gray-300 dark:bg-gray-600 mx-1"></div>
                <button id="btn-dock-chatbot" class="w-10 h-10 text-gray-500 hover:text-blue-600 transition-colors rounded-full flex items-center justify-center" title="Re-encaixar Chat"><i class="ph-bold ph-arrows-in-simple text-xl"></i></button>
            </div>`
-        : `<div class="absolute right-3 top-[env(safe-area-inset-top,0.5rem)] sm:top-3.5 flex items-center gap-1">
+        : `<div class="absolute right-3 top-[1rem] flex items-center gap-1">
                <button id="btn-clear-chat" class="w-10 h-10 text-gray-500 hover:text-red-500 transition-colors rounded-full flex items-center justify-center" title="Limpar Histórico"><i class="ph-bold ph-trash text-lg"></i></button>
                <button id="btn-external-popout" class="w-10 h-10 text-gray-500 hover:text-blue-600 transition-colors rounded-full flex items-center justify-center hidden sm:flex" title="Nova Janela (Pop-out Externo)"><i class="ph-bold ph-arrow-square-out text-lg"></i></button>
-               <button id="btn-pip-chatbot" class="w-10 h-10 text-gray-500 hover:text-blue-600 transition-colors rounded-full flex items-center justify-center hidden sm:flex" title="Desencaixar / Arrastar (Draggable)"><i class="ph-bold ph-corners-out text-lg"></i></button>
-               <button id="btn-close-chatbot" class="w-10 h-10 text-gray-500 hover:text-red-500 transition-colors rounded-full flex items-center justify-center sm:hidden" title="Fechar Chat"><i class="ph-bold ph-x text-lg"></i></button>
+               <button id="btn-close-chatbot" class="w-10 h-10 text-gray-500 hover:text-red-500 transition-colors rounded-full flex items-center justify-center" title="Fechar Assistente"><i class="ph-bold ph-x text-lg"></i></button>
            </div>`;
 
-    const toggleButton = isPopout
-        ? ''
-        : `<button id="btn-toggle-chatbot" class="btn-toggle-chatbot pointer-events-auto">
-               <i class="ph-fill ph-chat-teardrop-dots"></i>
-           </button>`;
-
     container.innerHTML = `
-        <div id="chatbot-window" class="${windowClasses}">
-            <header id="kcs-chat-header">
-                <div id="chatbot-header-name" class="flex items-center gap-2 font-bold text-gray-800 dark:text-gray-100 pr-32">
+        <div id="chatbot-overlay" class="chatbot-overlay"></div>
+        <aside id="chatbot-panel" class="chatbot-panel chatbot-container" role="dialog" aria-modal="true" aria-labelledby="chatbot-panel-title">
+            <header id="kcs-chat-header" class="chatbot-panel-header">
+                <div class="flex items-center gap-2">
                     <div class="chat-bot-avatar shadow-sm shrink-0"><i class="ph-fill ph-robot text-lg"></i></div>
-                    <span class="truncate pointer-events-none text-sm">${botName}</span>
+                    <h2 id="chatbot-panel-title">Assistente KCS</h2>
                 </div>
                 ${headerButtons}
             </header>
-            <div id="chatbot-messages" class="flex-1 overflow-y-auto p-4 custom-scrollbar"></div>
-            <div class="bg-gray-50 dark:bg-surface border-t border-gray-200 dark:border-border-subtle flex flex-col shrink-0">
-                <form id="chatbot-form" class="p-3">
-                    <div class="flex items-end bg-white dark:bg-bg-main border border-gray-300 dark:border-border-subtle rounded-2xl px-2 py-1.5 focus-within:border-blue-500 transition-all shadow-inner pb-[env(safe-area-inset-bottom,0.5rem)] sm:pb-1.5">
-                        <textarea id="chatbot-input" rows="1" placeholder="Consultar base de conhecimento..." class="w-full bg-transparent border-0 ring-0 outline-none focus:outline-none focus:ring-0 text-gray-900 dark:text-gray-100 px-2 py-3 text-base sm:text-sm resize-none overflow-hidden max-h-[120px] min-h-[44px]"></textarea>
-                        <button type="submit" class="w-11 h-11 mb-0.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-colors shrink-0 shadow-md flex items-center justify-center"><i class="ph-bold ph-paper-plane-right text-lg"></i></button>
-                    </div>
-                </form>
-            </div>
-        </div>
-        ${toggleButton}
+            <div id="chatbot-messages" class="chatbot-messages custom-scrollbar"></div>
+            <form id="chatbot-form" class="chatbot-input-area" autocomplete="off">
+                <input id="chatbot-input" type="text" placeholder="Consultar base de conhecimento..." class="chatbot-input" />
+                <button type="submit" class="chatbot-send" aria-label="Enviar mensagem"><i class="ph-bold ph-paper-plane-right text-lg"></i></button>
+            </form>
+        </aside>
     `;
 
     setupChatbotEvents(container, botName, isPopout);
@@ -222,7 +207,7 @@ function parseMarkdownForChat(text) {
 }
 
 function setupChatbotEvents(container, botName, isPopout) {
-    const windowEl = document.getElementById('chatbot-window');
+    const panelEl = document.getElementById('chatbot-panel');
     const headerEl = document.getElementById('kcs-chat-header');
     const input = document.getElementById('chatbot-input');
     const form = document.getElementById('chatbot-form');
@@ -235,6 +220,8 @@ function setupChatbotEvents(container, botName, isPopout) {
     } else if (messagesEl.children.length === 0) {
         appendBotHTMLMessage(getGreetingHTML(), messagesEl);
     }
+    const badge = document.getElementById('chatbot-badge');
+    if (badge) badge.classList.toggle('hidden', !historyHTML);
 
     if (isPopout) {
         const btnDock = document.getElementById('btn-dock-chatbot');
@@ -272,9 +259,9 @@ function setupChatbotEvents(container, botName, isPopout) {
             else if (e.data && e.data.type === 'KCS_CHAT_CLOSED') {
                 messagesEl.innerHTML = e.data.html;
                 scrollToBottom(messagesEl);
-                if (windowEl.classList.contains('hidden')) {
-                    const btnToggle = document.getElementById('btn-toggle-chatbot');
-                    if (btnToggle) btnToggle.click();
+                if (panelEl && panelEl.classList.contains('active')) {
+                    const btnOpen = document.getElementById('btn-open-chatbot');
+                    if (btnOpen) btnOpen.click();
                 }
             }
         });
@@ -290,100 +277,60 @@ function setupChatbotEvents(container, botName, isPopout) {
                 }
                 scrollToBottom(messagesEl);
                 
-                if (e.key === 'kcs_popout_closed' && windowEl.classList.contains('hidden')) {
-                    const btnToggle = document.getElementById('btn-toggle-chatbot');
-                    if (btnToggle) btnToggle.click();
+                if (e.key === 'kcs_popout_closed' && panelEl && !panelEl.classList.contains('active')) {
+                    const btnOpen = document.getElementById('btn-open-chatbot');
+                    if (btnOpen) btnOpen.click();
                 }
             }
         });
     }
 
     if (!isPopout) {
-        const btnToggle = document.getElementById('btn-toggle-chatbot');
-        const btnPip = document.getElementById('btn-pip-chatbot');
+        const btnOpen = document.getElementById('btn-open-chatbot');
         const btnExternalPopout = document.getElementById('btn-external-popout');
-        const btnCloseMobile = document.getElementById('btn-close-chatbot');
+        const btnClose = document.getElementById('btn-close-chatbot');
+        const overlay = document.getElementById('chatbot-overlay');
 
-        btnToggle.onclick = () => {
-            const isHidden = windowEl.classList.contains('hidden');
-            windowEl.classList.toggle('hidden', !isHidden);
-            windowEl.classList.toggle('flex', isHidden);
-            if (isHidden) input.focus();
-            btnToggle.innerHTML = isHidden ? '<i class="ph-bold ph-x text-2xl"></i>' : '<i class="ph-fill ph-chat-teardrop-dots"></i>';
+        const openChatPanel = () => {
+            if (!container || !panelEl || !overlay) return;
+            container.classList.remove('hidden');
+            overlay.classList.remove('active');
+            panelEl.classList.add('active');
+            document.body.classList.add('chatbot-open');
+            input.focus();
         };
 
-        if (btnCloseMobile) btnCloseMobile.onclick = () => btnToggle.click();
+        const closeChatPanel = () => {
+            if (!container || !panelEl || !overlay) return;
+            panelEl.classList.remove('active');
+            overlay.classList.remove('active');
+            container.classList.add('hidden');
+            document.body.classList.remove('chatbot-open');
+        };
+
+        if (btnOpen) {
+            btnOpen.onclick = () => {
+                const isHidden = container.classList.contains('hidden');
+                if (isHidden) openChatPanel();
+                else closeChatPanel();
+            };
+        }
+
+        if (btnClose) btnClose.onclick = closeChatPanel;
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && panelEl && panelEl.classList.contains('active')) {
+                closeChatPanel();
+            }
+        });
 
         if (btnExternalPopout) {
             btnExternalPopout.onclick = () => {
-                btnToggle.click(); 
+                closeChatPanel();
                 localStorage.setItem('kcs_history_current', messagesEl.innerHTML);
                 const chatUrl = window.location.origin + window.location.pathname + '?chat_popout=true';
                 window.open(chatUrl, 'KCSAssistant', 'width=450,height=650,left=100,top=100,resizable=yes,scrollbars=yes,status=no,toolbar=no,menubar=no');
             };
-        }
-
-        let isExpanded = false;
-        let isDragging = false;
-        let currentX, currentY, initialX, initialY;
-        let xOffset = 0, yOffset = 0;
-
-        if (btnPip) {
-            btnPip.onclick = () => {
-                isExpanded = !isExpanded;
-                if (isExpanded) {
-                    windowEl.classList.remove('absolute', 'bottom-0', 'sm:bottom-20', 'right-0', 'transition-all');
-                    windowEl.classList.add('fixed', 'shadow-[0_10px_50px_rgba(0,0,0,0.5)]', 'z-[9999]');
-                    windowEl.style.left = '50%';
-                    windowEl.style.top = '20%';
-                    windowEl.style.transform = 'translate(-50%, 0)';
-                    windowEl.style.bottom = 'auto';
-                    windowEl.style.right = 'auto';
-                    xOffset = 0; yOffset = 0; currentX = 0; currentY = 0;
-                    headerEl.classList.add('cursor-move', 'bg-blue-50', 'dark:bg-blue-900/20');
-                    btnPip.classList.add('text-blue-600', 'bg-blue-100', 'dark:bg-blue-900/50');
-                    btnPip.innerHTML = '<i class="ph-bold ph-corners-in text-lg"></i>';
-                } else {
-                    windowEl.classList.add('absolute', 'bottom-0', 'sm:bottom-20', 'right-0', 'transition-all');
-                    windowEl.classList.remove('fixed', 'shadow-[0_10px_50px_rgba(0,0,0,0.5)]', 'z-[9999]');
-                    windowEl.style.left = ''; windowEl.style.top = ''; windowEl.style.transform = '';
-                    windowEl.style.bottom = ''; windowEl.style.right = ''; 
-                    headerEl.classList.remove('cursor-move', 'bg-blue-50', 'dark:bg-blue-900/20');
-                    btnPip.classList.remove('text-blue-600', 'bg-blue-100', 'dark:bg-blue-900/50');
-                    btnPip.innerHTML = '<i class="ph-bold ph-corners-out text-lg"></i>';
-                }
-            };
-        }
-
-        headerEl.addEventListener('mousedown', dragStart);
-        document.addEventListener('mouseup', dragEnd);
-        document.addEventListener('mousemove', drag);
-
-        function dragStart(e) {
-            if (!isExpanded || e.target.closest('button')) return;
-            initialX = e.clientX - xOffset;
-            initialY = e.clientY - yOffset;
-            isDragging = true;
-            headerEl.classList.add('cursor-grabbing');
-        }
-
-        function dragEnd() {
-            if (!isDragging) return;
-            initialX = currentX;
-            initialY = currentY;
-            isDragging = false;
-            headerEl.classList.remove('cursor-grabbing');
-        }
-
-        function drag(e) {
-            if (isDragging) {
-                e.preventDefault(); 
-                currentX = e.clientX - initialX;
-                currentY = e.clientY - initialY;
-                xOffset = currentX;
-                yOffset = currentY;
-                windowEl.style.transform = `translate(calc(-50% + ${currentX}px), ${currentY}px)`;
-            }
         }
     }
 

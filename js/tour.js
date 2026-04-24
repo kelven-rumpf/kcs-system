@@ -138,8 +138,8 @@ function executePremiumTour() {
     tour.addStep({ 
         id: 'step-chatbot', 
         title: '<i class="ph-fill ph-robot text-indigo-400"></i> Assistente IA Especialista', 
-        text: 'Dúvidas rápidas? O Chatbot entrega a solução pronta baseada em toda a nossa base.', 
-        attachTo: { element: '#btn-toggle-chatbot', on: 'top' }, // ID ATUALIZADO E POSIÇÃO TOP
+        text: 'Dúvidas rápidas? O Assistente entrega a solução pronta baseada em toda a nossa base.', 
+        attachTo: { element: '#btn-open-chatbot', on: 'top' }, 
         buttons: [{ action: () => tour.back(), text: '⬅ Voltar', classes: 'tour-btn-back' }, { action: () => tour.complete(), text: 'Finalizar 🎉', classes: 'tour-btn-finish' }] 
     });
     

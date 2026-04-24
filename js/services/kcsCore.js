@@ -55,6 +55,66 @@ async function fetchWithBackoff(url, options, maxRetries = 4) {
     throw new Error("Limite de requisições excedido. Tente novamente em instantes.");
 }
 
+function extractJsonObject(text) {
+    const firstBrace = text.indexOf('{');
+    if (firstBrace === -1) return null;
+
+    let depth = 0;
+    for (let i = firstBrace; i < text.length; i++) {
+        if (text[i] === '{') depth++;
+        if (text[i] === '}') depth--;
+        if (depth === 0) return text.substring(firstBrace, i + 1);
+    }
+    return null;
+}
+
+function validateStructuredResponse(payload) {
+    if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+        throw new Error('A resposta da IA não é um objeto JSON válido.');
+    }
+
+    const requiredKeys = ['titulo', 'sintoma', 'ambiente', 'causa', 'solucao', 'passos'];
+    const missingKeys = requiredKeys.filter(key => {
+        const value = payload[key];
+        return typeof value !== 'string' || value.trim().length === 0;
+    });
+
+    if (missingKeys.length > 0) {
+        throw new Error(`Resposta JSON inválida ou incompleta. Faltando: ${missingKeys.join(', ')}`);
+    }
+
+    return {
+        titulo: payload.titulo.trim(),
+        sintoma: payload.sintoma.trim(),
+        ambiente: payload.ambiente.trim(),
+        causa: payload.causa.trim(),
+        solucao: payload.solucao.trim(),
+        passos: payload.passos.trim(),
+        tags: Array.isArray(payload.tags) ? payload.tags.filter(tag => typeof tag === 'string' && tag.trim().length > 0) : []
+    };
+}
+
+function parseJsonStructuredResponse(cleanedText) {
+    const candidateStrings = [cleanedText];
+    const extracted = extractJsonObject(cleanedText);
+    if (extracted && extracted !== cleanedText) {
+        candidateStrings.push(extracted);
+    }
+
+    let lastError = null;
+    for (const candidate of candidateStrings) {
+        try {
+            const parsed = JSON.parse(candidate);
+            return validateStructuredResponse(parsed);
+        } catch (error) {
+            lastError = error;
+        }
+    }
+
+    console.error('[IA Parser] Não foi possível parsear JSON válido. Texto recebido:', cleanedText);
+    throw lastError || new Error('A IA devolveu JSON inválido.');
+}
+
 async function callGeminiIA(systemPrompt, userOriginalText, actionType, isJson = false) {
     if (!CONFIG || !CONFIG.GEMINI_API_KEY) throw new Error("Chave da API não configurada.");
     
@@ -74,7 +134,7 @@ async function callGeminiIA(systemPrompt, userOriginalText, actionType, isJson =
     });
     
     const data = await response.json();
-    const responseText = data.candidates[0].content.parts[0].text;
+    const responseText = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
     
     let cleanedText = responseText.trim();
     if (cleanedText.startsWith('```')) {
@@ -98,20 +158,7 @@ async function callGeminiIA(systemPrompt, userOriginalText, actionType, isJson =
 
     // FALLBACK ROBUSTO PARA JSON (SRE)
     if (isJson) {
-        try {
-            return JSON.parse(cleanedText);
-        } catch (e) {
-            console.warn("[IA Fallback] JSON corrompido pela IA. Acionando Regex extrator...");
-            const match = cleanedText.match(/\{[\s\S]*\}/);
-            if (match) {
-                try {
-                    return JSON.parse(match[0]);
-                } catch(err2) {
-                    throw new Error("A IA devolveu um formato irrecuperável.");
-                }
-            }
-            throw new Error("Não foi possível extrair os dados estruturados da IA.");
-        }
+        return parseJsonStructuredResponse(cleanedText);
     }
 
     return cleanedText;
@@ -129,6 +176,7 @@ OBJETIVOS DE EXTRAÇÃO:
 4. Identificar a 'causa' (raiz técnica).
 5. Identificar a 'solucao' (resumo de como resolver).
 6. Estruturar os 'passos' (o guia prático detalhado).
+7. Gerar 'tags' relevantes (array de strings) para categorização e busca.
 
 REGRAS PARA A CHAVE 'passos':
 - Escreva de forma limpa, direta, com verbos no infinitivo (ex: Acessar, Clicar).
@@ -142,7 +190,8 @@ RETORNO OBRIGATÓRIO (JSON STRICT):
     "ambiente": "...",
     "causa": "...",
     "solucao": "...",
-    "passos": "..."
+    "passos": "...",
+    "tags": ["tag1", "tag2", "tag3"]
 }
 
 RASCUNHO DO USUÁRIO:

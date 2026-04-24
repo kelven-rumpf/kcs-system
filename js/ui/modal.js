@@ -1,6 +1,6 @@
 import { getCurrentUser, hasPermission, hasRole, getAllUsersFromCloud, getAllCompaniesFromCloud, getAllInvitedUsers } from '../auth.js';
 import { initEditor } from './editor.js'; 
-import { formatContentForView } from './render.js'; 
+import { formatContentForView, isAppBooting } from './render.js'; 
 import { getFlatCategories, addCategory, removeCategory, updateCategory } from '../services/categories.js';
 import { VISIBILITY, SECTORS } from '../config.js';
 
@@ -18,6 +18,11 @@ const SQL_DB_TYPES = [
 // ==========================================
 
 function attachToOverlay(modal) {
+    if (isAppBooting()) {
+        console.warn('Modal render blocked while app is booting.');
+        return;
+    }
+
     const overlayRoot = document.getElementById('overlay-root');
     if (!overlayRoot) {
         console.warn('overlay-root não encontrado');
@@ -183,33 +188,33 @@ export function openArticleModal(article = null, onSave, rebindToolbar) {
                 <div class="alert-icon"><i class="ph-fill ph-magic-wand"></i></div>
                 <div class="alert-content">
                     <h4 class="alert-title">Piloto Automático KCS</h4>
-                    <p class="alert-text">Descreva o problema e a solução no <strong>Passo a Passo</strong> e clique em <strong class="badge-indigo">✨ Refinar</strong>.</p>
+                    <p class="alert-text">Conte o cenário completo no <strong>Procedimento Detalhado</strong> e clique em <strong class="badge-indigo">✨ Refinar</strong> para que a IA aperfeiçoe o procedimento.</p>
                 </div>
             </div>
             
             <div class="form-group">
                 <label class="form-label">Título *</label>
-                <input type="text" id="article-title-${idUnico}" placeholder="Deixe em branco e a IA deduzirá para você..." class="form-input" value="${article?.title || ''}" />
+                <input type="text" id="article-title-${idUnico}" placeholder="Ex: Resetar Senha de Usuário" class="form-input" value="${article?.title || ''}" />
             </div>
             
             <div class="form-row-split">
                 <div class="form-group">
                     <label class="form-label">Sintoma / Problema</label>
-                    <textarea id="article-symptom-${idUnico}" rows="2" class="form-textarea">${article?.symptom || ''}</textarea>
+                    <textarea id="article-symptom-${idUnico}" rows="2" placeholder="Descreva o erro ou situação relatada" class="form-textarea">${article?.symptom || ''}</textarea>
                 </div>
                 <div class="form-group">
                     <label class="form-label">Ambiente</label>
-                    <textarea id="article-environment-${idUnico}" rows="2" class="form-textarea">${article?.environment || ''}</textarea>
+                    <textarea id="article-environment-${idUnico}" rows="2" placeholder="Ex: Windows 10, Chrome 120, SQL Server 2019" class="form-textarea">${article?.environment || ''}</textarea>
                 </div>
             </div>
             
             <div class="form-group">
                 <label class="form-label">Causa</label>
-                <textarea id="article-cause-${idUnico}" rows="2" class="form-textarea">${article?.cause || ''}</textarea>
+                <textarea id="article-cause-${idUnico}" rows="2" placeholder="O que causou o problema" class="form-textarea">${article?.cause || ''}</textarea>
             </div>
             <div class="form-group">
                 <label class="form-label">Solução</label>
-                <textarea id="article-solution-${idUnico}" rows="2" class="form-textarea">${article?.solution || ''}</textarea>
+                <textarea id="article-solution-${idUnico}" rows="2" placeholder="Descreva o passo a passo da resolução" class="form-textarea">${article?.solution || ''}</textarea>
             </div>
             
             <div class="form-group editor-container">

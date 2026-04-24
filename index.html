@@ -1,22 +1,15 @@
 <!DOCTYPE html>
 <html lang="pt-BR" class="dark">
 <head>
-  <link rel="icon" href="data:image/svg+xml,
-<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'>
-  <circle cx='30' cy='30' r='10' fill='%23007ACC'/>
-  <circle cx='70' cy='30' r='10' fill='%23007ACC'/>
-  <circle cx='50' cy='70' r='10' fill='%23007ACC'/>
-  <path d='M30 30 L70 30 L50 70 Z'
-        stroke='%23007ACC'
-        stroke-width='4'
-        fill='none'/>
-</svg>">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='30' cy='30' r='10' fill='%23007ACC'/%3E%3Ccircle cx='70' cy='30' r='10' fill='%23007ACC'/%3E%3Ccircle cx='50' cy='70' r='10' fill='%23007ACC'/%3E%3Cpath d='M30 30 L70 30 L50 70 Z' stroke='%23007ACC' stroke-width='4' fill='none'/%3E%3C/svg%3E">
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>KCS Knowledge System</title>
   <meta name="description" content="Base de Conhecimento Corporativa — Knowledge Centered Service" />
 
   <script>
+    window.__APP_BOOTING__ = true;
+    window.__AUTH_CHECKING__ = true;
     const savedTheme = localStorage.getItem('kcs_theme') || 'dark';
     if (savedTheme === 'light') {
       document.documentElement.classList.remove('dark');
@@ -24,20 +17,51 @@
     }
   </script>
 
+  <style>
+    body.auth-checking #app-screen,
+    body.auth-checking #login-screen,
+    body.auth-checking #loading-overlay {
+      display: none !important;
+      visibility: hidden !important;
+      pointer-events: none !important;
+    }
+
+    body.auth-unauthenticated #app-screen,
+    body.auth-authenticated #login-screen,
+    body.auth-authenticated #loading-overlay {
+      display: none !important;
+      visibility: hidden !important;
+      pointer-events: none !important;
+    }
+
+    body.auth-unauthenticated #login-screen {
+      display: flex !important;
+      visibility: visible !important;
+      pointer-events: auto !important;
+    }
+
+    body.auth-authenticated #app-screen {
+      display: grid !important;
+      visibility: visible !important;
+      pointer-events: auto !important;
+    }
+  </style>
+
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/dexie@4.4.2/dist/dexie.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/fuse.js@6.6.2"></script>
   <script src="https://cdn.jsdelivr.net/npm/@phosphor-icons/web"></script>
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.0.4/dist/tesseract.min.js"></script>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/shepherd.js@11.0.1/dist/css/shepherd.css"/>
   <script src="https://cdn.jsdelivr.net/npm/shepherd.js@11.0.1/dist/js/shepherd.min.js"></script>
   
   <link rel="stylesheet" href="css/style.css">
  
 </head>
-<body class="bg-bg-main text-white h-[100dvh] overflow-hidden"> 
+<body class="bg-bg-main text-white h-[100dvh] overflow-hidden auth-checking"> 
 
-  <div id="loading-overlay" class="fixed inset-0 bg-black/60 z-[200] flex items-center justify-center backdrop-blur-sm">
+  <div id="loading-overlay" class="hidden fixed inset-0 bg-black/60 z-[200] flex items-center justify-center backdrop-blur-sm">
     <div class="flex flex-col items-center gap-3 bg-surface p-6 rounded-2xl shadow-2xl border border-border-subtle">
         <div class="w-10 h-10 border-[3px] border-blue-500 border-t-transparent rounded-full animate-spin"></div>
         <span class="text-sm font-semibold text-gray-300" id="loading-msg">Processando...</span>
@@ -46,7 +70,7 @@
 
   <div id="toast-container" class="fixed top-4 right-4 z-[150] flex flex-col gap-2 max-w-sm w-[90vw] sm:w-auto"></div>
 
-  <div id="login-screen" class="hidden fixed inset-0 z-[100] flex items-center justify-center login-page-bg transition-colors duration-500 p-4 sm:p-6 overflow-hidden">
+  <div id="login-screen" style="display:none;" class="hidden fixed inset-0 z-[100] flex items-center justify-center login-page-bg transition-colors duration-500 p-4 sm:p-6 overflow-hidden" aria-hidden="true" inert>
     <div class="login-container relative w-full max-w-[420px] p-8 sm:p-10 rounded-[20px] shadow-2xl flex flex-col transform transition-all">
         <span class="absolute top-5 right-6 text-[10px] login-text-muted font-mono font-bold tracking-widest px-2 py-1 rounded border login-border-subtle">v1.0.1</span>
         <div class="flex flex-col items-center text-center mb-8 mt-2">
@@ -63,11 +87,11 @@
     </div>
   </div>
 
-  <div id="app-screen" class="hidden h-[100dvh] w-full relative overflow-hidden workbench-grid">
+  <div id="app-screen" style="display:none;" class="hidden h-[100dvh] w-full relative overflow-hidden workbench-grid" aria-hidden="true" inert>
     
-<header class="workbench-titlebar bg-surface border-b border-border-subtle px-4 py-2 flex items-center shrink-0 relative z-30 h-16">
+<header class="workbench-titlebar bg-surface border-b border-border-subtle px-4 py-2 flex items-center shrink-0 relative z-30 h-16" role="banner">
       
-      <button id="btn-toggle-sidebar" onclick="document.getElementById('sidebar').classList.remove('-translate-x-full');" class="lg:hidden text-gray-400 hover:text-gray-900 dark:hover:text-white p-2 transition-colors touch-target mr-2">
+      <button id="btn-toggle-sidebar" onclick="document.getElementById('sidebar').classList.remove('-translate-x-full');" class="lg:hidden text-gray-400 hover:text-gray-900 dark:hover:text-white p-2 transition-colors touch-target mr-2" aria-label="Alternar barra lateral">
         <i class="ph ph-list text-[24px]"></i>
       </button>
       
@@ -82,15 +106,16 @@
       
 <div class="flex-1 max-w-3xl w-full flex items-center gap-2">
   <div class="relative flex-1">
+    <label for="search-input" class="sr-only">Pesquisar na base de conhecimento</label>
     <i class="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-[14px] pointer-events-none"></i>
     <input type="text" id="search-input" class="w-full bg-white dark:bg-bg-main border border-gray-300 dark:border-border-subtle pl-9 pr-4 py-1 text-sm text-gray-900 dark:text-white placeholder-gray-500 transition-colors focus:ring-1 focus:ring-blue-500 outline-none" placeholder="Pesquisar na base de conhecimento..." />
   </div>
   
-  <button id="btn-new-article" title="Novo Procedimento KCS">
+  <button id="btn-new-article" title="Novo Procedimento KCS" aria-label="Novo Procedimento KCS">
       <i class="ph-bold ph-plus"></i> KCS
   </button>
   
-  <button id="btn-new-sql" title="Novo Script SQL">
+  <button id="btn-new-sql" title="Novo Script SQL" aria-label="Novo Script SQL">
       <i class="ph ph-database"></i> SQL
   </button>
 </div>
@@ -99,20 +124,20 @@
 
     <div class="workbench-activitybar">
         <div class="activitybar-top">
-            <button type="button" class="activitybar-btn active" data-view="articles" title="Artigos (Base de Conhecimento)">
+            <button type="button" class="activitybar-btn active" data-view="articles" title="Artigos (Base de Conhecimento)" aria-label="Artigos (Base de Conhecimento)">
                 <i class="ph ph-files"></i>
             </button>
            
-            <button type="button" class="activitybar-btn" data-view="sql" title="Biblioteca SQL">
+            <button type="button" class="activitybar-btn" data-view="sql" title="Biblioteca SQL" aria-label="Biblioteca SQL">
                 <i class="ph ph-database"></i>
             </button>
         </div>
 
         <div class="activitybar-bottom">
-            <button type="button" class="activitybar-btn" data-view="account" title="Minha Conta">
+            <button type="button" class="activitybar-btn" data-view="account" title="Minha Conta" aria-label="Minha Conta">
                 <i class="ph ph-user-circle"></i>
             </button>
-            <button type="button" class="activitybar-btn" data-view="settings" title="Configurações e Administração">
+            <button type="button" class="activitybar-btn" data-view="settings" title="Configurações e Administração" aria-label="Configurações e Administração">
                 <i class="ph ph-gear"></i>
             </button>
         </div>
@@ -122,7 +147,7 @@
        <nav id="sidebar-nav" class="flex-1 p-2 space-y-0.5 overflow-y-auto"></nav>
     </aside>
 
-    <main class="workbench-editor flex-1 flex flex-col relative overflow-hidden p-0 bg-editor-background">
+    <main class="workbench-editor flex-1 flex flex-col relative overflow-hidden p-0 bg-editor-background" role="main">
         
         <div id="workbench-tabs-bar" class="flex overflow-x-auto bg-[#252526] dark:bg-sidebar-background border-b border-[#3c3c3c] dark:border-border hidden shrink-0 select-none">
             </div>
@@ -140,16 +165,21 @@
 
     <div id="kcs-dock" class="workbench-panel"></div>
 
-    <footer class="workbench-statusbar flex items-center justify-between z-50 select-none px-3">
+    <footer class="workbench-statusbar flex items-center justify-between z-50 select-none px-3" role="contentinfo">
         <div class="flex items-center gap-3">
-            <span class="flex items-center gap-1 hover:bg-white/20 px-2 py-0.5 cursor-pointer rounded"><i class="ph-bold ph-x-circle text-red-400"></i> 0</span>
-            <span class="flex items-center gap-1 hover:bg-white/20 px-2 py-0.5 cursor-pointer rounded"><i class="ph-bold ph-warning text-yellow-400"></i> 0</span>
-            <span class="flex items-center gap-1 hover:bg-white/20 px-2 py-0.5 cursor-pointer rounded"><i class="ph-bold ph-broadcast text-blue-400"></i> Firebase Connected</span>
+            <span class="flex items-center gap-1 hover:bg-white/20 px-2 py-0.5 cursor-pointer rounded" aria-label="Erros: 0"><i class="ph-bold ph-x-circle text-red-400"></i> 0</span>
+            <span class="flex items-center gap-1 hover:bg-white/20 px-2 py-0.5 cursor-pointer rounded" aria-label="Avisos: 0"><i class="ph-bold ph-warning text-yellow-400"></i> 0</span>
+            <span class="flex items-center gap-1 hover:bg-white/20 px-2 py-0.5 cursor-pointer rounded" aria-label="Firebase Conectado"><i class="ph-bold ph-broadcast text-blue-400"></i> Firebase Connected</span>
         </div>
         <div class="flex items-center gap-3">
+            <button id="btn-open-chatbot" class="footer-chat-button" type="button" title="Abrir Assistente" aria-label="Abrir Assistente KCS">
+                <i class="ph ph-chat-circle-dots text-lg"></i>
+                <span class="footer-chat-button-text hidden sm:inline">Assistente</span>
+                <span id="chatbot-badge" class="footer-chat-badge hidden" aria-hidden="true"></span>
+            </button>
             <span id="app-version-display" class="hover:bg-white/20 px-2 py-0.5 cursor-pointer rounded">v1.0.1</span>
             <span class="hover:bg-white/20 px-2 py-0.5 cursor-pointer rounded hidden sm:inline">UTF-8</span>
-            <span class="hover:bg-white/20 px-2 py-0.5 cursor-pointer rounded"><i class="ph-bold ph-bell"></i></span>
+            <span class="hover:bg-white/20 px-2 py-0.5 cursor-pointer rounded" aria-label="Notificações"><i class="ph-bold ph-bell"></i></span>
         </div>
     </footer>
 
@@ -162,7 +192,7 @@
     <div class="bg-surface border border-border-subtle rounded-xl sm:rounded-2xl w-full max-w-4xl h-[100dvh] sm:h-auto sm:max-h-[90vh] flex flex-col shadow-2xl modal-box">
         <div class="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-border-subtle shrink-0">
             <h2 id="modal-title" class="text-base sm:text-lg font-bold text-gray-900 dark:text-white">Novo Procedimento</h2>
-            <button id="btn-cancel-article" class="text-gray-400 hover:text-gray-900 dark:hover:text-white touch-target"><i class="ph ph-x text-[20px]"></i></button>
+            <button id="btn-cancel-article" class="text-gray-400 hover:text-gray-900 dark:hover:text-white touch-target" aria-label="Fechar modal"><i class="ph ph-x text-[20px]"></i></button>
         </div>
         <form id="article-form" class="flex-1 overflow-y-auto flex flex-col custom-scrollbar">
             <div id="article-form-body" class="p-4 sm:p-6 space-y-4 flex-1"></div>
@@ -181,7 +211,7 @@
     <div class="bg-surface border border-border-subtle rounded-xl sm:rounded-2xl w-full max-w-4xl h-[100dvh] sm:h-auto sm:max-h-[90vh] flex flex-col shadow-2xl modal-box">
         <div class="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-border-subtle shrink-0">
             <h2 id="sql-modal-title" class="text-base sm:text-lg font-bold text-gray-900 dark:text-white">Novo Script SQL</h2>
-            <button id="btn-cancel-sql" class="text-gray-400 hover:text-gray-900 dark:hover:text-white touch-target"><i class="ph ph-x text-[20px]"></i></button>
+            <button id="btn-cancel-sql" class="text-gray-400 hover:text-gray-900 dark:hover:text-white touch-target" aria-label="Fechar modal"><i class="ph ph-x text-[20px]"></i></button>
         </div>
         <form id="sql-form" class="flex-1 overflow-y-auto flex flex-col custom-scrollbar">
             <div id="sql-form-body" class="p-4 sm:p-6 space-y-4 flex-1"></div>
@@ -194,7 +224,7 @@
     <div class="bg-surface border border-border-subtle rounded-2xl w-full max-w-lg max-h-[80vh] flex flex-col shadow-2xl modal-box">
         <div class="flex items-center justify-between px-6 py-4 border-b border-border-subtle">
             <h2 class="text-lg font-bold text-gray-900 dark:text-white">Categorias</h2>
-            <button id="btn-close-category-modal" class="text-gray-400 hover:text-gray-900 dark:hover:text-white touch-target"><i class="ph ph-x text-[20px]"></i></button>
+            <button id="btn-close-category-modal" class="text-gray-400 hover:text-gray-900 dark:hover:text-white touch-target" aria-label="Fechar modal"><i class="ph ph-x text-[20px]"></i></button>
         </div>
         <div class="flex-1 overflow-y-auto p-4 custom-scrollbar">
             <div id="category-list" class="space-y-0.5 mb-4"></div>
@@ -219,7 +249,7 @@
             <h2 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
                 <i class="ph-fill ph-gear"></i> Painel de Administração
             </h2>
-            <button id="btn-close-settings-modal" class="text-gray-400 hover:text-gray-900 dark:hover:text-white touch-target btn-icon btn-close">
+            <button id="btn-close-settings-modal" class="text-gray-400 hover:text-gray-900 dark:hover:text-white touch-target btn-icon btn-close" aria-label="Fechar modal">
                 <i class="ph ph-x text-[20px]"></i>
             </button>
         </div>
@@ -249,30 +279,7 @@
       </ul>
   </div>
 
-  <div id="vscode-settings-menu" class="hidden vscode-context-menu">
-      <ul>
-          <li onclick="window.__kcs.openSettings()">Administração</li>
-          <li onclick="window.__kcs.openCompanySettings()">Planos e Limites</li>
-          <li onclick="window.__kcs.openCategoryManager()">Gerenciar Categorias</li>
-          <li class="menu-separator"></li>
-          <li onclick="window.__kcs.showReadme()">Documentação do Sistema</li>
-          <li class="menu-separator"></li>
-          <li onclick="window.__kcs.toggleTheme()">Alternar Tema</li>
-      </ul>
-  </div>
 
-  <div id="vscode-account-menu" class="hidden vscode-context-menu">
-      <ul>
-          <li class="menu-info">
-              <span id="user-name-display" class="font-bold block text-[13px]">Usuário</span>
-              <div class="flex items-center gap-2 mt-1">
-                  <span id="user-role-display" class="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-wider">Membro</span>
-                  <div id="company-plan-badge"></div> </div>
-          </li>
-          <li class="menu-separator"></li>
-          <li onclick="window.__kcs.logout()">Sair do Sistema</li>
-      </ul>
-  </div>
 
 </body>
 </html>

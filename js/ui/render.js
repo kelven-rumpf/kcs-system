@@ -7,6 +7,10 @@ import { STATUS_LABELS, STATUS_COLORS, ARTICLE_STATUS } from '../config.js';
 import { getCurrentUser, hasPermission, hasRole } from '../auth.js';
 import { getCategoryName } from '../services/categories.js';
 
+export function isAppBooting() {
+    return typeof window !== 'undefined' && window.__APP_BOOTING__ === true;
+}
+
 const SQL_DB_TYPES = [
     { value: 'mysql', label: 'MySQL', color: 'db-mysql' },
     { value: 'postgres', label: 'PostgreSQL', color: 'db-postgres' },
@@ -1134,13 +1138,31 @@ export function renderDashboard(articles, scripts, topAnalysts = [], topCollabor
 }
 
 export function toggleLoginScreen(show) {
+  const body = document.body;
+  if (!body) return;
+
+  body.classList.remove('auth-checking', 'auth-authenticated', 'auth-unauthenticated');
+  body.classList.add(show ? 'auth-unauthenticated' : 'auth-authenticated');
+
   const loginScreen = document.getElementById('login-screen');
   const appScreen = document.getElementById('app-screen');
-  if (loginScreen) loginScreen.classList.toggle('hidden', !show);
-  if (appScreen) appScreen.classList.toggle('hidden', show);
+
+  if (show) {
+    loginScreen?.removeAttribute('aria-hidden');
+    loginScreen?.removeAttribute('inert');
+    appScreen?.setAttribute('aria-hidden', 'true');
+    appScreen?.setAttribute('inert', '');
+  } else {
+    appScreen?.removeAttribute('aria-hidden');
+    appScreen?.removeAttribute('inert');
+    loginScreen?.setAttribute('aria-hidden', 'true');
+    loginScreen?.setAttribute('inert', '');
+  }
 }
 
 export function showToast(message, type = 'info') {
+  if (typeof window !== 'undefined' && window.__APP_BOOTING__ === true) return;
+
   const container = document.getElementById('toast-container');
   if (!container) return;
   
@@ -1154,38 +1176,58 @@ export function showToast(message, type = 'info') {
   setTimeout(() => { toast.classList.add('animate-slide-out'); setTimeout(() => toast.remove(), 300); }, 3500);
 }
 
-export function showLoading(show) {
-    const oldLoader = document.getElementById('loading-overlay');
-    if (oldLoader) oldLoader.classList.add('hidden');
-    
-    let topBar = document.getElementById('kcs-top-loader');
-    if (!topBar) {
-        topBar = document.createElement('div');
-        topBar.id = 'kcs-top-loader';
-        topBar.className = 'loading-bar';
-        topBar.style.width = '0%';
-        
-        const overlayRoot = document.getElementById('overlay-root');
-        if (overlayRoot) {
-            overlayRoot.appendChild(topBar);
+export function showLoading(show, message = 'Processando...') {
+    try {
+        const booting = typeof window !== 'undefined' && (window.__APP_BOOTING__ === true || window.__AUTH_CHECKING__ === true);
+        if (booting) {
+            console.debug('[showLoading suppressed during boot/auth]', message);
+            if (!show) {
+                const oldLoader = document.getElementById('loading-overlay');
+                if (oldLoader) oldLoader.classList.add('hidden');
+                const existingTopBar = document.getElementById('kcs-top-loader');
+                if (existingTopBar) {
+                    existingTopBar.style.display = 'none';
+                    existingTopBar.style.opacity = '0';
+                    existingTopBar.style.width = '0%';
+                }
+            }
+            return;
         }
-    }
-    
-    if (show) {
-        topBar.style.display = 'block';
-        topBar.style.opacity = '1';
-        topBar.style.width = '15%';
-        setTimeout(() => { if(topBar.style.opacity === '1') topBar.style.width = '65%'; }, 100);
-        setTimeout(() => { if(topBar.style.opacity === '1') topBar.style.width = '85%'; }, 2000);
-    } else {
-        topBar.style.width = '100%';
-        setTimeout(() => {
-            topBar.style.opacity = '0';
-            setTimeout(() => { 
-                topBar.style.display = 'none'; 
-                topBar.style.width = '0%'; 
-            }, 300);
-        }, 400);
+
+        const oldLoader = document.getElementById('loading-overlay');
+        if (oldLoader) oldLoader.classList.add('hidden');
+        
+        let topBar = document.getElementById('kcs-top-loader');
+        if (!topBar) {
+            topBar = document.createElement('div');
+            topBar.id = 'kcs-top-loader';
+            topBar.className = 'loading-bar';
+            topBar.style.width = '0%';
+            
+            const overlayRoot = document.getElementById('overlay-root');
+            if (overlayRoot) {
+                overlayRoot.appendChild(topBar);
+            }
+        }
+        
+        if (show) {
+            topBar.style.display = 'block';
+            topBar.style.opacity = '1';
+            topBar.style.width = '15%';
+            setTimeout(() => { if (topBar.style.opacity === '1') topBar.style.width = '65%'; }, 100);
+            setTimeout(() => { if (topBar.style.opacity === '1') topBar.style.width = '85%'; }, 2000);
+        } else {
+            topBar.style.width = '100%';
+            setTimeout(() => {
+                topBar.style.opacity = '0';
+                setTimeout(() => {
+                    topBar.style.display = 'none';
+                    topBar.style.width = '0%';
+                }, 300);
+            }, 400);
+        }
+    } catch (error) {
+        console.warn('[showLoading] suppressed error:', error);
     }
 }
 
