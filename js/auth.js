@@ -446,3 +446,52 @@ export async function deleteCompanyInCloud(companyId) {
     await deleteDoc(doc(dbCloud, "companies", companyId));
     return { success: true };
 }
+
+export async function createGroup(groupData) {
+    const { collection, addDoc } = await import('https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js');
+
+    const companyId = groupData.company_id || sessionStorage.getItem(TENANT_KEYS.COMPANY_ID);
+
+    if (!companyId) throw new Error('company_id não encontrado.');
+    if (!groupData.name || groupData.name.trim().length < 2) throw new Error('Nome do grupo inválido.');
+
+    const payload = {
+        name: groupData.name.trim(),
+        company_id: companyId,
+        sector_id: groupData.sector_id || null,
+        createdAt: new Date().toISOString(),
+        createdBy: currentUser?.email || 'system'
+    };
+
+    const ref = await addDoc(collection(dbCloud, 'groups'), payload);
+
+    return {
+        success: true,
+        id: ref.id,
+        ...payload
+    };
+}
+
+export async function getGroupsFromCloud() {
+    const { collection, getDocs, query, where } = await import('https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js');
+
+    const companyId = sessionStorage.getItem(TENANT_KEYS.COMPANY_ID);
+    if (!companyId) return [];
+
+    const q = query(
+        collection(dbCloud, 'groups'),
+        where('company_id', '==', companyId)
+    );
+
+    const snap = await getDocs(q);
+    const groups = [];
+
+    snap.forEach(docSnap => {
+        groups.push({
+            id: docSnap.id,
+            ...docSnap.data()
+        });
+    });
+
+    return groups;
+}

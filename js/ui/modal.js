@@ -1,8 +1,19 @@
-import { getCurrentUser, hasPermission, hasRole, getAllUsersFromCloud, getAllCompaniesFromCloud, getAllInvitedUsers } from '../auth.js';
+import { 
+    getCurrentUser, 
+    hasPermission, 
+    hasRole, 
+    getAllUsersFromCloud, 
+    getAllCompaniesFromCloud, 
+    getAllInvitedUsers,
+    createGroup,
+    getGroupsFromCloud
+} from '../auth.js';
 import { initEditor } from './editor.js'; 
 import { formatContentForView, isAppBooting } from './render.js'; 
 import { getFlatCategories, addCategory, removeCategory, updateCategory } from '../services/categories.js';
 import { VISIBILITY, SECTORS } from '../config.js';
+
+
 
 window.__kcs = window.__kcs || {};
 
@@ -1159,6 +1170,22 @@ export async function openSettingsModal() {
         const currentUser = getCurrentUser();
         const users = await getAllUsersFromCloud();
         const invites = await getAllInvitedUsers();
+        const groups = await getGroupsFromCloud();
+
+const GROUPS_BY_SECTOR = SECTORS.reduce((acc, sector) => {
+    acc[sector.id] = [];
+    return acc;
+}, {});
+
+groups.forEach(group => {
+    const sectorId = group.sector_id || 'TI';
+
+    if (!GROUPS_BY_SECTOR[sectorId]) {
+        GROUPS_BY_SECTOR[sectorId] = [];
+    }
+
+    GROUPS_BY_SECTOR[sectorId].push(group);
+});
         
         let companies = [];
         if (isSuperAdmin) {
@@ -1270,6 +1297,90 @@ export async function openSettingsModal() {
             </div>
         </div>`;
 
+     
+
+async function handleCreateGroup(sectorId) {
+    const input = document.querySelector(`[data-group-input="${sectorId}"]`);
+    if (!input) return;
+
+    const name = input.value.trim();
+    if (!name) return;
+
+    const companyId = sessionStorage.getItem('companyId');
+
+    await createGroup({
+        name,
+        company_id: companyId,
+        sector_id: sectorId
+    });
+
+    input.value = '';
+
+    openSettingsModal();
+}
+
+window.handleCreateGroup = handleCreateGroup;
+
+const groupsBySectorHtml = `
+<div class="mb-10">
+    <h3 class="text-sm font-bold uppercase tracking-widest mb-4 flex items-center gap-2" style="color: var(--color-text-muted);">
+        <i class="ph-fill ph-tree-structure text-indigo-500 text-lg"></i> Grupos por Setor
+    </h3>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        ${SECTORS.map(sector => `
+            <div class="rounded-xl p-4 shadow-sm transition-colors hover:bg-black/5 dark:hover:bg-white/5" style="background-color: var(--color-sidebar-background); border: 1px solid var(--color-border-subtle);">
+                
+                <div class="flex items-start justify-between gap-3 mb-3">
+                    <div>
+                        <p class="font-bold text-[14px]" style="color: var(--color-text-inverse);">${safeText(sector.name)}</p>
+                        <p class="text-[11px] font-mono mt-1" style="color: var(--color-text-secondary);">ID: ${safeText(sector.id)}</p>
+                    </div>
+                    <div class="w-9 h-9 rounded-lg bg-indigo-500/10 text-indigo-500 flex items-center justify-center">
+                        <i class="ph-fill ph-users-three text-lg"></i>
+                    </div>
+                </div>
+
+                <div class="flex gap-2 mb-3">
+                    <input 
+                        type="text"
+                        placeholder="Nome do grupo"
+                        data-group-input="${sector.id}"
+                        class="flex-1 rounded-md px-2 py-1 text-xs"
+                        style="background-color: var(--color-editor-background); border: 1px solid var(--color-border); color: var(--color-text-primary);"
+                    />
+                    <button 
+                        type="button"
+                        onclick="handleCreateGroup('${sector.id}')"
+                        class="px-2 py-1 text-xs rounded-md bg-indigo-500 text-white hover:bg-indigo-600"
+                    >
+                        Criar
+                    </button>
+                </div>
+
+                <div data-groups-list>
+                    ${(GROUPS_BY_SECTOR[sector.id] || []).length > 0 ? `
+                        <div class="space-y-2">
+                            ${(GROUPS_BY_SECTOR[sector.id] || []).map(group => `
+                                <div class="flex items-center justify-between rounded-lg px-3 py-2 text-xs"
+                                     style="background-color: var(--color-editor-background); color: var(--color-text-secondary); border: 1px solid var(--color-border);">
+                                    <span class="font-medium">${safeText(group.name)}</span>
+                                    <span class="font-mono opacity-60">${safeText(group.id)}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    ` : `
+                        <div class="rounded-lg px-3 py-2 text-xs"
+                             style="background-color: var(--color-editor-background); color: var(--color-text-secondary); border: 1px dashed var(--color-border);">
+                            Nenhum grupo configurado neste setor.
+                        </div>
+                    `}
+                </div>
+            </div>
+        `).join('')}
+    </div>
+</div>`;
+
         const activeUsersHtml = `
         <div class="mb-10">
             <h3 class="text-sm font-bold uppercase tracking-widest mb-4 flex items-center gap-2" style="color: var(--color-text-muted);"><i class="ph-fill ph-users text-green-500 text-lg"></i> Usuários Registrados</h3>
@@ -1335,6 +1446,7 @@ export async function openSettingsModal() {
                     </div>
                     ${companiesHtml}
                     ${invitesHtml}
+                    ${groupsBySectorHtml}
                     ${activeUsersHtml}
                     ${backupHtml}
                     <div class="h-12"></div>
