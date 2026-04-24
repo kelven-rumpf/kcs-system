@@ -3,7 +3,7 @@
  */
 
 export const CONFIG = {
-  GEMINI_API_KEY: "AIzaSyCl0DJo0_XNEk9yzaHPTc-vbeXpKT5mt3o", 
+  GEMINI_API_KEY: "minha chave", 
 };
 
 export const INACTIVITY_TIMEOUT = 10 * 60 * 1000;
