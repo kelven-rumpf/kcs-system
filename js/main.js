@@ -189,7 +189,12 @@ window.TabManager = (() => {
             closeTab(id);
         });
 
-        contentPanel.addEventListener('input', () => markDirty(id, true));
+        // Adicionar listener de input para marcar dirty, EXCETO para a aba de Administração
+        contentPanel.addEventListener('input', () => {
+            if (id !== 'tab-admin-panel') {
+                markDirty(id, true);
+            }
+        });
 
         switchTab(id);
     }

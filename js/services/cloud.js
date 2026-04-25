@@ -27,11 +27,11 @@ import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/
 import { PLANS } from '../config.js'; 
 
 export const FIREBASE_CONFIG = {
-    apiKey: "minhachave",
-    authDomain: "minhachave",
-    projectId: "minhachave",
-    storageBucket: "minhachave",
-    appId: "minhachave"
+    apiKey: "AIzaSyC_S8IW_iuTrKHRv76DQ3ve-pZCHqNVimA",
+    authDomain: "kcs-system-180db.firebaseapp.com",
+    projectId: "kcs-system-180db",
+    storageBucket: "kcs-system-180db.firebasestorage.app",
+    appId: "1:57579884453:web:62c4f94cc5b4fe60a9624c"
 };
 
 export const appCloud = initializeApp(FIREBASE_CONFIG);

@@ -6,8 +6,14 @@ import {
     getAllCompaniesFromCloud, 
     getAllInvitedUsers,
     createGroup,
-    getGroupsFromCloud
+    getGroupsFromCloud,
+    updateUserGroupsInCloud,
+    deleteGroupFromCloud,
+    getCustomSectorsFromCloud,
+    createSectorInCloud,
+    deleteSectorFromCloud
 } from '../auth.js';
+
 import { initEditor } from './editor.js'; 
 import { formatContentForView, isAppBooting } from './render.js'; 
 import { getFlatCategories, addCategory, removeCategory, updateCategory } from '../services/categories.js';
@@ -1022,6 +1028,56 @@ export function openHistoryModal(item, type) {
 }
 
 // ==========================================
+// FUNÇÃO GLOBAL DE FILTROS PARA ADMIN
+// ==========================================
+window.__kcsAdminFilters = window.__kcsAdminFilters || {
+    companyId: '',
+    sectorId: '',
+    role: ''
+};
+
+function applyAdminUserFilters() {
+    const companyFilter = window.__kcsAdminFilters.companyId;
+    const sectorFilter = window.__kcsAdminFilters.sectorId;
+    const roleFilter = window.__kcsAdminFilters.role;
+
+    const rows = document.querySelectorAll('[data-user-row="true"]');
+    let visibleCount = 0;
+
+    rows.forEach(row => {
+        const company = row.dataset.companyId || '';
+        const sector = row.dataset.sectorId || '';
+        const role = row.dataset.role || '';
+
+        const matchCompany = !companyFilter || company === companyFilter;
+        const matchSector = !sectorFilter || sector === sectorFilter;
+        const matchRole = !roleFilter || role === roleFilter;
+
+        const isVisible = matchCompany && matchSector && matchRole;
+        row.style.display = isVisible ? '' : 'none';
+        if (isVisible) visibleCount++;
+    });
+
+    // Mostrar mensagem se nenhum usuário visível
+    const emptyMsg = document.querySelector('[id$="admin-users-empty-msg"]');
+    if (rows.length > 0) {
+        if (!emptyMsg && visibleCount === 0) {
+            const tbody = document.querySelector('#admin-users-tbody');
+            if (tbody) {
+                const msg = document.createElement('tr');
+                msg.id = 'admin-users-empty-msg';
+                msg.innerHTML = `<td colspan="6" class="py-6 text-center text-sm italic" style="color: var(--color-text-muted);">Nenhum usuário encontrado com os filtros aplicados.</td>`;
+                tbody.appendChild(msg);
+            }
+        } else if (emptyMsg && visibleCount > 0) {
+            emptyMsg.remove();
+        }
+    }
+}
+
+window.__kcsApplyUserFilters = applyAdminUserFilters;
+
+// ==========================================
 // MDI TAB: GERENCIADOR DE CATEGORIAS (BLINDADO E MINIMALISTA)
 // ==========================================
 export async function openCategoryModal(refreshCallback) {
@@ -1159,6 +1215,29 @@ export async function openSettingsModal() {
     container.className = 'flex flex-col h-full bg-editor-background';
     container.id = `view-container-${idUnico}`;
     container.style.backgroundColor = 'var(--color-editor-background)';
+    
+    // Garantir que a aba não seja marcada como dirty ANTES de renderizar
+    if (window.TabManager?.markDirty) {
+        window.TabManager.markDirty('tab-admin-panel', false);
+    }
+    
+    function adminSection(title, icon, colorClass, contentHtml, defaultOpen = true) {
+    return `
+        <details class="mb-6 rounded-xl overflow-hidden shadow-sm" style="background-color: var(--color-sidebar-background); border: 1px solid var(--color-border-subtle);" ${defaultOpen ? 'open' : ''}>
+            <summary class="cursor-pointer select-none px-5 py-4 flex items-center justify-between gap-3 transition-colors hover:bg-black/5 dark:hover:bg-white/5">
+                <div class="flex items-center gap-2">
+                    <i class="${icon} ${colorClass} text-lg"></i>
+                    <span class="text-sm font-bold uppercase tracking-widest" style="color: var(--color-text-muted);">${title}</span>
+                </div>
+                <i class="ph-bold ph-caret-down text-sm" style="color: var(--color-text-muted);"></i>
+            </summary>
+
+            <div class="px-5 pb-5">
+                ${contentHtml}
+            </div>
+        </details>
+    `;
+}
 
     container.innerHTML = `<div class="p-10 flex items-center gap-3 text-blue-500"><i class="ph-bold ph-spinner animate-spin text-2xl"></i> Buscando dados...</div>`;
     window.TabManager.openTab(idUnico, 'Administração', 'ph-gear-six', container);
@@ -1172,10 +1251,29 @@ export async function openSettingsModal() {
         const invites = await getAllInvitedUsers();
         const groups = await getGroupsFromCloud();
 
-const GROUPS_BY_SECTOR = SECTORS.reduce((acc, sector) => {
-    acc[sector.id] = [];
-    return acc;
-}, {});
+        // Sistema híbrido: combinar setores fixos + setores personalizados da nuvem
+        const customSectors = await getCustomSectorsFromCloud();
+        
+        const sectorMap = new Map();
+        
+        // Adicionar setores fixos primeiro
+        [...SECTORS].forEach(s => {
+            sectorMap.set(s.id, { ...s, isCustom: false });
+        });
+        
+        // Adicionar setores personalizados (sem duplicar IDs)
+        [...customSectors].forEach(s => {
+            if (!sectorMap.has(s.id)) {
+                sectorMap.set(s.id, { ...s, isCustom: true });
+            }
+        });
+        
+        const allSectors = Array.from(sectorMap.values());
+
+        const GROUPS_BY_SECTOR = allSectors.reduce((acc, sector) => {
+            acc[sector.id] = [];
+            return acc;
+        }, {});
 
 groups.forEach(group => {
     const sectorId = group.sector_id || 'TI';
@@ -1198,7 +1296,7 @@ groups.forEach(group => {
         if (isSuperAdmin) companiesSelectOptions = companies.map(c => `<option value="${c.companyId}">${c.companyName}</option>`).join('');
         else companiesSelectOptions = `<option value="${currentUser.companyId}">${currentUser.companyName}</option>`;
         
-        const sectorsOptionsHtml = (userSector) => SECTORS.map(s => `<option value="${s.id}" ${userSector === s.id ? 'selected' : ''}>${s.name}</option>`).join('');
+        const sectorsOptionsHtml = (userSector) => allSectors.map(s => `<option value="${s.id}" ${userSector === s.id ? 'selected' : ''}>${s.name}</option>`).join('');
 
         let companiesHtml = '';
         if (isSuperAdmin) {
@@ -1316,114 +1414,311 @@ async function handleCreateGroup(sectorId) {
 
     input.value = '';
 
-    openSettingsModal();
+    // Fechar a aba anterior e abrir novamente
+    const existingTab = document.getElementById('view-container-tab-admin-panel');
+    if (existingTab) {
+        window.TabManager.closeTab('tab-admin-panel', false);
+    }
+
+    await openSettingsModal();
+}
+
+async function handleDeleteGroup(groupId, groupName) {
+    if (!groupId) return;
+
+    const confirmed = confirm(`Deseja excluir o grupo "${groupName}"? Esta ação também removerá o vínculo dos usuários.`);
+    if (!confirmed) return;
+
+    await deleteGroupFromCloud(groupId);
+
+    // Fechar a aba anterior e abrir novamente para garantir atualização
+    const existingTab = document.getElementById('view-container-tab-admin-panel');
+    if (existingTab) {
+        window.TabManager.closeTab('tab-admin-panel', false);
+    }
+
+    await openSettingsModal();
+}
+
+
+
+async function handleToggleUserGroup(userId, groupId, checked) {
+    if (!userId || !groupId) return;
+
+    const currentUser = users.find(u => u.id === userId || u.uid === userId);
+    if (!currentUser) return;
+
+    const currentGroupIds = Array.isArray(currentUser.group_ids)
+        ? [...currentUser.group_ids]
+        : currentUser.group_id
+            ? [currentUser.group_id]
+            : [];
+
+    const nextGroupIds = checked
+        ? [...new Set([...currentGroupIds, groupId])]
+        : currentGroupIds.filter(id => id !== groupId);
+
+    await updateUserGroupsInCloud(userId, nextGroupIds);
+
+    // Atualizar localmente em vez de recarregar
+    currentUser.group_ids = nextGroupIds;
+    currentUser.group_id = nextGroupIds[0] || null;
+
+    // Atualizar apenas o contador do usuário no DOM
+    const countEl = document.querySelector(`[data-user-group-count="${userId}"]`);
+    if (countEl) {
+        countEl.textContent = `${nextGroupIds.length} selecionado${nextGroupIds.length === 1 ? '' : 's'}`;
+    }
 }
 
 window.handleCreateGroup = handleCreateGroup;
+window.handleDeleteGroup = handleDeleteGroup;
+window.handleToggleUserGroup = handleToggleUserGroup;
 
-const groupsBySectorHtml = `
-<div class="mb-10">
-    <h3 class="text-sm font-bold uppercase tracking-widest mb-4 flex items-center gap-2" style="color: var(--color-text-muted);">
-        <i class="ph-fill ph-tree-structure text-indigo-500 text-lg"></i> Grupos por Setor
-    </h3>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-        ${SECTORS.map(sector => `
-            <div class="rounded-xl p-4 shadow-sm transition-colors hover:bg-black/5 dark:hover:bg-white/5" style="background-color: var(--color-sidebar-background); border: 1px solid var(--color-border-subtle);">
+const groupsBySectorHtml = adminSection(
+    'Grupos por Setor',
+    'ph-fill ph-tree-structure',
+    'text-indigo-500',
+    `
+    <div class="space-y-6">
+        <!-- UI para Criar Novo Setor -->
+        <div class="flex gap-2 p-4 rounded-lg" style="background-color: var(--color-editor-background); border: 1px solid var(--color-border);">
+            <input
+                type="text"
+                id="new-sector-name"
+                placeholder="Nome do novo setor"
+                class="flex-1 rounded-md px-3 py-2 text-sm outline-none"
+                style="background-color: var(--color-sidebar-background); border: 1px solid var(--color-border); color: var(--color-text-primary);"
+            />
+            <button
+                type="button"
+                onclick="handleCreateSector()"
+                class="px-4 py-2 rounded-md bg-green-600 text-white text-sm font-semibold hover:bg-green-700 transition-colors"
+                title="Criar novo setor"
+            >
+                <i class="ph-bold ph-plus mr-1"></i> Setor
+            </button>
+        </div>
+
+        <div class="space-y-4">
+            ${allSectors.map(sector => {
+                const sectorGroups = GROUPS_BY_SECTOR[sector.id] || [];
+                const groupCount = sectorGroups.length;
+                const isCustom = sector.isCustom || false;
                 
-                <div class="flex items-start justify-between gap-3 mb-3">
-                    <div>
-                        <p class="font-bold text-[14px]" style="color: var(--color-text-inverse);">${safeText(sector.name)}</p>
-                        <p class="text-[11px] font-mono mt-1" style="color: var(--color-text-secondary);">ID: ${safeText(sector.id)}</p>
-                    </div>
-                    <div class="w-9 h-9 rounded-lg bg-indigo-500/10 text-indigo-500 flex items-center justify-center">
-                        <i class="ph-fill ph-users-three text-lg"></i>
-                    </div>
-                </div>
-
-                <div class="flex gap-2 mb-3">
-                    <input 
-                        type="text"
-                        placeholder="Nome do grupo"
-                        data-group-input="${sector.id}"
-                        class="flex-1 rounded-md px-2 py-1 text-xs"
-                        style="background-color: var(--color-editor-background); border: 1px solid var(--color-border); color: var(--color-text-primary);"
-                    />
-                    <button 
-                        type="button"
-                        onclick="handleCreateGroup('${sector.id}')"
-                        class="px-2 py-1 text-xs rounded-md bg-indigo-500 text-white hover:bg-indigo-600"
-                    >
-                        Criar
-                    </button>
-                </div>
-
-                <div data-groups-list>
-                    ${(GROUPS_BY_SECTOR[sector.id] || []).length > 0 ? `
-                        <div class="space-y-2">
-                            ${(GROUPS_BY_SECTOR[sector.id] || []).map(group => `
-                                <div class="flex items-center justify-between rounded-lg px-3 py-2 text-xs"
-                                     style="background-color: var(--color-editor-background); color: var(--color-text-secondary); border: 1px solid var(--color-border);">
-                                    <span class="font-medium">${safeText(group.name)}</span>
-                                    <span class="font-mono opacity-60">${safeText(group.id)}</span>
-                                </div>
-                            `).join('')}
+                return `
+                <details class="rounded-xl overflow-hidden transition-colors hover:bg-black/5 dark:hover:bg-white/5" style="background-color: var(--color-sidebar-background); border: 1px solid var(--color-border-subtle);">
+                    <summary class="cursor-pointer px-4 py-3 flex items-center justify-between gap-3 transition-colors hover:bg-black/5 dark:hover:bg-white/5" style="color: var(--color-text-primary); list-style:none;">
+                        <div class="flex items-center gap-3">
+                            <i class="ph-bold ph-caret-right text-base"></i>
+                            <div>
+                                <p class="font-semibold" style="color: var(--color-text-inverse);">${safeText(sector.name)}
+                                    ${isCustom ? '<span class="ml-2 text-[10px] px-2 py-1 rounded" style="background-color: rgba(34, 197, 94, 0.2); color: rgb(134, 239, 172);">PERSONALIZADO</span>' : '<span class="ml-2 text-[10px] px-2 py-1 rounded" style="background-color: rgba(99, 102, 241, 0.2); color: rgb(165, 180, 252);">PADRÃO</span>'}
+                                </p>
+                                <p class="text-[11px]" style="color: var(--color-text-secondary);">ID: ${safeText(sector.id)}</p>
+                            </div>
                         </div>
-                    ` : `
-                        <div class="rounded-lg px-3 py-2 text-xs"
-                             style="background-color: var(--color-editor-background); color: var(--color-text-secondary); border: 1px dashed var(--color-border);">
-                            Nenhum grupo configurado neste setor.
+                        <span class="text-[11px] font-semibold" style="color: var(--color-text-muted);">${groupCount} grupo${groupCount === 1 ? '' : 's'}</span>
+                    </summary>
+                    <div class="px-4 pb-4 pt-3 space-y-3">
+                        <div class="flex gap-2">
+                            <input
+                                type="text"
+                                placeholder="Nome do grupo"
+                                data-group-input="${sector.id}"
+                                class="flex-1 rounded-md px-3 py-2 text-sm outline-none"
+                                style="background-color: var(--color-editor-background); border: 1px solid var(--color-border); color: var(--color-text-primary);"
+                            />
+                            <button
+                                type="button"
+                                onclick="handleCreateGroup('${sector.id}')"
+                                class="px-4 py-2 rounded-md bg-indigo-500 text-white text-sm font-semibold hover:bg-indigo-600 transition-colors"
+                            >
+                                Criar
+                            </button>
+                            ${isCustom ? `
+                            <button
+                                type="button"
+                                onclick="handleDeleteSector('${sector.id}', '${safeText(sector.name)}')"
+                                class="px-3 py-2 rounded-md text-red-500 text-sm font-semibold hover:bg-red-500/10 transition-colors"
+                                title="Excluir setor personalizado"
+                            >
+                                <i class="ph-bold ph-trash"></i>
+                            </button>
+                            ` : ''}
                         </div>
-                    `}
+                        ${groupCount > 0 ? `
+                            <div class="space-y-2 max-h-56 overflow-y-auto pr-1">
+                                ${sectorGroups.map(group => `
+                                    <div class="flex items-center justify-between rounded-lg px-3 py-2 text-sm" style="background-color: var(--color-editor-background); color: var(--color-text-primary); border: 1px solid var(--color-border);">
+                                        <div class="min-w-0">
+                                            <p class="font-medium truncate">${safeText(group.name)}</p>
+                                            <p class="font-mono opacity-50 text-[10px] truncate">${safeText(group.id)}</p>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onclick="handleDeleteGroup('${safeText(group.id)}', '${safeText(group.name)}')"
+                                            class="ml-3 p-1.5 rounded text-red-500 transition-colors hover:bg-red-500/10"
+                                            title="Excluir grupo"
+                                        >
+                                            <i class="ph-bold ph-trash text-sm"></i>
+                                        </button>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        ` : `
+                            <div class="rounded-lg px-3 py-2 text-xs" style="background-color: var(--color-editor-background); color: var(--color-text-secondary); border: 1px dashed var(--color-border);">
+                                Nenhum grupo configurado neste setor.
+                            </div>
+                        `}
+                    </div>
+                </details>
+                `;
+            }).join('')}
+        </div>
+    </div>
+    `,
+    true
+);
+
+        const activeUsersHtml = adminSection(
+    'Usuários Registrados',
+    'ph-fill ph-users',
+    'text-green-500',
+    `
+    <div>
+        <!-- Barra de Filtros -->
+        <div class="mb-6 p-5 rounded-xl" style="background-color: var(--color-editor-background); border: 1px solid var(--color-border-subtle);">
+            <div class="text-xs font-bold uppercase tracking-widest mb-4" style="color: var(--color-text-muted);"><i class="ph-fill ph-funnel mr-2"></i>Filtrar por:</div>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                    <label class="block text-[11px] font-semibold mb-2" style="color: var(--color-text-secondary);">Empresa</label>
+                    <select id="filter-company" class="w-full px-3 py-2 rounded-lg text-xs outline-none cursor-pointer transition-colors" style="background-color: var(--color-sidebar-background); color: var(--color-text-primary); border: 1px solid var(--color-border); focus:ring-1 focus:ring-green-500;">
+                        <option value="">Todas</option>
+                        ${companies.map(c => `<option value="${c.companyId}">${safeText(c.companyName)}</option>`).join('')}
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-[11px] font-semibold mb-2" style="color: var(--color-text-secondary);">Setor</label>
+                    <select id="filter-sector" class="w-full px-3 py-2 rounded-lg text-xs outline-none cursor-pointer transition-colors" style="background-color: var(--color-sidebar-background); color: var(--color-text-primary); border: 1px solid var(--color-border); focus:ring-1 focus:ring-green-500;">
+                        <option value="">Todos</option>
+                        ${SECTORS.map(s => `<option value="${s.id}">${safeText(s.name)}</option>`).join('')}
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-[11px] font-semibold mb-2" style="color: var(--color-text-secondary);">Cargo</label>
+                    <select id="filter-role" class="w-full px-3 py-2 rounded-lg text-xs outline-none cursor-pointer transition-colors" style="background-color: var(--color-sidebar-background); color: var(--color-text-primary); border: 1px solid var(--color-border); focus:ring-1 focus:ring-green-500;">
+                        <option value="">Todos</option>
+                        <option value="super_admin">Super Admin</option>
+                        <option value="admin">Admin</option>
+                        <option value="analyst">Analista</option>
+                        <option value="user">Usuário</option>
+                    </select>
                 </div>
             </div>
-        `).join('')}
-    </div>
-</div>`;
+        </div>
 
-        const activeUsersHtml = `
-        <div class="mb-10">
-            <h3 class="text-sm font-bold uppercase tracking-widest mb-4 flex items-center gap-2" style="color: var(--color-text-muted);"><i class="ph-fill ph-users text-green-500 text-lg"></i> Usuários Registrados</h3>
-            <div class="rounded-xl overflow-hidden shadow-sm" style="background-color: var(--color-sidebar-background); border: 1px solid var(--color-border-subtle);">
-                <table class="w-full text-left border-collapse">
-                    <tbody class="divide-y" style="divide-color: var(--color-border-subtle);">
+        <!-- Tabela de Usuários -->
+        <div class="rounded-xl overflow-hidden shadow-sm" style="background-color: var(--color-sidebar-background); border: 1px solid var(--color-border-subtle);">
+            <table class="w-full text-left border-collapse">
+                <tbody class="divide-y" style="divide-color: var(--color-border-subtle);">
+                    <tbody id="admin-users-tbody">
                         ${users.map(u => {
                             const safeName = (u.displayName && String(u.displayName) !== 'undefined') ? u.displayName : 'Usuário KCS';
                             const safeEmail = (u.email && String(u.email) !== 'undefined') ? u.email : 'Sem e-mail';
+                            const userSectorId = u.sectorId || u.sector_id || 'TI';
+                            const userCompanyId = u.companyId || 'LIMBO_TENANT';
+                            const userRole = u.role || 'user';
+                            const userGroupIds = Array.isArray(u.group_ids)
+                                ? u.group_ids
+                                : u.group_id
+                                    ? [u.group_id]
+                                    : [];
+                            const groupsInSector = groups.filter(group => !group.sector_id || group.sector_id === userSectorId);
+                            const selectedCount = userGroupIds.length;
+
                             return `
-                            <tr class="transition-colors hover:bg-black/5 dark:hover:bg-white/5">
-                                <td class="py-3 px-5 flex items-center gap-3">
-                                    <img src="${u.photoURL || 'https://via.placeholder.com/40'}" class="w-8 h-8 rounded-full border" style="border-color: var(--color-border);" onerror="this.style.display='none'">
-                                    <div>
-                                        <p class="font-bold text-[13px]" style="color: var(--color-text-inverse);">${safeText(safeName)}</p>
-                                        <p class="text-[12px]" style="color: var(--color-text-secondary);">${safeText(safeEmail)}</p>
+                            <tr class="transition-colors hover:bg-black/5 dark:hover:bg-white/5" data-user-row="true" data-user-id="${u.id}" data-company-id="${userCompanyId}" data-sector-id="${userSectorId}" data-role="${userRole}">
+                                <td class="py-3 px-5 flex items-center gap-3 min-w-[200px]">
+                                    <img src="${u.photoURL || 'https://via.placeholder.com/40'}" class="w-8 h-8 rounded-full border flex-shrink-0" style="border-color: var(--color-border);" onerror="this.style.display='none'">
+                                    <div class="min-w-0">
+                                        <p class="font-bold text-[13px] truncate" style="color: var(--color-text-inverse);">${safeText(safeName)}</p>
+                                        <p class="text-[12px] truncate" style="color: var(--color-text-secondary);">${safeText(safeEmail)}</p>
                                     </div>
                                 </td>
-                                <td class="py-3 px-5 text-right">
-                                    <div class="flex items-center justify-end gap-2">
-                                        ${isSuperAdmin ? `
-                                        <select class="px-2 py-1.5 rounded text-xs outline-none cursor-pointer" style="background-color: var(--color-editor-background); color: var(--color-text-primary); border: 1px solid var(--color-border);" data-action="update-company" data-id="${u.id}">
+
+                                <td class="py-3 px-5">
+                                    ${isSuperAdmin ? `
+                                        <select class="w-full px-2 py-1.5 rounded text-xs outline-none cursor-pointer" style="background-color: var(--color-editor-background); color: var(--color-text-primary); border: 1px solid var(--color-border);" data-action="update-company" data-id="${u.id}">
                                             <option value="LIMBO_TENANT" ${u.companyId === 'LIMBO_TENANT' ? 'selected' : ''}>⚠️ Pendente</option>
                                             ${companiesSelectOptions.replace(`value="${u.companyId}"`, `value="${u.companyId}" selected`)}
-                                        </select>` : ''}
-                                        <select class="px-2 py-1.5 rounded text-xs outline-none cursor-pointer" style="background-color: var(--color-editor-background); color: var(--color-text-primary); border: 1px solid var(--color-border);" data-action="update-sector" data-id="${u.id}">
-                                            ${sectorsOptionsHtml(u.sectorId || 'TI')}
                                         </select>
-                                        <select class="px-2 py-1.5 rounded text-xs outline-none cursor-pointer" style="background-color: var(--color-editor-background); color: var(--color-text-primary); border: 1px solid var(--color-border);" data-action="update-role" data-id="${u.id}">
-                                            ${isSuperAdmin ? `<option value="super_admin" ${u.role === 'super_admin' ? 'selected' : ''}>Super Admin</option>` : ''}
-                                            <option value="admin" ${u.role === 'admin' ? 'selected' : ''}>Admin</option>
-                                            <option value="analyst" ${u.role === 'analyst' ? 'selected' : ''}>Analista</option>
-                                            <option value="user" ${u.role === 'user' ? 'selected' : ''}>Usuário</option>
-                                        </select>
-                                        <button class="p-1.5 rounded text-red-500 transition-colors" style="background-color: var(--color-editor-background); border: 1px solid var(--color-border);" onmouseover="this.style.backgroundColor='rgba(239,68,68,0.1)';" onmouseout="this.style.backgroundColor='var(--color-editor-background)';" data-action="delete-user" data-id="${u.id}"><i class="ph-bold ph-trash text-sm"></i></button>
-                                    </div>
+                                    ` : `
+                                        <div class="text-sm" style="color: var(--color-text-secondary);">${safeText(u.companyName || currentUser.companyName || '')}</div>
+                                    `}
+                                </td>
+
+                                <td class="py-3 px-5">
+                                    <select class="w-full px-2 py-1.5 rounded text-xs outline-none cursor-pointer" style="background-color: var(--color-editor-background); color: var(--color-text-primary); border: 1px solid var(--color-border);" data-action="update-sector" data-id="${u.id}">
+                                        ${sectorsOptionsHtml(userSectorId)}
+                                    </select>
+                                </td>
+
+                                <td class="py-3 px-5">
+                                    <select class="w-full px-2 py-1.5 rounded text-xs outline-none cursor-pointer" style="background-color: var(--color-editor-background); color: var(--color-text-primary); border: 1px solid var(--color-border);" data-action="update-role" data-id="${u.id}">
+                                        ${isSuperAdmin ? `<option value="super_admin" ${u.role === 'super_admin' ? 'selected' : ''}>Super Admin</option>` : ''}
+                                        <option value="admin" ${u.role === 'admin' ? 'selected' : ''}>Admin</option>
+                                        <option value="analyst" ${u.role === 'analyst' ? 'selected' : ''}>Analista</option>
+                                        <option value="user" ${u.role === 'user' ? 'selected' : ''}>Usuário</option>
+                                    </select>
+                                </td>
+
+                                <td class="py-3 px-5">
+                                    <details class="rounded-lg overflow-hidden transition-colors" style="background-color: var(--color-editor-background); border: 1px solid var(--color-border);">
+                                        <summary class="flex items-center justify-between gap-2 px-3 py-2 text-xs font-semibold cursor-pointer transition-colors hover:bg-black/5 dark:hover:bg-white/5" style="color: var(--color-text-primary); list-style:none;">
+                                            <span class="flex items-center gap-1.5">
+                                                <i class="ph-bold ph-caret-right text-xs"></i>
+                                                <span>Grupos <strong>(<span data-user-group-count="${u.id}">${selectedCount}</span>)</strong></span>
+                                            </span>
+                                        </summary>
+                                        <div class="mt-1 max-h-40 overflow-y-auto space-y-1 px-2 py-2">
+                                            ${groupsInSector.map(group => `
+                                                <label class="flex items-center gap-2 rounded-md px-2 py-1.5 text-xs cursor-pointer transition-colors hover:bg-black/5 dark:hover:bg-white/5" style="color: var(--color-text-primary);">
+                                                    <input 
+                                                        type="checkbox"
+                                                        data-action="toggle-user-group"
+                                                        data-id="${u.id}"
+                                                        data-group-id="${safeText(group.id)}"
+                                                        ${userGroupIds.includes(group.id) ? 'checked' : ''}
+                                                    />
+                                                    <span class="flex-1 truncate">${safeText(group.name)}</span>
+                                                </label>
+                                            `).join('') || `
+                                                <div class="text-[10px] italic px-2 py-1 text-center" style="color: var(--color-text-muted);">Nenhum grupo</div>
+                                            `}
+                                        </div>
+                                    </details>
+                                </td>
+
+                                <td class="py-3 px-5 text-right">
+                                    <button class="p-1.5 rounded text-red-500 transition-colors" style="background-color: var(--color-editor-background); border: 1px solid var(--color-border);" onmouseover="this.style.backgroundColor='rgba(239,68,68,0.1)';" onmouseout="this.style.backgroundColor='var(--color-editor-background)';" data-action="delete-user" data-id="${u.id}">
+                                        <i class="ph-bold ph-trash text-sm"></i>
+                                    </button>
                                 </td>
                             </tr>`;
-                        }).join('') || `<tr><td colspan="2" class="py-6 text-center text-sm italic" style="color: var(--color-text-muted);">Nenhum usuário ativo.</td></tr>`}
+                        }).join('') || `<tr><td colspan="6" class="py-6 text-center text-sm italic" style="color: var(--color-text-muted);">Nenhum usuário ativo.</td></tr>`}
                     </tbody>
-                </table>
-            </div>
-        </div>`;
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Event listeners para filtros -->
+        <div style="display:none;"></div>
+    </div>
+    `,
+    true
+);
 
         const backupHtml = isSuperAdmin ? `
         <div class="mb-10 p-6 rounded-xl border border-green-500/20 bg-green-500/5">
@@ -1444,6 +1739,7 @@ const groupsBySectorHtml = `
                         </h2>
                         <p class="text-sm" style="color: var(--color-text-secondary);">Gerencie permissões, usuários e configurações estruturais da plataforma.</p>
                     </div>
+                    
                     ${companiesHtml}
                     ${invitesHtml}
                     ${groupsBySectorHtml}
@@ -1464,6 +1760,13 @@ const groupsBySectorHtml = `
         container.querySelectorAll('[data-action="remove-invite"]').forEach(btn => btn.addEventListener('click', (e) => window.__kcs.removeInvite(e.currentTarget.dataset.email)));
         container.querySelectorAll('[data-action="update-company"]').forEach(sel => sel.addEventListener('change', (e) => window.__kcs.updateUserCompany(e.currentTarget.dataset.id, e.target.value)));
         container.querySelectorAll('[data-action="update-sector"]').forEach(sel => sel.addEventListener('change', (e) => window.__kcs.updateUserSector(e.currentTarget.dataset.id, e.target.value)));
+        container.querySelectorAll('[data-action="toggle-user-group"]').forEach(input => input.addEventListener('change', (e) => {
+    window.handleToggleUserGroup(
+        e.currentTarget.dataset.id,
+        e.currentTarget.dataset.groupId,
+        e.currentTarget.checked
+    );
+}));
         container.querySelectorAll('[data-action="update-role"]').forEach(sel => sel.addEventListener('change', (e) => window.__kcs.updateUserRole(e.currentTarget.dataset.id, e.target.value)));
         container.querySelectorAll('[data-action="delete-user"]').forEach(btn => btn.addEventListener('click', (e) => window.__kcs.deleteUser(e.currentTarget.dataset.id)));
         container.querySelectorAll('[data-action="trigger-backup"]').forEach(btn => btn.addEventListener('click', () => window.__kcs.triggerManualBackup()));
@@ -1478,6 +1781,33 @@ const groupsBySectorHtml = `
                 const rl = container.querySelector('#invite-role').value;
                 await window.__kcs.inviteUser(em, rl, cp, sc);
             });
+        }
+
+        // Inicializar filtros de usuários
+        requestAnimationFrame(() => {
+            // Vincular eventos de filtros
+            ['filter-company', 'filter-sector', 'filter-role'].forEach(id => {
+                const element = container.querySelector(`#${id}`);
+                if (element) {
+                    element.addEventListener('change', (e) => {
+                        window.__kcsAdminFilters = window.__kcsAdminFilters || {};
+                        if (id === 'filter-company') window.__kcsAdminFilters.companyId = e.target.value;
+                        if (id === 'filter-sector') window.__kcsAdminFilters.sectorId = e.target.value;
+                        if (id === 'filter-role') window.__kcsAdminFilters.role = e.target.value;
+                        applyAdminUserFilters();
+                    });
+                }
+            });
+
+            // Aplicar filtros iniciais
+            if (window.__kcsApplyUserFilters) {
+                window.__kcsApplyUserFilters();
+            }
+        });
+
+        // Garantir que a aba não seja marcada como dirty
+        if (window.TabManager?.markDirty) {
+            window.TabManager.markDirty('tab-admin-panel', false);
         }
 
     } catch (e) { 

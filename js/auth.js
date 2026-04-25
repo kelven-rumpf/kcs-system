@@ -290,6 +290,70 @@ export async function updateUserCompanyInCloud(uid, newCompanyId) {
     return { success: true };
 }
 
+export async function updateUserGroupsInCloud(userId, groupIds) {
+    const { doc, updateDoc } = await import('https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js');
+
+    if (!userId) throw new Error('userId não informado.');
+
+    const normalizedGroupIds = Array.isArray(groupIds)
+        ? groupIds.filter(Boolean)
+        : [];
+
+    const userRef = doc(dbCloud, 'users', userId);
+
+    await updateDoc(userRef, {
+        group_ids: normalizedGroupIds,
+        group_id: null,
+        updatedAt: new Date().toISOString()
+    });
+
+    return {
+        success: true,
+        userId,
+        group_ids: normalizedGroupIds
+    };
+}
+
+export async function deleteGroupFromCloud(groupId) {
+    const { 
+        doc, 
+        deleteDoc, 
+        collection, 
+        query, 
+        where, 
+        getDocs, 
+        updateDoc 
+    } = await import('https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js');
+
+    if (!groupId) throw new Error('groupId não informado.');
+
+    const usersQuery = query(
+        collection(dbCloud, 'users'),
+        where('group_ids', 'array-contains', groupId)
+    );
+
+    const usersSnap = await getDocs(usersQuery);
+
+    const updates = usersSnap.docs.map(userDoc => {
+        const userData = userDoc.data();
+        const currentGroupIds = Array.isArray(userData.group_ids) ? userData.group_ids : [];
+
+        return updateDoc(doc(dbCloud, 'users', userDoc.id), {
+            group_ids: currentGroupIds.filter(id => id !== groupId),
+            updatedAt: new Date().toISOString()
+        });
+    });
+
+    await Promise.all(updates);
+
+    await deleteDoc(doc(dbCloud, 'groups', groupId));
+
+    return {
+        success: true,
+        groupId
+    };
+}
+
 export async function updateUserSectorInCloud(uid, newSectorId) {
     const { doc, updateDoc } = await import('https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js');
     await updateDoc(doc(dbCloud, "users", uid), { sectorId: newSectorId });
@@ -494,4 +558,130 @@ export async function getGroupsFromCloud() {
     });
 
     return groups;
+}
+
+// ==========================================
+// SECTOR MANAGEMENT (CUSTOM SECTORS)
+// ==========================================
+
+export async function getCustomSectorsFromCloud() {
+    const { collection, getDocs, query, where } = await import('https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js');
+
+    const companyId = sessionStorage.getItem(TENANT_KEYS.COMPANY_ID);
+    if (!companyId) return [];
+
+    const q = query(
+        collection(dbCloud, 'sectors'),
+        where('company_id', '==', companyId)
+    );
+
+    const snap = await getDocs(q);
+    const sectors = [];
+
+    snap.forEach(docSnap => {
+        sectors.push({
+            id: docSnap.id,
+            ...docSnap.data()
+        });
+    });
+
+    return sectors;
+}
+
+export async function createSectorInCloud(name) {
+    const { collection, addDoc } = await import('https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js');
+
+    const companyId = sessionStorage.getItem(TENANT_KEYS.COMPANY_ID);
+
+    if (!companyId) throw new Error('company_id não encontrado.');
+    if (!name || name.trim().length < 2) throw new Error('Nome do setor inválido.');
+
+    // Gerar ID em slug uppercase (ex: "TI Novo" -> "TI_NOVO")
+    const sectorId = name
+        .trim()
+        .toUpperCase()
+        .replace(/\s+/g, '_')
+        .replace(/[^A-Z0-9_]/g, '');
+
+    // Verificar duplicação
+    const customSectors = await getCustomSectorsFromCloud();
+    const allSectors = [...SECTORS, ...customSectors];
+
+    if (allSectors.find(s => s.id === sectorId)) {
+        throw new Error(`Setor com ID "${sectorId}" já existe.`);
+    }
+
+    const payload = {
+        id: sectorId,
+        name: name.trim(),
+        company_id: companyId,
+        isCustom: true,
+        createdAt: new Date().toISOString(),
+        createdBy: currentUser?.email || 'system'
+    };
+
+    const docRef = await addDoc(collection(dbCloud, 'sectors'), payload);
+
+    return {
+        success: true,
+        id: sectorId,
+        ...payload
+    };
+}
+
+export async function deleteSectorFromCloud(sectorId) {
+    const { collection, query, where, getDocs, deleteDoc, doc } = await import('https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js');
+
+    const companyId = sessionStorage.getItem(TENANT_KEYS.COMPANY_ID);
+    if (!companyId) throw new Error('company_id não encontrado.');
+
+    // Verificar se é setor personalizado (não pode deletar SECTORS fixos)
+    const isCustom = !SECTORS.find(s => s.id === sectorId);
+    if (!isCustom) {
+        throw new Error('Não é possível excluir setores padrão do sistema.');
+    }
+
+    // Verificar se há grupos usando este setor
+    const groupsQuery = query(
+        collection(dbCloud, 'groups'),
+        where('company_id', '==', companyId),
+        where('sector_id', '==', sectorId)
+    );
+
+    const groupsSnap = await getDocs(groupsQuery);
+
+    if (groupsSnap.size > 0) {
+        throw new Error(`Não é possível excluir setor com ${groupsSnap.size} grupo(s) vinculado(s).`);
+    }
+
+    // Verificar se há usuários usando este setor
+    const usersQuery = query(
+        collection(dbCloud, 'users'),
+        where('company_id', '==', companyId),
+        where('sectorId', '==', sectorId)
+    );
+
+    const usersSnap = await getDocs(usersQuery);
+
+    if (usersSnap.size > 0) {
+        throw new Error(`Não é possível excluir setor com ${usersSnap.size} usuário(s) vinculado(s).`);
+    }
+
+    // Se passou nas verificações, buscar o documento e deletar
+    const sectorsQuery = query(
+        collection(dbCloud, 'sectors'),
+        where('id', '==', sectorId),
+        where('company_id', '==', companyId)
+    );
+
+    const sectorsSnap = await getDocs(sectorsQuery);
+
+    if (sectorsSnap.size === 0) {
+        throw new Error('Setor não encontrado.');
+    }
+
+    const sectorDoc = sectorsSnap.docs[0];
+    await deleteDoc(sectorDoc.ref);
+
+    return { success: true, message: 'Setor excluído com sucesso.' };
 }
