@@ -8,6 +8,13 @@ import { doc, setDoc, getDoc, getDocs, deleteDoc, collection, query, where, upda
 import { getCurrentUser } from '../auth.js';
 import { CONFIG, COLLECTION_ARTICLES } from '../config.js';
 
+import {
+    filterArticlesByUserScope,
+    canViewArticle,
+    canEditArticle,
+    canApproveArticle
+} from './visibility.js';
+
 // ID de Sessão Único (Protege contra o mesmo usuário abrindo 2 abas)
 export const SESSION_ID = Math.random().toString(36).substring(2, 15);
 
@@ -227,125 +234,257 @@ async function syncFirebaseToLocal(companyId) {
     }
 }
 
+
+
+
 export async function listArticles(forceSync = false) { 
     const user = getCurrentUser();
+
     if (!user || !user.companyId) return [];
 
     if (!forceSync) {
         try {
-            const cached = await dbLocal.articles.where('companyId').equals(user.companyId).toArray();
+            const cached = await dbLocal.articles
+                .where('companyId')
+                .equals(user.companyId)
+                .toArray();
+
             if (cached.length > 0) {
-                // Sincroniza em background (Fire and Forget)
                 syncFirebaseToLocal(user.companyId).catch(() => {});
-                return cached;
+                return filterArticlesByUserScope(cached, user);
             }
         } catch (e) {
             console.warn("[Dexie] Falha ao ler cache, recorrendo à nuvem:", e);
         }
     }
-    
-    return await syncFirebaseToLocal(user.companyId);
+
+    const articles = await syncFirebaseToLocal(user.companyId);
+    return filterArticlesByUserScope(articles, user);
 }
-export async function getArticle(id) { 
-    // Sempre busca da nuvem para garantir a versão mais recente em leitura de artigo
-    const docRef = doc(dbCloud, COLLECTION_ARTICLES, id);
-    const snap = await getDoc(docRef);
-    if (snap.exists()) {
-        const data = snap.data();
-        dbLocal.articles.put(data).catch(() => {}); // Atualiza o cache
-        return data;
+
+
+export async function getArticle(articleId) {
+  try {
+    const user = getCurrentUser();
+    if (!user) throw new Error('Usuário não autenticado');
+
+    const ref = doc(dbCloud, COLLECTION_ARTICLES, articleId);
+    const snapshot = await getDoc(ref);
+
+    if (!snapshot.exists()) {
+      throw new Error('Procedimento não encontrado');
     }
-    return null;
+
+    const article = {
+      id: snapshot.id,
+      ...snapshot.data()
+    };
+
+    if (!canViewArticle(user, article)) {
+      throw new Error('Sem permissão para visualizar este procedimento.');
+    }
+
+    return article;
+
+  } catch (error) {
+    console.error('Erro ao buscar artigo:', error);
+    throw error;
+  }
 }
+
 
 export async function createArticle(data) {
     try {
         const user = getCurrentUser();
-        if (!user) throw new Error("Sessão expirada.");
-        const userId = user.uid || user.id || 'unknown_user_id'; 
-        const authorName = user.displayName || user.name || user.email || 'Usuário KCS';
-        const newId = `kcs_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+        if (!user) throw new Error('Usuário não autenticado');
 
-        const newArticle = {
-            id: newId,
-            articleNumber: Math.floor(Math.random() * 900000) + 100000, 
-            title: data.title || '',
-            symptom: data.symptom || '',
-            environment: data.environment || '',
-            cause: data.cause || '',
-            solution: data.solution || '',
-            steps: data.steps || '', 
-            categoryId: data.categoryId || '',
-            visibility: data.visibility || 'public',
-            tags: Array.isArray(data.tags) ? data.tags : [],
-            createdBy: authorName,
-            authorId: userId,
-            reviewerId: null,
-            status: data.statusRequest === 'approved' ? 'approved' : 'pendente_revisao', 
-            companyId: user.companyId || 'LIMBO_TENANT',
-            sectorId: user.sectorId || 'TI',
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            likes: [], favorites: [], comments: [], history: [],
-            currentEditorId: null,
-            currentEditorName: null,
-            currentEditorSession: null,
-            lastEditHeartbeat: null
+        const now = new Date().toISOString();
+
+        const userId = user.id || user.uid;
+
+        const isInvalidName = (value) => {
+            if (!value || typeof value !== 'string') return true;
+
+            const normalized = value.trim();
+
+            if (!normalized) return true;
+            if (normalized === userId) return true;
+            if (normalized.length > 28 && !normalized.includes(' ') && !normalized.includes('@')) return true;
+
+            return false;
         };
-        
-        await setDoc(doc(dbCloud, COLLECTION_ARTICLES, newId), newArticle);
-        await dbLocal.articles.put(newArticle).catch(() => {}); // Adiciona ao Cache
-        
-        return newArticle;
+
+        const candidates = [
+            user.displayName,
+            user.name,
+            user.fullName,
+            user.nome,
+            user.email
+        ];
+
+        const validName = candidates.find(value => !isInvalidName(value));
+
+        const authorName = validName
+            ? validName.trim()
+            : 'Usuário KCS';
+
+        const requestedStatus =
+            data.status ||
+            data.statusRequest ||
+            data.workflowStatus ||
+            'pendente_revisao';
+
+        const normalizedStatus = String(requestedStatus || '').toLowerCase();
+
+        const cleanArticleNumber = data.articleNumber
+            ? String(data.articleNumber).replace(/^#KCS-/i, '')
+            : Date.now().toString().slice(-6);
+
+        const article = {
+            ...data,
+
+            companyId: user.companyId,
+            sectorId: data.sectorId || user.sectorId || null,
+
+            group_ids: Array.isArray(data.group_ids)
+                ? data.group_ids
+                : Array.isArray(user.group_ids)
+                    ? user.group_ids
+                    : [],
+
+            articleNumber: cleanArticleNumber,
+
+            createdBy: authorName,
+            updatedBy: authorName,
+
+            createdById: userId,
+            authorId: userId,
+            updatedById: userId,
+            created_by: userId,
+
+            authorName: authorName,
+            author: authorName,
+            createdByName: authorName,
+            updatedByName: authorName,
+            created_by_name: authorName,
+
+            createdAt: now,
+            updatedAt: now,
+            created_at: now,
+            updated_at: now,
+
+            visibility: data.visibility || 'public',
+
+            views: data.views || 0,
+            likes: Array.isArray(data.likes) ? data.likes : [],
+            favorites: Array.isArray(data.favorites) ? data.favorites : [],
+            comments: Array.isArray(data.comments) ? data.comments : []
+        };
+
+        if (
+            normalizedStatus === 'approved' ||
+            normalizedStatus === 'publicado' ||
+            normalizedStatus === 'published'
+        ) {
+            article.status = canApproveArticle(user, article)
+                ? 'approved'
+                : 'pendente_revisao';
+
+            if (article.status === 'approved') {
+                article.approvedBy = authorName;
+                article.approvedById = userId;
+                article.reviewedBy = authorName;
+                article.reviewedById = userId;
+                article.validatedBy = authorName;
+                article.validatedById = userId;
+                article.approvedAt = now;
+            }
+        } else {
+            article.status = requestedStatus || 'pendente_revisao';
+        }
+
+        const docRef = await addDoc(
+            collection(dbCloud, COLLECTION_ARTICLES),
+            article
+        );
+
+        article.id = docRef.id;
+
+        await setDoc(
+            doc(dbCloud, COLLECTION_ARTICLES, docRef.id),
+            {
+                id: docRef.id
+            },
+            { merge: true }
+        );
+
+        try {
+            await dbLocal.articles.put(article);
+        } catch (cacheError) {
+            console.warn('[Dexie] Falha ao salvar artigo no cache local:', cacheError);
+        }
+
+        return article;
+
     } catch (error) {
-        console.error("Erro ao salvar procedimento:", error);
+        console.error('Erro ao criar artigo:', error);
         throw error;
     }
 }
 
-export async function updateArticle(id, data) {
-    try {
-        const user = getCurrentUser();
-        if (!user) throw new Error("Usuário não autenticado.");
-        const userId = user.uid || user.id || 'unknown_user_id';
-        const authorName = user.displayName || user.name || user.email || 'Usuário KCS';
-        
-        const existing = await getArticle(id);
-        if (!existing) throw new Error("Artigo não encontrado.");
 
-        const snapshot = { ...existing };
-        delete snapshot.history; 
-        const newHistory = existing.history || [];
-        newHistory.push(snapshot);
+export async function updateArticle(articleId, updates) {
+  try {
+    const user = getCurrentUser();
+    if (!user) throw new Error('Usuário não autenticado');
 
-        let statusFinal = data.statusRequest === 'approved' ? 'approved' : (data.status || existing.status);
-        let reviewerFinal = existing.reviewerId || null;
-        if (statusFinal === 'approved' && existing.status !== 'approved') reviewerFinal = userId;
+    const ref = doc(dbCloud, COLLECTION_ARTICLES, articleId);
+    const snapshot = await getDoc(ref);
 
-        const updatedArticle = {
-            ...existing,
-            ...data,
-            steps: data.steps !== undefined ? data.steps : existing.steps,
-            updatedBy: authorName,
-            updaterId: userId,
-            updatedAt: new Date().toISOString(),
-            history: newHistory,
-            status: statusFinal,
-            reviewerId: reviewerFinal,
-            currentEditorId: null,
-            currentEditorName: null,
-            currentEditorSession: null,
-            lastEditHeartbeat: null
-        };
-        
-        await updateDoc(doc(dbCloud, COLLECTION_ARTICLES, id), updatedArticle);
-        await dbLocal.articles.put(updatedArticle).catch(() => {}); // Atualiza o Cache
-        
-        return updatedArticle;
-    } catch (error) {
-        console.error("Erro ao salvar procedimento:", error);
-        throw error;
+    if (!snapshot.exists()) {
+      throw new Error('Procedimento não encontrado');
     }
+
+    const article = {
+      id: snapshot.id,
+      ...snapshot.data()
+    };
+
+    if (!canEditArticle(user, article)) {
+      throw new Error('Sem permissão para editar este procedimento');
+    }
+
+    if (updates.status === 'approved') {
+      if (!canApproveArticle(user, article)) {
+        throw new Error('Sem permissão para aprovar este procedimento');
+      }
+    }
+
+    const payload = {
+      ...updates,
+      updatedAt: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+
+    await updateDoc(ref, payload);
+
+    const updatedArticle = {
+      ...article,
+      ...payload
+    };
+
+    try {
+      await dbLocal.articles.put(updatedArticle);
+    } catch (cacheError) {
+      console.warn('[Dexie] Falha ao atualizar cache local:', cacheError);
+    }
+
+    return updatedArticle;
+
+  } catch (error) {
+    console.error('Erro ao atualizar artigo:', error);
+    throw error;
+  }
 }
 
 export async function removeArticle(id) { 
