@@ -18,6 +18,7 @@ import { initEditor } from './editor.js';
 import { formatContentForView, isAppBooting } from './render.js'; 
 import { getFlatCategories, addCategory, removeCategory, updateCategory } from '../services/categories.js';
 import { VISIBILITY, SECTORS } from '../config.js';
+import { getAllSectors } from '../services/sectorDirectory.js';
 
 
 
@@ -1296,7 +1297,28 @@ groups.forEach(group => {
         if (isSuperAdmin) companiesSelectOptions = companies.map(c => `<option value="${c.companyId}">${c.companyName}</option>`).join('');
         else companiesSelectOptions = `<option value="${currentUser.companyId}">${currentUser.companyName}</option>`;
         
-        const sectorsOptionsHtml = (userSector) => allSectors.map(s => `<option value="${s.id}" ${userSector === s.id ? 'selected' : ''}>${s.name}</option>`).join('');
+function sectorsOptionsHtml(userSector) {
+    const normalize = (v) =>
+        String(v || '')
+            .trim()
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '');
+
+    const normalizedUserSector = normalize(userSector);
+
+    return allSectors.map(s => {
+        const isSelected =
+            normalize(s.id) === normalizedUserSector ||
+            normalize(s.name) === normalizedUserSector;
+
+        return `
+            <option value="${safeText(s.id)}" ${isSelected ? 'selected' : ''}>
+                ${safeText(s.name)}
+            </option>
+        `;
+    }).join('');
+}
 
         let companiesHtml = '';
         if (isSuperAdmin) {
@@ -1439,6 +1461,66 @@ async function handleDeleteGroup(groupId, groupName) {
 
     await openSettingsModal();
 }
+
+async function handleCreateSector() {
+    const input = document.getElementById('new-sector-name');
+    if (!input) return;
+
+    const name = input.value.trim();
+    if (!name) {
+        window.__kcs?.showToast?.('Informe o nome do setor.', 'warning');
+        return;
+    }
+
+    try {
+        await createSectorInCloud(name);
+
+        input.value = '';
+
+        window.__kcs?.showToast?.(`Setor "${name}" criado com sucesso.`, 'success');
+
+        const existingTab = document.getElementById('view-container-tab-admin-panel');
+        if (existingTab) {
+            window.TabManager.closeTab('tab-admin-panel', false);
+        }
+
+        await openSettingsModal();
+
+    } catch (error) {
+        console.error('Erro ao criar setor:', error);
+        window.__kcs?.showToast?.(error.message || 'Erro ao criar setor.', 'error');
+    }
+}
+
+async function handleDeleteSector(sectorId, sectorName) {
+    if (!sectorId) return;
+
+    const confirmed = confirm(`Deseja excluir o setor "${sectorName}"? Esta ação pode afetar usuários, grupos e procedimentos vinculados.`);
+    if (!confirmed) return;
+
+    try {
+        await deleteSectorFromCloud(sectorId);
+
+        window.__kcs?.showToast?.(`Setor "${sectorName}" excluído com sucesso.`, 'success');
+
+        const existingTab = document.getElementById('view-container-tab-admin-panel');
+        if (existingTab) {
+            window.TabManager.closeTab('tab-admin-panel', false);
+        }
+
+        await openSettingsModal();
+
+    } catch (error) {
+        console.error('Erro ao excluir setor:', error);
+        window.__kcs?.showToast?.(error.message || 'Erro ao excluir setor.', 'error');
+    }
+}
+
+window.handleCreateSector = handleCreateSector;
+window.handleDeleteSector = handleDeleteSector;
+window.handleCreateGroup = handleCreateGroup;
+window.handleDeleteGroup = handleDeleteGroup;
+window.handleToggleUserGroup = handleToggleUserGroup;
 
 
 
@@ -1607,7 +1689,7 @@ const groupsBySectorHtml = adminSection(
                     <label class="block text-[11px] font-semibold mb-2" style="color: var(--color-text-secondary);">Setor</label>
                     <select id="filter-sector" class="w-full px-3 py-2 rounded-lg text-xs outline-none cursor-pointer transition-colors" style="background-color: var(--color-sidebar-background); color: var(--color-text-primary); border: 1px solid var(--color-border); focus:ring-1 focus:ring-green-500;">
                         <option value="">Todos</option>
-                        ${SECTORS.map(s => `<option value="${s.id}">${safeText(s.name)}</option>`).join('')}
+                        ${allSectors.map(s => `<option value="${safeText(s.id)}">${safeText(s.name)}</option>`).join('')}
                     </select>
                 </div>
                 <div>

@@ -4,6 +4,7 @@
  */
 
 import { STATUS_LABELS, STATUS_COLORS, ARTICLE_STATUS, SECTORS } from '../config.js';
+import { getSectorDisplayName } from '../services/sectorDirectory.js';
 import { getCurrentUser, hasPermission, hasRole } from '../auth.js';
 import { getCategoryName } from '../services/categories.js';
 
@@ -47,20 +48,18 @@ export function renderHeader() {
         roleDisplay.textContent = roleLabels[user.role] || user.role;
     }
 
-    // Buscar nome do setor pelo ID
-    if (sectorDisplay) {
-        let sectorName = 'Não informado';
-        if (user.sectorId) {
-            const sector = SECTORS.find(s => s.id === user.sectorId);
-            if (sector) {
-                sectorName = sector.name;
-            } else if (typeof user.sectorId === 'string') {
-                // Se o sectorId for um nome completo (para dados antigos), usar como está
-                sectorName = user.sectorId;
-            }
+// Buscar nome do setor pelo ID (versão definitiva com Firebase + fallback)
+if (sectorDisplay) {
+    (async () => {
+        try {
+            const sectorName = await getSectorDisplayName(user.sectorId);
+            sectorDisplay.textContent = `Setor: ${sectorName}`;
+        } catch (error) {
+            console.warn('Erro ao resolver nome do setor:', error);
+            sectorDisplay.textContent = `Setor: ${user.sectorId || 'Não informado'}`;
         }
-        sectorDisplay.textContent = `Setor: ${sectorName}`;
-    }
+    })();
+}
 
     const btnAdminPanel = document.getElementById('btn-admin-panel');
     if (btnAdminPanel) {

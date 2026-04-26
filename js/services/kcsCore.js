@@ -434,57 +434,110 @@ export async function createArticle(data) {
 
 
 export async function updateArticle(articleId, updates) {
-  try {
-    const user = getCurrentUser();
-    if (!user) throw new Error('Usuário não autenticado');
-
-    const ref = doc(dbCloud, COLLECTION_ARTICLES, articleId);
-    const snapshot = await getDoc(ref);
-
-    if (!snapshot.exists()) {
-      throw new Error('Procedimento não encontrado');
-    }
-
-    const article = {
-      id: snapshot.id,
-      ...snapshot.data()
-    };
-
-    if (!canEditArticle(user, article)) {
-      throw new Error('Sem permissão para editar este procedimento');
-    }
-
-    if (updates.status === 'approved') {
-      if (!canApproveArticle(user, article)) {
-        throw new Error('Sem permissão para aprovar este procedimento');
-      }
-    }
-
-    const payload = {
-      ...updates,
-      updatedAt: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    };
-
-    await updateDoc(ref, payload);
-
-    const updatedArticle = {
-      ...article,
-      ...payload
-    };
-
     try {
-      await dbLocal.articles.put(updatedArticle);
-    } catch (cacheError) {
-      console.warn('[Dexie] Falha ao atualizar cache local:', cacheError);
+        const user = getCurrentUser();
+        if (!user) throw new Error('Usuário não autenticado');
+
+        const ref = doc(dbCloud, COLLECTION_ARTICLES, articleId);
+        const snapshot = await getDoc(ref);
+
+        if (!snapshot.exists()) {
+            throw new Error('Procedimento não encontrado');
+        }
+
+        const existingArticle = {
+            id: snapshot.id,
+            ...snapshot.data()
+        };
+
+        const requestedStatus =
+            updates.statusRequest ||
+            updates.status ||
+            existingArticle.status;
+
+        const normalizedRequestedStatus = String(requestedStatus || '').trim().toLowerCase();
+
+        const isApprovalRequest =
+            normalizedRequestedStatus === 'approved' ||
+            normalizedRequestedStatus === 'publicado' ||
+            normalizedRequestedStatus === 'published';
+
+        const now = new Date().toISOString();
+
+        const userId = user.id || user.uid;
+        const userName =
+            user.name ||
+            user.displayName ||
+            user.fullName ||
+            user.email ||
+            'Sistema';
+
+        // Aprovação: valida pela regra de aprovação, não pela regra comum de edição
+        if (isApprovalRequest) {
+            if (!canApproveArticle(user, existingArticle)) {
+                throw new Error('Sem permissão para aprovar este procedimento');
+            }
+        } else {
+            if (!canEditArticle(user, existingArticle)) {
+                throw new Error('Sem permissão para editar este procedimento');
+            }
+        }
+
+        const history = Array.isArray(existingArticle.history)
+            ? [...existingArticle.history]
+            : [];
+
+        history.push({
+            ...existingArticle,
+            historyAt: now,
+            historyBy: userName,
+            historyById: userId
+        });
+
+        const payload = {
+            ...updates,
+            updatedAt: now,
+            updated_at: now,
+            updatedBy: userName,
+            updatedById: userId,
+            updaterId: userId,
+            history
+        };
+
+        if (isApprovalRequest) {
+            payload.status = 'approved';
+            payload.statusRequest = 'approved';
+            payload.approvedBy = userName;
+            payload.approvedById = userId;
+            payload.reviewedBy = userName;
+            payload.reviewedById = userId;
+            payload.validatedBy = userName;
+            payload.validatedById = userId;
+            payload.reviewerId = userId;
+            payload.approvedAt = now;
+        }
+
+        delete payload.id;
+
+        await updateDoc(ref, payload);
+
+        const updatedArticle = {
+            ...existingArticle,
+            ...payload
+        };
+
+        try {
+            await dbLocal.articles.put(updatedArticle);
+        } catch (cacheError) {
+            console.warn('[Dexie] Falha ao atualizar cache local:', cacheError);
+        }
+
+        return updatedArticle;
+
+    } catch (error) {
+        console.error('Erro ao atualizar artigo:', error);
+        throw error;
     }
-
-    return updatedArticle;
-
-  } catch (error) {
-    console.error('Erro ao atualizar artigo:', error);
-    throw error;
-  }
 }
 
 export async function removeArticle(id) { 

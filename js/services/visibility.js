@@ -50,19 +50,43 @@ export function hasSameCompany(user, entity) {
 }
 
 export function hasSectorAccess(user, entity) {
-  if (!user || !entity) return false;
+    if (!user || !entity) return false;
 
-  if (isSuperAdmin(user)) return true;
+    if (isSuperAdmin(user)) return true;
 
-  const userSector = user.sectorId || user.sector_id || user.sector || null;
-  const entitySector = entity.sectorId || entity.sector_id || entity.sector || null;
+    const normalizeSector = (value) => {
+        if (!value) return null;
 
-  // Compatibilidade com dados antigos
-  if (!entitySector) return true;
+        const normalized = String(value)
+            .trim()
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/_/g, ' ');
 
-  if (!userSector) return false;
+        const aliases = {
+            'ti': 'tecnologia da informacao',
+            'tecnologia': 'tecnologia da informacao',
+            'tecnologia da informacao': 'tecnologia da informacao'
+        };
 
-  return String(userSector).trim().toLowerCase() === String(entitySector).trim().toLowerCase();
+        return aliases[normalized] || normalized;
+    };
+
+    const userSector = normalizeSector(user.sectorId || user.sector_id || user.sector);
+    const entitySector = normalizeSector(entity.sectorId || entity.sector_id || entity.sector);
+
+    // Conteúdo sem setor só é legado.
+    // Para private, não deve abrir para qualquer setor.
+    if (!entitySector) {
+        return false;
+    }
+
+    if (!userSector) {
+        return false;
+    }
+
+    return userSector === entitySector;
 }
 
 export function hasGroupAccess(user, entity) {
@@ -99,8 +123,6 @@ export function canViewArticle(user, article) {
 
     if (!hasSameCompany(user, article)) return false;
 
-    if (isOwner(user, article)) return true;
-
     const status = String(article.status || '').trim().toLowerCase();
     const visibility = String(article.visibility || 'public').trim().toLowerCase();
 
@@ -115,24 +137,29 @@ export function canViewArticle(user, article) {
 
     const sameSector = hasSectorAccess(user, article);
     const sameGroup = hasGroupAccess(user, article);
+    const sameScope = sameSector && sameGroup;
 
     // Público aprovado: qualquer usuário da mesma empresa vê
     if (!isPrivate && isPublished) {
         return true;
     }
 
-    // Privado aprovado: qualquer usuário do mesmo setor/grupo vê
+    // Privado aprovado: somente mesmo setor/grupo
     if (isPrivate && isPublished) {
-        return sameSector && sameGroup;
+        return sameScope;
     }
 
-    // Não aprovado: autor já passou acima.
-    // Analista/Admin só veem fila/rascunho do próprio escopo.
+    // Rascunho / revisão:
+    // Autor só vê se ainda estiver no mesmo setor/grupo
+    if (isOwner(user, article)) {
+        return sameScope;
+    }
+
+    // Analista/Admin só veem pendentes/rascunhos do próprio escopo
     if ([ROLES.ADMIN, ROLES.ANALYST].includes(user.role)) {
-        return sameSector && sameGroup;
+        return sameScope;
     }
 
-    // Usuário comum não vê pendente/draft de outras pessoas
     return false;
 }
 
@@ -165,19 +192,15 @@ export function canEditArticle(user, article) {
 // ======================
 
 export function canApproveArticle(user, article) {
-  if (!user || !article) return false;
+    if (!user || !article) return false;
 
-  // super_admin aprova tudo
-  if (isSuperAdmin(user)) return true;
+    if (isSuperAdmin(user)) return true;
 
-  // todos os outros precisam estar na mesma empresa
-  if (!hasSameCompany(user, article)) return false;
+    if (!hasSameCompany(user, article)) return false;
 
-  // apenas admin e analyst aprovam
-  if (![ROLES.ADMIN, ROLES.ANALYST].includes(user.role)) return false;
+    if (![ROLES.ADMIN, ROLES.ANALYST].includes(user.role)) return false;
 
-  // admin e analyst aprovam apenas dentro do próprio setor/grupo
-  return hasSectorAccess(user, article) && hasGroupAccess(user, article);
+    return hasSectorAccess(user, article) && hasGroupAccess(user, article);
 }
 
 // ======================
