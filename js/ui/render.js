@@ -3,7 +3,7 @@
  * Refatorado para Arquitetura Semântica Baseada no Design System e Sincronismo de Overlay/Dock
  */
 
-import { STATUS_LABELS, STATUS_COLORS, ARTICLE_STATUS } from '../config.js';
+import { STATUS_LABELS, STATUS_COLORS, ARTICLE_STATUS, SECTORS } from '../config.js';
 import { getCurrentUser, hasPermission, hasRole } from '../auth.js';
 import { getCategoryName } from '../services/categories.js';
 
@@ -26,6 +26,7 @@ export function renderHeader() {
     const avatar = document.getElementById('user-avatar');
     const nameDisplay = document.getElementById('user-name-display');
     const roleDisplay = document.getElementById('user-role-display');
+    const sectorDisplay = document.getElementById('user-sector-display');
 
     if (avatar) {
         avatar.textContent = user.displayName ? user.displayName.charAt(0).toUpperCase() : '?';
@@ -44,6 +45,21 @@ export function renderHeader() {
     
     if (roleDisplay) {
         roleDisplay.textContent = roleLabels[user.role] || user.role;
+    }
+
+    // Buscar nome do setor pelo ID
+    if (sectorDisplay) {
+        let sectorName = 'Não informado';
+        if (user.sectorId) {
+            const sector = SECTORS.find(s => s.id === user.sectorId);
+            if (sector) {
+                sectorName = sector.name;
+            } else if (typeof user.sectorId === 'string') {
+                // Se o sectorId for um nome completo (para dados antigos), usar como está
+                sectorName = user.sectorId;
+            }
+        }
+        sectorDisplay.textContent = `Setor: ${sectorName}`;
     }
 
     const btnAdminPanel = document.getElementById('btn-admin-panel');

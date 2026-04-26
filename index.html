@@ -70,15 +70,15 @@
 
   <div id="toast-container" class="fixed top-4 right-4 z-[150] flex flex-col gap-2 max-w-sm w-[90vw] sm:w-auto"></div>
 
-  <div id="login-screen" style="display:none;" class="hidden fixed inset-0 z-[100] flex items-center justify-center login-page-bg transition-colors duration-500 p-4 sm:p-6 overflow-hidden" aria-hidden="true" inert>
-    <div class="login-container relative w-full max-w-[420px] p-8 sm:p-10 rounded-[20px] shadow-2xl flex flex-col transform transition-all">
-        <span class="absolute top-5 right-6 text-[10px] login-text-muted font-mono font-bold tracking-widest px-2 py-1 rounded border login-border-subtle">v1.0.1</span>
+  <div id="login-screen" style="display:none;" class="hidden fixed inset-0 z-[100] flex items-center justify-center login-page-bg transition-colors duration-500 overflow-hidden" aria-hidden="true" inert>
+    <div class="login-container relative w-full max-w-[420px] p-8 sm:p-10 rounded-[18px] shadow-2xl flex flex-col transform transition-all">
+        <span class="absolute top-6 right-6 text-[9px] login-text-muted font-mono font-bold tracking-widest px-3 py-1.5 rounded border login-border-subtle opacity-70">v1.0.1</span>
         <div class="flex flex-col items-center text-center mb-8 mt-2">
-            <div class="w-16 h-16 bg-blue-600/10 rounded-2xl flex items-center justify-center mb-4 border border-blue-500/20 shadow-inner">
-                <i class="ph ph-book-open text-[32px] text-blue-500"></i>
+            <div class="w-16 h-16 bg-blue-600/15 rounded-2xl flex items-center justify-center mb-4 border border-blue-500/25 shadow-inner">
+                <i class="ph ph-book-open text-[32px] text-blue-400"></i>
             </div>
             <h1 class="text-2xl font-bold login-text-primary tracking-tight">KCS Hub</h1>
-            <p class="login-text-secondary text-sm mt-1">Acesse sua base de conhecimento</p>
+            <p class="login-text-secondary text-sm mt-2">Acesse sua base de conhecimento</p>
         </div>
         <div id="login-form" class="w-full"></div>
         <div class="mt-8 flex items-center justify-center gap-2 text-xs login-text-muted font-medium w-full">
@@ -273,6 +273,7 @@
           <li class="menu-info">
               <span id="user-name-display" class="font-bold block text-[13px]">Usuário</span>
               <span id="user-role-display" class="text-[11px] text-gray-500 dark:text-gray-400 mt-1 uppercase tracking-wider">Membro</span>
+              <span id="user-sector-display" class="text-[11px] text-gray-500 dark:text-gray-400 mt-2 block">Setor: Não informado</span>
           </li>
           <li class="menu-separator"></li>
           <li onclick="window.__kcs.logout()">Sair do Sistema</li>

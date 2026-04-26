@@ -589,42 +589,60 @@ export async function getCustomSectorsFromCloud() {
 }
 
 export async function createSectorInCloud(name) {
-    const { collection, addDoc } = await import('https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js');
+    const { doc, setDoc } = await import('https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js');
 
     const companyId = sessionStorage.getItem(TENANT_KEYS.COMPANY_ID);
 
     if (!companyId) throw new Error('company_id não encontrado.');
     if (!name || name.trim().length < 2) throw new Error('Nome do setor inválido.');
 
-    // Gerar ID em slug uppercase (ex: "TI Novo" -> "TI_NOVO")
-    const sectorId = name
-        .trim()
-        .toUpperCase()
-        .replace(/\s+/g, '_')
-        .replace(/[^A-Z0-9_]/g, '');
+    const cleanName = name.trim();
 
-    // Verificar duplicação
+    const normalizeSectorId = (value) => {
+        return String(value || '')
+            .trim()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '_')
+            .replace(/^_+|_+$/g, '');
+    };
+
+    const sectorId = normalizeSectorId(cleanName);
+
+    if (!sectorId || sectorId.length < 2) {
+        throw new Error('Não foi possível gerar um ID válido para o setor.');
+    }
+
     const customSectors = await getCustomSectorsFromCloud();
     const allSectors = [...SECTORS, ...customSectors];
 
-    if (allSectors.find(s => s.id === sectorId)) {
-        throw new Error(`Setor com ID "${sectorId}" já existe.`);
+    const alreadyExists = allSectors.some(s =>
+        String(s.id).toLowerCase() === sectorId.toLowerCase() ||
+        String(s.name).trim().toLowerCase() === cleanName.toLowerCase()
+    );
+
+    if (alreadyExists) {
+        throw new Error(`Setor "${cleanName}" já existe.`);
     }
 
     const payload = {
         id: sectorId,
-        name: name.trim(),
+        name: cleanName,
         company_id: companyId,
         isCustom: true,
         createdAt: new Date().toISOString(),
-        createdBy: currentUser?.email || 'system'
+        createdBy: currentUser?.email || currentUser?.displayName || 'system'
     };
 
-    const docRef = await addDoc(collection(dbCloud, 'sectors'), payload);
+    await setDoc(
+        doc(dbCloud, 'sectors', `${companyId}_${sectorId}`),
+        payload,
+        { merge: true }
+    );
 
     return {
         success: true,
-        id: sectorId,
         ...payload
     };
 }

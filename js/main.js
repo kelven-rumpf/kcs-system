@@ -355,31 +355,33 @@ async function init() {
             form.innerHTML = `
                 <div class="space-y-4 w-full">
                     <div>
-                        <input type="email" id="login-email" placeholder="E-mail corporativo" class="w-full bg-gray-900/50 border border-gray-700 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all placeholder-gray-500">
+                        <label class="block text-[11px] font-semibold text-gray-400 mb-2 uppercase tracking-wider">E-mail</label>
+                        <input type="email" id="login-email" placeholder="seu@email.com" class="w-full bg-gray-900/50 border border-gray-700 rounded-[10px] px-4 py-3 text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all placeholder-gray-500">
                     </div>
                     <div>
-                        <input type="password" id="login-password" placeholder="Senha" class="w-full bg-gray-900/50 border border-gray-700 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all placeholder-gray-500">
+                        <label class="block text-[11px] font-semibold text-gray-400 mb-2 uppercase tracking-wider">Senha</label>
+                        <input type="password" id="login-password" placeholder="••••••••" class="w-full bg-gray-900/50 border border-gray-700 rounded-[10px] px-4 py-3 text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all placeholder-gray-500">
                     </div>
-                    <div class="flex gap-2">
-                        <button type="button" id="btn-email-login" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl shadow-lg transition-all">Entrar</button>
-                        <button type="button" id="btn-email-register" class="flex-1 bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 px-4 rounded-xl shadow-lg transition-all border border-gray-600">Cadastrar</button>
+                    <div class="flex gap-2 pt-2">
+                        <button type="button" id="btn-email-login" class="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold py-3 px-4 rounded-[10px] shadow-lg transition-all transform hover:-translate-y-0.5 active:translate-y-0">Entrar</button>
+                        <button type="button" id="btn-email-register" class="flex-1 bg-gray-700/60 hover:bg-gray-600/80 text-white font-semibold py-3 px-4 rounded-[10px] transition-all transform hover:-translate-y-0.5 active:translate-y-0 border border-gray-600/50">Criar Conta</button>
                     </div>
                 </div>
                 
                 <div class="flex items-center my-6 w-full">
-                    <div class="flex-1 border-t border-gray-700"></div>
-                    <span class="px-3 text-xs text-gray-500 uppercase tracking-wider font-semibold">Ou continuar com</span>
-                    <div class="flex-1 border-t border-gray-700"></div>
+                    <div class="flex-1 border-t border-gray-700/50"></div>
+                    <span class="px-3 text-[11px] text-gray-500 uppercase tracking-widest font-semibold">Ou continuar com</span>
+                    <div class="flex-1 border-t border-gray-700/50"></div>
                 </div>
                 
                 <div class="flex flex-col gap-3 w-full">
-                    <button type="button" id="btn-google-login" class="w-full flex items-center justify-center gap-3 bg-white text-gray-800 font-bold py-3.5 px-4 rounded-xl shadow-[0_4px_14px_0_rgba(255,255,255,0.1)] hover:-translate-y-0.5 transition-all">
+                    <button type="button" id="btn-google-login" class="w-full flex items-center justify-center gap-3 bg-white/95 hover:bg-white text-gray-800 font-semibold py-3 px-4 rounded-[10px] shadow-md hover:shadow-lg transition-all transform hover:-translate-y-0.5 active:translate-y-0">
                         <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" class="w-5 h-5">
                         Google
                     </button>
-                    <button type="button" id="btn-microsoft-login" class="w-full flex items-center justify-center gap-3 bg-[#2F2F2F] hover:bg-[#3F3F3F] text-[#ffffff] font-bold py-3.5 px-4 rounded-xl shadow-[0_4px_14px_0_rgba(0,0,0,0.2)] hover:-translate-y-0.5 transition-all border border-gray-700">
+                    <button type="button" id="btn-microsoft-login" class="w-full flex items-center justify-center gap-3 bg-gray-900/70 hover:bg-gray-900 text-white font-semibold py-3 px-4 rounded-[10px] shadow-md hover:shadow-lg transition-all transform hover:-translate-y-0.5 active:translate-y-0 border border-gray-700/50">
                         <svg class="w-5 h-5" viewBox="0 0 21 21"><path fill="#f25022" d="M1 1h9v9H1z"/><path fill="#00a4ef" d="M11 1h9v9h-9z"/><path fill="#7fba00" d="M1 11h9v9H1z"/><path fill="#ffb900" d="M11 11h9v9h-9z"/></svg>
-                        Microsoft (Azure AD)
+                        Microsoft
                     </button>
                 </div>
             `;

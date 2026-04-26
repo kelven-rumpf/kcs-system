@@ -1516,7 +1516,9 @@ const groupsBySectorHtml = adminSection(
                                 <p class="font-semibold" style="color: var(--color-text-inverse);">${safeText(sector.name)}
                                     ${isCustom ? '<span class="ml-2 text-[10px] px-2 py-1 rounded" style="background-color: rgba(34, 197, 94, 0.2); color: rgb(134, 239, 172);">PERSONALIZADO</span>' : '<span class="ml-2 text-[10px] px-2 py-1 rounded" style="background-color: rgba(99, 102, 241, 0.2); color: rgb(165, 180, 252);">PADRÃO</span>'}
                                 </p>
-                                <p class="text-[11px]" style="color: var(--color-text-secondary);">ID: ${safeText(sector.id)}</p>
+                                <p class="text-[11px]" style="color: var(--color-text-secondary);">
+    ${sector.isCustom ? 'Setor personalizado' : 'Setor padrão'}
+</p>
                             </div>
                         </div>
                         <span class="text-[11px] font-semibold" style="color: var(--color-text-muted);">${groupCount} grupo${groupCount === 1 ? '' : 's'}</span>
@@ -1554,7 +1556,9 @@ const groupsBySectorHtml = adminSection(
                                     <div class="flex items-center justify-between rounded-lg px-3 py-2 text-sm" style="background-color: var(--color-editor-background); color: var(--color-text-primary); border: 1px solid var(--color-border);">
                                         <div class="min-w-0">
                                             <p class="font-medium truncate">${safeText(group.name)}</p>
-                                            <p class="font-mono opacity-50 text-[10px] truncate">${safeText(group.id)}</p>
+                                            <p class="text-[11px] opacity-60 truncate">
+    Setor: ${safeText(sector.name)}
+</p>
                                         </div>
                                         <button
                                             type="button"
