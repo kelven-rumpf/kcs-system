@@ -190,11 +190,22 @@ window.TabManager = (() => {
         });
 
         // Adicionar listener de input para marcar dirty, EXCETO para a aba de Administração
-        contentPanel.addEventListener('input', () => {
-            if (id !== 'tab-admin-panel') {
-                markDirty(id, true);
-            }
-        });
+        contentPanel.addEventListener('input', (event) => {
+    if (id === 'tab-admin-panel') return;
+
+    const target = event.target;
+
+    if (
+        target?.closest?.('[data-kcs-no-dirty="true"]') ||
+        target?.closest?.('.kcs-comment-area') ||
+        target?.id?.startsWith('inline-comment-input-') ||
+        target?.id?.startsWith('inline-sql-comment-')
+    ) {
+        return;
+    }
+
+    markDirty(id, true);
+});
 
         switchTab(id);
     }

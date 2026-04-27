@@ -14,6 +14,7 @@ import {
     deleteSectorFromCloud
 } from '../auth.js';
 
+import { openPanel, openProcedurePanel, closePanel } from './mentionPanel.js';
 import { initEditor } from './editor.js'; 
 import { formatContentForView, isAppBooting } from './render.js'; 
 import { getFlatCategories, addCategory, removeCategory, updateCategory } from '../services/categories.js';
@@ -135,24 +136,74 @@ window.copyFieldText = function(btn) {
 };
 
 // Singleton para o evento do Lightbox
+// Singleton seguro para preview de imagens em procedimentos publicados
 if (!window.__kcsZoomInit) {
-    document.addEventListener('click', (e) => {
-        if (e.target.tagName === 'IMG' && e.target.closest('.modal-zoomable')) {
-            const src = e.target.src;
-            const lb = document.createElement('div');
-            lb.className = 'lightbox-overlay';
-            lb.innerHTML = `
-                <img src="${src}" class="lightbox-image">
-                <button class="btn-icon btn-lightbox-close"><i class="ph-bold ph-x"></i></button>`;
-            
-            lb.addEventListener('click', () => lb.remove());
-            
-            const overlayRoot = document.getElementById('overlay-root');
-            if (overlayRoot) {
-                overlayRoot.appendChild(lb);
-            }
+    let activeLightbox = null;
+
+    function closeKcsLightbox() {
+        if (!activeLightbox) return;
+
+        document.removeEventListener('keydown', handleKcsLightboxEsc);
+        activeLightbox.remove();
+        activeLightbox = null;
+        document.body.classList.remove('kcs-lightbox-open');
+    }
+
+    function handleKcsLightboxEsc(event) {
+        if (event.key === 'Escape') {
+            closeKcsLightbox();
         }
-    });
+    }
+
+    function openKcsLightbox(img) {
+        closeKcsLightbox();
+
+        const src = img?.currentSrc || img?.src;
+        if (!src) return;
+
+        activeLightbox = document.createElement('div');
+        activeLightbox.className = 'kcs-published-lightbox';
+        activeLightbox.innerHTML = `
+            <div class="kcs-published-lightbox-backdrop" data-lightbox-close="true"></div>
+
+            <div class="kcs-published-lightbox-content" role="dialog" aria-modal="true">
+                <button type="button" class="kcs-published-lightbox-close" data-lightbox-close="true" aria-label="Fechar imagem">
+                    <i class="ph-bold ph-x"></i>
+                </button>
+
+                <img 
+                    src="${src}" 
+                    alt="${img.alt || 'Imagem do procedimento'}" 
+                    class="kcs-published-lightbox-img"
+                    draggable="false"
+                >
+            </div>
+        `;
+
+        activeLightbox.addEventListener('click', (event) => {
+            if (event.target.closest('[data-lightbox-close="true"]')) {
+                event.preventDefault();
+                event.stopPropagation();
+                closeKcsLightbox();
+            }
+        }, true);
+
+        document.addEventListener('keydown', handleKcsLightboxEsc);
+        document.body.appendChild(activeLightbox);
+        document.body.classList.add('kcs-lightbox-open');
+    }
+
+    document.addEventListener('click', (event) => {
+        const img = event.target.closest('img');
+
+        if (!img || !img.closest('.modal-zoomable')) return;
+
+        event.preventDefault();
+        event.stopPropagation();
+
+        openKcsLightbox(img);
+    }, true);
+
     window.__kcsZoomInit = true;
 }
 
@@ -170,7 +221,7 @@ function safeBindEvent(element, eventType, handler) {
 // ==========================================
 // MDI TAB: NOVA DOCUMENTAÇÃO (CRIAÇÃO/EDIÇÃO)
 // ==========================================
-export function openArticleModal(article = null, onSave, rebindToolbar) {
+export async function openArticleModal(article = null, onSave, rebindToolbar) {
     const user = getCurrentUser();
     const authorName = article ? article.createdBy : user.displayName;
     const kcsNum = article?.articleNumber ? `KCS-${article.articleNumber}` : 'Gerado ao salvar';
@@ -188,6 +239,22 @@ export function openArticleModal(article = null, onSave, rebindToolbar) {
     formContainer.className = 'flex flex-col h-full';
     formContainer.id = `form-${idUnico}`;
 
+    const allGroups = await getGroupsFromCloud().catch(() => []);
+const userSectorId = user?.sectorId || article?.sectorId || '';
+const articleGroupIds = Array.isArray(article?.group_ids) ? article.group_ids : [];
+
+const groupsForSector = allGroups.filter(group => {
+    return !group.sector_id || group.sector_id === userSectorId;
+});
+
+const groupOptions = groupsForSector.map(group => `
+    <option value="${group.id}" ${articleGroupIds.includes(group.id) ? 'selected' : ''}>
+        ${group.name}
+    </option>
+`).join('');
+    
+    
+    
     // 2. Montar o HTML com IDs ÚNICOS para permitir múltiplas abas abertas
     formContainer.innerHTML = `
         <div class="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 custom-scrollbar">
@@ -251,6 +318,9 @@ export function openArticleModal(article = null, onSave, rebindToolbar) {
                         <button type="button" data-format="insertOrderedList" class="btn-tool"><i class="ph ph-list-numbers"></i></button>
                         <div class="toolbar-divider"></div>
                         <button type="button" data-format="image" class="btn-tool tool-image" title="Anexar Imagem"><i class="ph ph-camera"></i></button>
+                        <button type="button" data-format="ocr" class="btn-tool tool-ocr" title="OCR por imagem">
+    <i class="ph ph-scan"></i>
+</button>
                     </div>
                     <div class="toolbar-actions-right">
                         <button type="button" class="btn-ia btn-ia-reescrever"><i class="ph-fill ph-magic-wand"></i> Refinar</button>
@@ -264,13 +334,21 @@ export function openArticleModal(article = null, onSave, rebindToolbar) {
                     <label class="form-label">Categoria</label>
                     <select id="article-category-${idUnico}" class="form-select">${categoryOptions}</select>
                 </div>
-                <div class="form-group">
-                    <label class="form-label">Visibilidade</label>
-                    <select id="article-visibility-${idUnico}" class="form-select">
-                        <option value="${VISIBILITY.PUBLIC}" ${article?.visibility === VISIBILITY.PUBLIC ? 'selected' : ''}>🌍 Público</option>
-                        <option value="${VISIBILITY.PRIVATE}" ${article?.visibility === VISIBILITY.PRIVATE ? 'selected' : ''}>🔒 Privado</option>
-                    </select>
-                </div>
+              <div class="form-group">
+    <label class="form-label">Visibilidade</label>
+    <select id="article-visibility-${idUnico}" class="form-select">
+        <option value="${VISIBILITY.PUBLIC}" ${article?.visibility === VISIBILITY.PUBLIC ? 'selected' : ''}>🌍 Público</option>
+        <option value="${VISIBILITY.PRIVATE}" ${article?.visibility === VISIBILITY.PRIVATE ? 'selected' : ''}>🔒 Privado</option>
+    </select>
+</div>
+
+<div class="form-group">
+    <label class="form-label">Grupo do Setor</label>
+    <select id="article-group-${idUnico}" class="form-select">
+        <option value="">Todos os grupos do setor</option>
+        ${groupOptions}
+    </select>
+</div>
                 <div class="form-group">
                     <label class="form-label">Tags (Vírgula)</label>
                     <input type="text" id="article-tags-${idUnico}" class="form-input" value="${(article?.tags || []).join(', ')}" />
@@ -327,6 +405,9 @@ export function openArticleModal(article = null, onSave, rebindToolbar) {
             steps: document.getElementById(`article-body-${idUnico}`)?.innerHTML || '', 
             categoryId: document.getElementById(`article-category-${idUnico}`)?.value || '', 
             visibility: document.getElementById(`article-visibility-${idUnico}`)?.value || VISIBILITY.PUBLIC,
+            group_ids: document.getElementById(`article-group-${idUnico}`)?.value
+    ? [document.getElementById(`article-group-${idUnico}`)?.value]
+    : [],
             tags: (document.getElementById(`article-tags-${idUnico}`)?.value || '').split(',').map(t => t.trim()).filter(Boolean), 
             statusRequest: submitAction 
         }, article?.id || null);
@@ -433,7 +514,7 @@ export function openViewModal(article, currentUser) {
             <div class="w-full mt-16 pt-8 border-t border-border-subtle" data-html2pdf-ignore>
                 <h4 class="text-[12px] font-bold uppercase tracking-widest mb-6 flex items-center gap-2" style="color: var(--color-text-muted);"><i class="ph-fill ph-chats text-base text-blue-500"></i> Comentários da Equipe</h4>
                 
-                <div class="kcs-surface-elevated mb-8 rounded-xl overflow-hidden shadow-sm focus-within:ring-1 focus-within:ring-blue-500 transition-all">
+                <div class="kcs-surface-elevated kcs-comment-area mb-8 rounded-xl overflow-hidden shadow-sm focus-within:ring-1 focus-within:ring-blue-500 transition-all" data-kcs-no-dirty="true">
                     <textarea id="inline-comment-input-${idUnico}" rows="2" placeholder="Adicione uma observação, dúvida ou sugestão de melhoria..." class="w-full bg-transparent p-4 outline-none resize-y min-h-[70px] text-[14px]" style="color: var(--color-text-inverse);"></textarea>
                     <div class="flex justify-end p-3 border-t border-border-subtle" style="background-color: rgba(0,0,0,0.05);">
                         <button type="button" id="btn-send-comment-${idUnico}" class="flex items-center gap-2 px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg shadow-sm transition-colors">
@@ -490,6 +571,30 @@ export function openViewModal(article, currentUser) {
             </div>
         </div>
     `;
+
+    // Delegação de eventos para menções em procedimento publicado
+container.addEventListener('click', (event) => {
+    const sqlChip = event.target.closest('.sql-mention-chip');
+    const procChip = event.target.closest('.proc-mention-chip');
+
+    if (sqlChip && sqlChip.dataset.sqlId) {
+        event.preventDefault();
+        event.stopPropagation();
+        openPanel(sqlChip.dataset.sqlId);
+        return;
+    }
+
+    if (procChip && procChip.dataset.procId) {
+        event.preventDefault();
+        event.stopPropagation();
+        openProcedurePanel(procChip.dataset.procId);
+        return;
+    }
+
+    if (!event.target.closest('#mention-detail-panel')) {
+        closePanel();
+    }
+});
 
     // 3. Lógica do Novo Comentário Inline
     const btnSendComment = container.querySelector(`#btn-send-comment-${idUnico}`);
@@ -836,7 +941,7 @@ export function openSqlViewModal(script) {
             <div class="w-full mt-16 pt-8 border-t border-border-subtle">
                 <h4 class="text-[12px] font-bold uppercase tracking-widest mb-6 flex items-center gap-2" style="color: var(--color-text-muted);"><i class="ph-fill ph-chats text-base text-purple-500"></i> Observações Técnicas</h4>
                 
-                <div class="kcs-surface-elevated mb-8 rounded-xl overflow-hidden shadow-sm focus-within:ring-1 focus-within:ring-purple-500 transition-all">
+                <div class="kcs-surface-elevated kcs-comment-area mb-8 rounded-xl overflow-hidden shadow-sm focus-within:ring-1 focus-within:ring-purple-500 transition-all" data-kcs-no-dirty="true">
                     <textarea id="inline-sql-comment-${idUnico}" rows="2" placeholder="Comente sobre a eficácia, segurança ou melhorias nesta query..." class="w-full bg-transparent p-4 outline-none resize-y min-h-[70px] text-[14px]" style="color: var(--color-text-inverse);"></textarea>
                     <div class="flex justify-end p-3 border-t border-border-subtle" style="background-color: rgba(0,0,0,0.05);">
                         <button type="button" id="btn-send-sql-comment-${idUnico}" class="flex items-center gap-2 px-5 py-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-lg shadow-sm transition-colors">

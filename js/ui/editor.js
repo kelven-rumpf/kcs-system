@@ -5,10 +5,77 @@
 
 import { showToast, showLoading } from './render.js';
 import { uploadImageToCloud } from '../services/cloud.js';
-import { reescreverTextoTecnico, corrigirGramaticaApenas, setArticleLock, releaseArticleLock, forceReleaseLock } from '../services/kcsCore.js';
+import { 
+    reescreverTextoTecnico, 
+    corrigirGramaticaApenas, 
+    setArticleLock, 
+    releaseArticleLock, 
+    forceReleaseLock,
+    listArticles,
+    extrairTextoImagemGemini
+} from '../services/kcsCore.js';
 import { getCurrentUser } from '../auth.js';
 import { listSqlScripts } from '../services/sqlLibrary.js'; // Import SQL service
-import { openPanel, closePanel } from './mentionPanel.js'; // Import mention panel
+import { openPanel, openProcedurePanel, closePanel, setupMentionClickBehavior } from './mentionPanel.js';
+
+function setupImagePreviewBehavior(editorElement) {
+    if (!editorElement || editorElement._kcsImagePreviewReady) return;
+
+    let activeOverlay = null;
+
+    function closePreview() {
+        if (!activeOverlay) return;
+
+        document.removeEventListener('keydown', handleEsc);
+        activeOverlay.remove();
+        activeOverlay = null;
+    }
+
+    function handleEsc(event) {
+        if (event.key === 'Escape') closePreview();
+    }
+
+    function openPreview(img) {
+        closePreview();
+
+        activeOverlay = document.createElement('div');
+        activeOverlay.className = 'kcs-image-preview-overlay';
+        activeOverlay.innerHTML = `
+            <div class="kcs-image-preview-shell">
+                <button type="button" class="kcs-image-preview-close" aria-label="Fechar imagem">
+                    <i class="ph-bold ph-x"></i>
+                </button>
+                <img src="${img.src}" alt="${img.alt || 'Imagem do procedimento'}" class="kcs-image-preview-img">
+            </div>
+        `;
+
+        activeOverlay.addEventListener('click', (event) => {
+            if (
+                event.target === activeOverlay ||
+                event.target.closest('.kcs-image-preview-close')
+            ) {
+                closePreview();
+            }
+        });
+
+        document.addEventListener('keydown', handleEsc);
+        document.body.appendChild(activeOverlay);
+    }
+
+    editorElement.addEventListener('click', (event) => {
+        const img = event.target.closest('img');
+
+        if (!img || !editorElement.contains(img)) return;
+
+        event.preventDefault();
+        event.stopPropagation();
+
+        openPreview(img);
+    });
+
+    editorElement._kcsImagePreviewReady = true;
+}
+
 
 export function initEditor(editorId = 'article-body') {
     const editor = document.getElementById(editorId);
@@ -20,7 +87,7 @@ export function initEditor(editorId = 'article-body') {
     // Make editor contenteditable
     editor.setAttribute('contenteditable', 'true');
     editor.classList.add('editor-content'); // Apply base editor styles
-
+    setupImagePreviewBehavior(editor);
         const form = editor.closest('form');
     const idUnico = editorId.startsWith('article-body-') ? editorId.slice('article-body-'.length) : '';
     const btnSave = form ? form.querySelector('button[type="submit"]') : null;
@@ -163,8 +230,13 @@ export function initEditor(editorId = 'article-body') {
                 e.preventDefault();
                 if (editor.getAttribute('contenteditable') === 'false') return;
                 const format = newBtn.getAttribute('data-format');
-                if (format === 'image') handleImageUpload(editor);
-                else insertFormatting(format, editor);
+                if (format === 'image') {
+    handleImageUpload(editor);
+} else if (format === 'ocr') {
+    handleOcrImageSelect(editor);
+} else {
+    insertFormatting(format, editor);
+}
             });
         });
     }
@@ -267,6 +339,8 @@ export function initEditor(editorId = 'article-body') {
     let mentionQuery = '';
     let mentionStartIndex = -1;
     let availableSqls = [];
+    let availableProcedures = [];
+    let availableMentions = [];
     let selectedMentionIndex = -1;
 
     // Function to get the current cursor position
@@ -289,62 +363,117 @@ export function initEditor(editorId = 'article-body') {
     }
 
     // Modified to return the fetched scripts
-    async function fetchSqlScripts() {
-        try {
-            availableSqls = await listSqlScripts();
-            console.log('[MENTION DEBUG] Fetched SQL scripts:', availableSqls);
-        } catch (error) {
-            console.error('[MENTION DEBUG] Error fetching SQL scripts:', error);
-            showToast('Erro ao carregar SQLs para menção.', 'error');
-        }
+async function fetchMentionSources() {
+    try {
+        const [sqls, procedures] = await Promise.all([
+            listSqlScripts(),
+            listArticles(true)
+        ]);
+
+        availableSqls = (sqls || []).map(sql => ({
+            ...sql,
+            mentionType: 'sql',
+            mentionId: sql.id,
+            mentionName: sql.name,
+            mentionDescription: sql.description || 'Script SQL'
+        }));
+
+        availableProcedures = (procedures || [])
+            .filter(article => {
+                const status = article.status || article.workflowStatus || '';
+                return status === 'approved' || status === 'published' || status === 'validated' || !status;
+            })
+            .map(article => ({
+                ...article,
+                mentionType: 'proc',
+                mentionId: article.id,
+                mentionName: article.title,
+                mentionDescription: article.articleNumber
+                    ? `#KCS-${article.articleNumber} · Procedimento`
+                    : 'Procedimento'
+            }));
+
+        availableMentions = [
+            ...availableSqls,
+            ...availableProcedures
+        ];
+
+        console.log('[MENTION DEBUG] Sources loaded:', {
+            sqls: availableSqls.length,
+            procedures: availableProcedures.length
+        });
+
+    } catch (error) {
+        console.error('[MENTION DEBUG] Error fetching mention sources:', error);
+        showToast('Erro ao carregar menções.', 'error');
+    }
+}
+
+function showMentionDropdown(items, coords) {
+    if (!mentionDropdown) {
+        mentionDropdown = document.createElement('div');
+        mentionDropdown.className = 'mention-dropdown';
+        document.body.appendChild(mentionDropdown);
     }
 
-    function showMentionDropdown(items, coords) {
-        console.log('[MENTION DEBUG] Showing dropdown with items:', items, 'at coords:', coords);
-        if (!mentionDropdown) {
-            mentionDropdown = document.createElement('div');
-            mentionDropdown.className = 'mention-dropdown';
-            document.body.appendChild(mentionDropdown);
-        }
+    mentionDropdown.innerHTML = '';
 
-        mentionDropdown.innerHTML = '';
-        if (items.length === 0) {
-            mentionDropdown.innerHTML = '<div class="mention-empty">Nenhum SQL encontrado.</div>';
-        } else {
-            items.forEach((item, index) => {
-                const div = document.createElement('div');
-                div.className = 'mention-item';
-                if (index === selectedMentionIndex) {
-                    div.classList.add('selected');
-                }
-                div.innerHTML = `
-                    <div class="mention-item-name">${item.name}</div>
-                    <div class="mention-item-description">${item.description || 'Sem descrição'}</div>
-                `;
-                // Use mousedown instead of click to prevent editor blur
-                div.addEventListener('mousedown', (e) => {
-                    console.log('[MENTION DEBUG] Clicked on mention item:', item);
-                    e.preventDefault(); // Prevent editor from losing focus
-                    e.stopPropagation(); // Prevent other listeners from firing
-                    selectMentionItem(item); // Use shared function
-                });
-                mentionDropdown.appendChild(div);
+    if (items.length === 0) {
+        mentionDropdown.innerHTML = '<div class="mention-empty">Nenhuma menção encontrada.</div>';
+    } else {
+        items.forEach((item, index) => {
+            const div = document.createElement('div');
+            div.className = 'mention-item';
+            div.dataset.mentionType = item.mentionType;
+            div.dataset.mentionId = item.mentionId;
+
+            if (index === selectedMentionIndex) {
+                div.classList.add('selected');
+            }
+
+            const icon = item.mentionType === 'proc'
+                ? 'ph-book-open'
+                : 'ph-database';
+
+            const label = item.mentionType === 'proc'
+                ? 'Procedimento'
+                : 'SQL';
+
+            div.innerHTML = `
+                <div class="mention-item-name">
+                    <i class="ph-bold ${icon}"></i>
+                    ${item.mentionName}
+                    <span class="mention-type-badge">${label}</span>
+                </div>
+                <div class="mention-item-description">
+                    ${item.mentionDescription || 'Sem descrição'}
+                </div>
+            `;
+
+            div.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                selectMentionItem(item);
             });
-        }
 
-        // Position the dropdown
-        mentionDropdown.style.left = `${coords.x}px`;
-        mentionDropdown.style.top = `${coords.y + coords.height}px`;
-        mentionDropdown.style.display = 'block';
-        // Ensure dropdown is within viewport
-        const rect = mentionDropdown.getBoundingClientRect();
-        if (rect.right > window.innerWidth) {
-            mentionDropdown.style.left = `${window.innerWidth - rect.width - 10}px`;
-        }
-        if (rect.bottom > window.innerHeight) {
-            mentionDropdown.style.top = `${coords.y - rect.height}px`;
-        }
+            mentionDropdown.appendChild(div);
+        });
     }
+
+    mentionDropdown.style.left = `${coords.x}px`;
+    mentionDropdown.style.top = `${coords.y + coords.height}px`;
+    mentionDropdown.style.display = 'block';
+
+    const rect = mentionDropdown.getBoundingClientRect();
+
+    if (rect.right > window.innerWidth) {
+        mentionDropdown.style.left = `${window.innerWidth - rect.width - 10}px`;
+    }
+
+    if (rect.bottom > window.innerHeight) {
+        mentionDropdown.style.top = `${coords.y - rect.height}px`;
+    }
+}
 
     function hideMentionDropdown() {
         if (mentionDropdown) {
@@ -355,91 +484,80 @@ export function initEditor(editorId = 'article-body') {
     }
 
     // Shared function for selecting mention - used by both Enter key and Click event
-    function selectMentionItem(sql) {
-        console.log('[MENTION DEBUG] selectMentionItem called with SQL:', sql);
-        if (!sql || !sql.id || !sql.name) {
-            console.error('[MENTION DEBUG] Invalid SQL object passed to selectMentionItem:', sql);
-            showToast('Erro: SQL inválido.', 'error');
-            return;
-        }
-        // Ensure editor maintains focus before inserting
-        editor.focus();
-        selectMention(sql);
-    }
-
-    function selectMention(sql) {
-        console.log('[MENTION DEBUG] Selecting SQL:', sql);
-        const selection = window.getSelection();
-        if (selection.rangeCount === 0) return;
-
-        const range = selection.getRangeAt(0);
-        // Recalculate mentionStartIndex and mentionQuery just before replacement
-        // This makes it robust for both keyboard (where input event sets it) and click (where it might need re-evaluation)
-        let textNode = range.startContainer;
-        // Ensure we are in a text node, or find one if cursor is at end of block
-        if (textNode.nodeType !== Node.TEXT_NODE) {
-            if (textNode.lastChild && textNode.lastChild.nodeType === Node.TEXT_NODE) {
-                textNode = textNode.lastChild;
-                // Adjust range to end of this text node if it was not there initially
-                if (range.startContainer !== textNode) {
-                    range.setStart(textNode, textNode.length);
-        range.collapse(true);
-                }
-        } else {
-                console.warn('[MENTION DEBUG] selectMention: startContainer is not a text node and no lastChild text node found. Cannot determine mention start index robustly.');
-            hideMentionDropdown();
+ function selectMentionItem(item) {
+    if (!item || !item.mentionId || !item.mentionName || !item.mentionType) {
+        console.error('[MENTION DEBUG] Invalid mention object:', item);
+        showToast('Erro: menção inválida.', 'error');
         return;
     }
-    }
 
-        const textBeforeCaret = textNode.textContent.substring(0, range.startOffset);
-        const match = textBeforeCaret.match(/(?:^|\s|\n)(@)([a-zA-Z0-9_]*)$/);
+    editor.focus();
+    selectMention(item);
+}
 
-        let actualMentionStartIndex = -1;
-        let actualMentionQuery = '';
+function selectMention(item) {
+    const selection = window.getSelection();
+    if (selection.rangeCount === 0) return;
 
-        if (match) {
-            const triggerChar = match[1]; // @
-            actualMentionQuery = match[2];
-            actualMentionStartIndex = range.startOffset - actualMentionQuery.length - triggerChar.length;
-            console.log('[MENTION DEBUG] Recalculated mentionStartIndex:', actualMentionStartIndex, 'actualMentionQuery:', actualMentionQuery);
+    const range = selection.getRangeAt(0);
+    let textNode = range.startContainer;
+
+    if (textNode.nodeType !== Node.TEXT_NODE) {
+        if (textNode.lastChild && textNode.lastChild.nodeType === Node.TEXT_NODE) {
+            textNode = textNode.lastChild;
+
+            if (range.startContainer !== textNode) {
+                range.setStart(textNode, textNode.length);
+                range.collapse(true);
+            }
         } else {
-            console.warn('[MENTION DEBUG] No valid @mention trigger found immediately before caret during selection. Cannot insert mention correctly.');
             hideMentionDropdown();
             return;
         }
-
-        // Delete the @ and the query text
-        range.setStart(textNode, actualMentionStartIndex); // Use the recalculated index
-        range.deleteContents();
-
-        // Create the mention chip
-        const mentionChip = document.createElement('span');
-        mentionChip.contentEditable = 'false'; // Make the chip not editable directly
-        mentionChip.className = 'sql-mention-chip';
-        mentionChip.dataset.sqlId = sql.id;
-        mentionChip.dataset.sqlName = sql.name;
-        mentionChip.innerHTML = `@${sql.name} <i class="ph-bold ph-database" style="font-size:1em;"></i>`;
-
-        // Add click listener to open the side panel
-        mentionChip.addEventListener('click', (e) => {
-            e.stopPropagation(); // Prevent editor focus change
-            openPanel(sql.id);
-        });
-
-        range.insertNode(mentionChip);
-        range.setStartAfter(mentionChip);
-        range.collapse(true);
-        selection.removeAllRanges();
-        selection.addRange(range);
-
-        // Add a non-breaking space after the chip for better typing experience
-        insertHtmlAtCursor('&nbsp;', editor);
-
-        hideMentionDropdown();
-        mentionQuery = '';
-        mentionStartIndex = -1;
     }
+
+    const textBeforeCaret = textNode.textContent.substring(0, range.startOffset);
+    const match = textBeforeCaret.match(/(?:^|\s|\n)(@)([a-zA-Z0-9_\-]*)$/);
+
+    if (!match) {
+        hideMentionDropdown();
+        return;
+    }
+
+    const actualMentionQuery = match[2];
+    const actualMentionStartIndex = range.startOffset - actualMentionQuery.length - 1;
+
+    range.setStart(textNode, actualMentionStartIndex);
+    range.deleteContents();
+
+    const mentionChip = document.createElement('span');
+    mentionChip.contentEditable = 'false';
+
+    if (item.mentionType === 'proc') {
+        mentionChip.className = 'proc-mention-chip';
+        mentionChip.dataset.procId = item.mentionId;
+        mentionChip.dataset.procName = item.mentionName;
+        mentionChip.innerHTML = `@${item.mentionName} <i class="ph-bold ph-book-open" style="font-size:1em;"></i>`;
+    } else {
+        mentionChip.className = 'sql-mention-chip';
+        mentionChip.dataset.sqlId = item.mentionId;
+        mentionChip.dataset.sqlName = item.mentionName;
+        mentionChip.innerHTML = `@${item.mentionName} <i class="ph-bold ph-database" style="font-size:1em;"></i>`;
+    }
+
+    range.insertNode(mentionChip);
+    range.setStartAfter(mentionChip);
+    range.collapse(true);
+
+    selection.removeAllRanges();
+    selection.addRange(range);
+
+    insertHtmlAtCursor('&nbsp;', editor);
+
+    hideMentionDropdown();
+    mentionQuery = '';
+    mentionStartIndex = -1;
+}
 
     editor.addEventListener('input', async (e) => {
         console.log('[MENTION DEBUG] Input event fired.');
@@ -473,13 +591,17 @@ export function initEditor(editorId = 'article-body') {
             mentionStartIndex = caretPos - mentionQuery.length - triggerChar.length;
             console.log('[MENTION DEBUG] Trigger detected. Mention query:', `'${mentionQuery}'`, 'Mention start index:', mentionStartIndex);
 
-            const filteredSqls = availableSqls.filter(sql =>
-                sql.name.toLowerCase().includes(mentionQuery.toLowerCase()) ||
-                (sql.description || '').toLowerCase().includes(mentionQuery.toLowerCase())
-            );
-            console.log('[MENTION DEBUG] Filtered SQLs:', filteredSqls);
-            selectedMentionIndex = 0; // Reset selection to first item
-            showMentionDropdown(filteredSqls, getCaretCoordinates());
+          const query = mentionQuery.toLowerCase();
+
+const filteredMentions = availableMentions.filter(item => {
+    const name = String(item.mentionName || '').toLowerCase();
+    const description = String(item.mentionDescription || '').toLowerCase();
+
+    return name.includes(query) || description.includes(query);
+});
+
+selectedMentionIndex = filteredMentions.length > 0 ? 0 : -1;
+showMentionDropdown(filteredMentions, getCaretCoordinates());
         } else {
             console.log('[MENTION DEBUG] No trigger match. Hiding dropdown.');
             hideMentionDropdown();
@@ -505,11 +627,17 @@ export function initEditor(editorId = 'article-body') {
             } else if (e.key === 'Enter') { // Changed from Enter || Tab
                 e.preventDefault();
                 if (selectedMentionIndex !== -1) {
-                    const selectedItemName = items[selectedMentionIndex].querySelector('.mention-item-name').textContent;
-                    const selectedSql = availableSqls.find(sql => sql.name === selectedItemName);
-                    if (selectedSql) {
-                        selectMentionItem(selectedSql); // Use shared function
-                    }
+                    const selectedType = items[selectedMentionIndex].dataset.mentionType;
+const selectedId = items[selectedMentionIndex].dataset.mentionId;
+
+const selectedMention = availableMentions.find(item =>
+    item.mentionType === selectedType &&
+    item.mentionId === selectedId
+);
+
+if (selectedMention) {
+    selectMentionItem(selectedMention);
+}
                 }
             } else if (e.key === 'Escape') {
                 e.preventDefault();
@@ -531,16 +659,28 @@ export function initEditor(editorId = 'article-body') {
 
     // Handle clicks on mention chips to open the panel
     editor.addEventListener('click', (e) => {
-        const targetChip = e.target.closest('.sql-mention-chip');
-        if (targetChip && targetChip.dataset.sqlId) {
-            openPanel(targetChip.dataset.sqlId);
-        } else {
-            closePanel(); // Close panel if clicking outside a chip
-        }
-    });
+    const sqlChip = e.target.closest('.sql-mention-chip');
+    const procChip = e.target.closest('.proc-mention-chip');
+
+    if (sqlChip && sqlChip.dataset.sqlId) {
+        e.preventDefault();
+        e.stopPropagation();
+        openPanel(sqlChip.dataset.sqlId);
+        return;
+    }
+
+    if (procChip && procChip.dataset.procId) {
+        e.preventDefault();
+        e.stopPropagation();
+        openProcedurePanel(procChip.dataset.procId);
+        return;
+    }
+
+    closePanel();
+});
 
     // Initial fetch of SQL scripts
-    fetchSqlScripts();
+    fetchMentionSources();
 }
 
 // Helper to extract mentions and replace them with placeholders
@@ -552,12 +692,37 @@ function extractMentionsAndReplaceWithPlaceholders(editorElement) {
     let mentionCounter = 0;
 
     // Process SQL mention chips
-    tempDiv.querySelectorAll('.sql-mention-chip').forEach((chip) => {
-        const placeholder = `[SQL_REF_${mentionCounter}]`;
-        mentions.push({ type: 'sql', id: chip.dataset.sqlId, name: chip.dataset.sqlName, placeholder: placeholder, originalHtml: chip.outerHTML });
-        chip.replaceWith(document.createTextNode(placeholder));
-        mentionCounter++;
+    // Process SQL mention chips
+tempDiv.querySelectorAll('.sql-mention-chip').forEach((chip) => {
+    const placeholder = `[SQL_REF_${mentionCounter}]`;
+
+    mentions.push({
+        type: 'sql',
+        id: chip.dataset.sqlId,
+        name: chip.dataset.sqlName,
+        placeholder,
+        originalHtml: chip.outerHTML
     });
+
+    chip.replaceWith(document.createTextNode(placeholder));
+    mentionCounter++;
+});
+
+// Process Procedure mention chips
+tempDiv.querySelectorAll('.proc-mention-chip').forEach((chip) => {
+    const placeholder = `[PROC_REF_${mentionCounter}]`;
+
+    mentions.push({
+        type: 'proc',
+        id: chip.dataset.procId,
+        name: chip.dataset.procName,
+        placeholder,
+        originalHtml: chip.outerHTML
+    });
+
+    chip.replaceWith(document.createTextNode(placeholder));
+    mentionCounter++;
+});
 
     // Process images (existing logic)
     tempDiv.querySelectorAll('img').forEach((img, index) => {
@@ -581,22 +746,9 @@ function restorePlaceholders(textWithPlaceholders, editorElement, mentions) {
         const regex = new RegExp(escapeRegExp(mention.placeholder), 'g');
         if (mention.type === 'image') {
             restoredHtml = restoredHtml.replace(regex, `<br>${mention.originalHtml}<br>`);
-        } else if (mention.type === 'sql') {
-            // Recreate the SQL mention chip element from its stored originalHtml
-            // This ensures event listeners are re-attached
-            const tempDiv = document.createElement('div');
-            tempDiv.innerHTML = mention.originalHtml;
-            const chip = tempDiv.firstChild;
-            if (chip) {
-                chip.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    openPanel(mention.id);
-                });
-            }
-            // Replace placeholder with the actual chip, but as a string
-            // The browser will parse this into an actual DOM element later
-            restoredHtml = restoredHtml.replace(regex, chip.outerHTML);
-        }
+        } else if (mention.type === 'sql' || mention.type === 'proc') {
+    restoredHtml = restoredHtml.replace(regex, mention.originalHtml);
+}
     });
 
     return restoredHtml;
@@ -604,6 +756,22 @@ function restorePlaceholders(textWithPlaceholders, editorElement, mentions) {
 
 function escapeRegExp(string) {
     return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+
+async function handleOcrImageSelect(editor) {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = SUPPORTED_OCR_TYPES.join(',');
+
+    input.onchange = async (event) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        await runOcrOnImageFile(file, editor);
+    };
+
+    input.click();
 }
 
 // UPLOAD E PROCESSAMENTO
@@ -693,10 +861,26 @@ function insertHtmlAtCursor(html, editor) {
 }
 
 export function insertFormatting(format, editor) {
+    if (!editor) return;
+
     editor.focus();
-    if (format === 'undo') document.execCommand('undo');
-    else if (format === 'redo') document.execCommand('redo');
-    else document.execCommand(format, false, null);
+
+    if (format === 'undo') {
+        document.execCommand('undo');
+        return;
+    }
+
+    if (format === 'redo') {
+        document.execCommand('redo');
+        return;
+    }
+
+    if (format === 'h3') {
+        document.execCommand('formatBlock', false, 'H3');
+        return;
+    }
+
+    document.execCommand(format, false, null);
 }
 
 export function resetEditor(editorId = 'article-body') {
@@ -713,27 +897,32 @@ async function runOcrOnImageFile(file, editor) {
         showToast('Tipo de imagem não suportado para OCR.', 'error');
         return;
     }
+
     if (file.size > MAX_OCR_SIZE_MB * 1024 * 1024) {
         showToast('Imagem excede o limite de 5MB.', 'error');
         return;
     }
-    showLoading(true, 'Processando imagem...');
+
+    showLoading(true, 'Processando OCR com IA...');
+
     try {
-        const { data } = await Tesseract.recognize(file, 'por', {
-            logger: m => console.log('[OCR]', m)
-        });
-        let text = (data.text || '').trim();
-        text = cleanOcrText(text);
-        if (text.length === 0) {
+        window._kcsOcrActive = true;
+
+        const text = cleanOcrText(await extrairTextoImagemGemini(file));
+
+        if (!text || text.length === 0) {
             showToast('Nenhum texto detectado na imagem.', 'warning');
             return;
         }
+
         insertOcrTextAtEnd(editor, text);
         showToast('Texto extraído com sucesso!', 'success');
+
     } catch (err) {
-        console.error('[OCR] Falha ao processar imagem:', err);
-        showToast('Falha ao processar imagem (OCR).', 'error');
+        console.error('[OCR Gemini] Falha ao processar imagem:', err);
+        showToast('Falha ao processar imagem com OCR.', 'error');
     } finally {
+        window._kcsOcrActive = false;
         showLoading(false);
     }
 }
@@ -744,13 +933,14 @@ function cleanOcrText(text) {
 }
 
 function insertOcrTextAtEnd(editor, text) {
-    // Do not trigger mention system for OCR text
-    if (window._kcsOcrActive) return;
+    const wrapper = document.createElement('div');
+    wrapper.className = 'ocr-inserted-text';
+    wrapper.innerHTML = `
+        <p><strong>Texto extraído da imagem:</strong></p>
+        <p>${String(text).replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>')}</p>
+    `;
 
-    const p = document.createElement('p');
-    p.innerText = text;
-    editor.appendChild(p);
-    // Scroll until the end
+    editor.appendChild(wrapper);
     editor.scrollTop = editor.scrollHeight;
 }
 
