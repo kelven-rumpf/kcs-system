@@ -1,40 +1,39 @@
 /**
  * services/dashboard.js — Consultas de Governança KCS no Firestore
+ * Versão sem índice composto obrigatório: busca usuários e ordena no client.
  */
-import { dbCloud } from './cloud.js'; // Importa a conexão do mesmo diretório
 
-export async function getTopAnalysts() {
+import { dbCloud } from './cloud.js';
+
+async function getUsersSafely() {
     try {
-        const { collection, query, where, orderBy, limit, getDocs } = await import('https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js');
-        
-        const q = query(
-            collection(dbCloud, 'users'),
-            where('role', 'in', ['analyst', 'admin', 'super_admin']),
-            orderBy('articlesApproved', 'desc'), 
-            limit(5)
-        );
-        const snap = await getDocs(q);
-        return snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const { collection, getDocs } = await import('https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js');
+
+        const snap = await getDocs(collection(dbCloud, 'users'));
+        return snap.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+        }));
     } catch (error) {
-        console.warn("Aviso (Analistas):", error.message);
-        return []; // Retorna vazio em caso de erro (ex: falta de índice) para ativar o fallback do render.js
+        console.warn('[Dashboard] Não foi possível carregar usuários:', error.message);
+        return [];
     }
 }
 
+export async function getTopAnalysts() {
+    const users = await getUsersSafely();
+
+    return users
+        .filter(user => ['analyst', 'admin', 'super_admin'].includes(user.role))
+        .sort((a, b) => (b.articlesApproved || 0) - (a.articlesApproved || 0))
+        .slice(0, 5);
+}
+
 export async function getTopCollaborators() {
-    try {
-        const { collection, query, where, orderBy, limit, getDocs } = await import('https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js');
-        
-        const q = query(
-            collection(dbCloud, 'users'),
-            where('role', '==', 'user'),
-            orderBy('draftsSubmitted', 'desc'), 
-            limit(5)
-        );
-        const snap = await getDocs(q);
-        return snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    } catch (error) {
-        console.warn("Aviso (Colaboradores):", error.message);
-        return []; // Retorna vazio em caso de erro para ativar o fallback do render.js
-    }
+    const users = await getUsersSafely();
+
+    return users
+        .filter(user => user.role === 'user' || user.draftsSubmitted > 0)
+        .sort((a, b) => (b.draftsSubmitted || 0) - (a.draftsSubmitted || 0))
+        .slice(0, 5);
 }

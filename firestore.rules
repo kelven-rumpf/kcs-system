@@ -1,0 +1,258 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function me() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isSuperAdmin() {
+      return signedIn() && me().role == 'super_admin';
+    }
+
+    function isAdmin() {
+      return signedIn() && me().role == 'admin';
+    }
+
+    function isAnalyst() {
+      return signedIn() && me().role == 'analyst';
+    }
+
+    function sameCompany(data) {
+      return signedIn() && data.companyId == me().companyId;
+    }
+
+    function sameSector(data) {
+      return data.sectorId == me().sectorId;
+    }
+
+    function userGroups() {
+      return me().group_ids is list ? me().group_ids : [];
+    }
+
+    function hasGroupAccess(data) {
+      return !('group_ids' in data)
+        || !(data.group_ids is list)
+        || data.group_ids.size() == 0
+        || data.group_ids.hasAny(userGroups());
+    }
+
+    function sectorFeatureDocId() {
+      return me().companyId + '_' + me().sectorId;
+    }
+
+    function sectorFeatureDocExists() {
+      return exists(/databases/$(database)/documents/sectorFeatures/$(sectorFeatureDocId()));
+    }
+
+    function sectorFeatures() {
+      return get(/databases/$(database)/documents/sectorFeatures/$(sectorFeatureDocId())).data.features;
+    }
+
+    function hasSectorFeature(featureKey) {
+      return isSuperAdmin()
+        || !sectorFeatureDocExists()
+        || sectorFeatures()[featureKey] != false;
+    }
+
+    function canReadScopedContent(data) {
+      return isSuperAdmin()
+        || (
+          sameCompany(data)
+          && (
+            data.visibility == 'public'
+            || (
+              data.visibility == 'private'
+              && sameSector(data)
+              && hasGroupAccess(data)
+            )
+          )
+        );
+    }
+
+    match /users/{userId} {
+      allow read: if signedIn() && (
+        request.auth.uid == userId ||
+        isSuperAdmin() ||
+        isAdmin()
+      );
+
+      allow create, update, delete: if isSuperAdmin();
+    }
+
+    match /articles/{articleId} {
+      allow read: if signedIn() && canReadScopedContent(resource.data);
+
+      allow create: if signedIn()
+        && request.resource.data.companyId == me().companyId
+        && request.resource.data.sectorId == me().sectorId;
+
+      allow update: if signedIn() && (
+        isSuperAdmin()
+        || (
+          sameCompany(resource.data)
+          && sameSector(resource.data)
+          && (
+            isAdmin()
+            || isAnalyst()
+            || resource.data.createdById == request.auth.uid
+            || resource.data.authorId == request.auth.uid
+          )
+        )
+      );
+
+      allow delete: if signedIn() && (
+        isSuperAdmin()
+        || (
+          sameCompany(resource.data)
+          && sameSector(resource.data)
+          && isAdmin()
+        )
+      );
+    }
+
+    match /sqlScripts/{scriptId} {
+      function isSqlPublic() {
+        return resource.data.visibility == 'public';
+      }
+
+      function isSqlPrivate() {
+        return resource.data.visibility == 'private';
+      }
+
+      function isSqlOwner() {
+        return resource.data.createdById == request.auth.uid;
+      }
+
+      allow read: if signedIn() && (
+        isSuperAdmin()
+        || (
+          sameCompany(resource.data)
+          && hasSectorFeature('sqlLibrary')
+          && (
+            isSqlPublic()
+            || (
+              isSqlPrivate()
+              && (
+                isAdmin()
+                || isAnalyst()
+                || isSqlOwner()
+              )
+            )
+          )
+        )
+      );
+
+      allow create: if signedIn()
+        && request.resource.data.companyId == me().companyId
+        && hasSectorFeature('sqlCreate')
+        && (isAdmin() || isAnalyst());
+
+      allow update, delete: if signedIn() && (
+        isSuperAdmin()
+        || (
+          sameCompany(resource.data)
+          && hasSectorFeature('sqlCreate')
+          && (
+            isAdmin()
+            || isSqlOwner()
+          )
+        )
+      );
+    }
+
+    match /sectorFeatures/{docId} {
+      allow read: if signedIn() && (
+        isSuperAdmin()
+        || resource.data.companyId == me().companyId
+      );
+
+      allow create: if signedIn() && (
+        isSuperAdmin()
+        || (
+          isAdmin()
+          && request.resource.data.companyId == me().companyId
+        )
+      );
+
+      allow update: if signedIn() && (
+        isSuperAdmin()
+        || (
+          isAdmin()
+          && resource.data.companyId == me().companyId
+          && request.resource.data.companyId == me().companyId
+        )
+      );
+
+      allow delete: if isSuperAdmin();
+    }
+
+    match /categories/{categoryId} {
+      allow read: if signedIn();
+
+      allow create, update, delete: if signedIn() && (
+        isSuperAdmin()
+        || isAdmin()
+      );
+    }
+
+    match /groups/{groupId} {
+      allow read: if signedIn() && sameCompany(resource.data);
+
+      allow create: if signedIn()
+        && request.resource.data.companyId == me().companyId
+        && (isSuperAdmin() || isAdmin());
+
+      allow update, delete: if signedIn() && (
+        isSuperAdmin()
+        || (
+          sameCompany(resource.data)
+          && isAdmin()
+        )
+      );
+    }
+
+    match /sectors/{sectorId} {
+      allow read: if signedIn() && sameCompany(resource.data);
+
+      allow create: if signedIn()
+        && request.resource.data.companyId == me().companyId
+        && (isSuperAdmin() || isAdmin());
+
+      allow update, delete: if signedIn() && (
+        isSuperAdmin()
+        || (
+          sameCompany(resource.data)
+          && isAdmin()
+        )
+      );
+    }
+
+    match /companies/{companyId} {
+      allow read: if signedIn() && (
+        isSuperAdmin()
+        || companyId == me().companyId
+      );
+
+      allow create, update, delete: if isSuperAdmin();
+    }
+
+    match /tenants/{tenantId} {
+      allow read: if signedIn() && (
+        isSuperAdmin()
+        || tenantId == me().companyId
+      );
+
+      allow create, update, delete: if isSuperAdmin();
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

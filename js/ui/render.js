@@ -777,183 +777,423 @@ export function renderDashboard(articles, scripts, topAnalysts = [], topCollabor
     const container = document.getElementById('dashboard-container');
     if (!container) return;
 
+    window.__kcsDashboardArticles = articles || [];
+    window.__kcsDashboardScripts = scripts || [];
+    window.__kcsDashboardTopAnalysts = topAnalysts || [];
+    window.__kcsDashboardTopCollaborators = topCollaborators || [];
+
+    const savedPeriod = localStorage.getItem('kcs_dashboard_period');
+
+if (!window.__kcsDashboardPeriod) {
+    window.__kcsDashboardPeriod = savedPeriod || '30d';
+}
+
+    window.__kcsSetDashboardPeriod = (period) => {
+    window.__kcsDashboardPeriod = period;
+
+    localStorage.setItem('kcs_dashboard_period', period);
+
+    renderDashboard(
+        window.__kcsDashboardArticles || [],
+        window.__kcsDashboardScripts || [],
+        window.__kcsDashboardTopAnalysts || [],
+        window.__kcsDashboardTopCollaborators || []
+    );
+};
+
     const now = new Date();
     const msPerDay = 1000 * 60 * 60 * 24;
+    const selectedPeriod = window.__kcsDashboardPeriod || '30d';
 
-    // ==========================================
-    // 1. CÁLCULOS DOS KPIs PRINCIPAIS E SAÚDE
-    // ==========================================
-    const validArticles = articles.filter(a => a.status === 'approved' || (typeof ARTICLE_STATUS !== 'undefined' && a.status === ARTICLE_STATUS.APPROVED));
-    const totalViews = articles.reduce((acc, a) => acc + (a.views || 0), 0);
+    const periodConfig = {
+        '7d': { label: '7 dias', days: 7 },
+        '30d': { label: '30 dias', days: 30 },
+        '90d': { label: '90 dias', days: 90 },
+        'all': { label: 'Tudo', days: null }
+    };
 
-    // Taxa de Aprovação
-    const approvalRate = articles.length > 0 ? Math.round((validArticles.length / articles.length) * 100) : 0;
+    const activePeriod = periodConfig[selectedPeriod] || periodConfig['30d'];
+    const periodStart = activePeriod.days ? new Date(now.getTime() - activePeriod.days * msPerDay) : null;
 
-    // Tempo Médio de Revisão (Aprovados que possuem data de criação e atualização distintas)
+    const normalizedArticles = (articles || []).map(article => ({
+        ...article,
+        _createdAt: dashboardToDate(article.createdAt),
+        _updatedAt: dashboardToDate(article.updatedAt),
+        _approvedAt: dashboardToDate(article.approvedAt || article.publishedAt || article.updatedAt),
+        _lastReviewedAt: dashboardToDate(article.lastReviewedAt || article.reviewedAt || article.updatedAt),
+        _status: dashboardNormalizeStatus(article.status)
+    }));
+
+    const normalizedScripts = scripts || [];
+
+    const approvedArticles = normalizedArticles.filter(article => article._status === 'approved');
+    const draftArticles = normalizedArticles.filter(article => article._status === 'draft');
+    const reviewArticles = normalizedArticles.filter(article => article._status === 'review');
+    const pendingArticles = normalizedArticles.filter(article => article._status !== 'approved');
+
+    const articlesInPeriod = normalizedArticles.filter(article => dashboardIsInPeriod(article._createdAt, periodStart));
+    const approvedInPeriod = approvedArticles.filter(article => dashboardIsInPeriod(article._approvedAt, periodStart));
+    const updatedInPeriod = normalizedArticles.filter(article => dashboardIsInPeriod(article._updatedAt, periodStart));
+
+    const totalViews = normalizedArticles.reduce((acc, article) => acc + (article.views || 0), 0);
+    const periodViews = articlesInPeriod.reduce((acc, article) => acc + (article.views || 0), 0);
+
+    const approvalRate = normalizedArticles.length > 0
+        ? Math.round((approvedArticles.length / normalizedArticles.length) * 100)
+        : 0;
+
+    const periodApprovalRate = articlesInPeriod.length > 0
+        ? Math.round((approvedInPeriod.length / articlesInPeriod.length) * 100)
+        : 0;
+
     let totalReviewTime = 0;
     let reviewedCount = 0;
-    validArticles.forEach(a => {
-        if (a.createdAt && a.updatedAt && a.createdAt !== a.updatedAt) {
-            totalReviewTime += (new Date(a.updatedAt) - new Date(a.createdAt)) / msPerDay;
+
+    approvedArticles.forEach(article => {
+        if (article._createdAt && article._approvedAt && article._approvedAt >= article._createdAt) {
+            totalReviewTime += (article._approvedAt - article._createdAt) / msPerDay;
             reviewedCount++;
         }
     });
+
     const avgReviewDays = reviewedCount > 0 ? Math.round(totalReviewTime / reviewedCount) : 0;
 
-    // Artigos Desatualizados (> 90 dias sem atualização)
-    const outdatedCount = validArticles.filter(a => {
-        const age = (now - new Date(a.updatedAt || a.createdAt || now)) / msPerDay;
-        return age > 90;
-    }).length;
+    const outdatedArticles = approvedArticles.filter(article => {
+        const baseDate = article._lastReviewedAt || article._updatedAt || article._createdAt || now;
+        const ageDays = (now - baseDate) / msPerDay;
+        return ageDays > 90;
+    });
 
-    // Nunca Revisados (Aprovados sem registro de autoridade revisora)
-    const neverReviewedCount = articles.filter(a => a.status === 'approved' && !a.approvedBy && !a.reviewedBy && !a.validatedBy).length;
+    const neverReviewedArticles = approvedArticles.filter(article =>
+        !article.approvedBy &&
+        !article.reviewedBy &&
+        !article.validatedBy &&
+        !article.lastReviewedAt &&
+        !article.reviewedAt
+    );
 
-    const hasReport = (a) => {
-        return (a.reportCount || 0) > 0 || (a.reports && a.reports.length > 0) || a.flagged === true || a.status === 'review' || a.status === 'pendente_revisao';
+    const hasReport = (article) => {
+        return (
+            (article.reportCount || 0) > 0 ||
+            (Array.isArray(article.reports) && article.reports.length > 0) ||
+            article.flagged === true ||
+            article._status === 'review'
+        );
     };
 
-    const qualityAlertArticles = articles.filter(a => {
-        const score = (a.useful || (a.likes || []).length || 0) - (a.notUseful || 0);
-        return score < 0 || hasReport(a);
+    const qualityAlertArticles = normalizedArticles.filter(article => {
+        const score = (article.useful || (article.likes || []).length || 0) - (article.notUseful || 0);
+        return score < 0 || hasReport(article);
     });
 
-    // ==========================================
-    // 2. CÁLCULOS DE QUALIDADE DA BASE
-    // ==========================================
-    const noCategoryCount = articles.filter(a => !a.categoryId && !a.category || a.category === 'Sem categoria').length;
-    const lowAccessCount = validArticles.filter(a => (a.views || 0) < 10).length;
-    
-    // Detector de Duplicatas (Títulos idênticos)
+    const noCategoryArticles = normalizedArticles.filter(article =>
+        (!article.categoryId && !article.category) ||
+        article.category === 'Sem categoria'
+    );
+
+    const lowAccessArticles = approvedArticles.filter(article => (article.views || 0) < 10);
+
     const titleCounts = {};
-    articles.forEach(a => {
-        if (!a.title) return;
-        const t = a.title.trim().toLowerCase();
-        titleCounts[t] = (titleCounts[t] || 0) + 1;
+    normalizedArticles.forEach(article => {
+        if (!article.title) return;
+        const title = article.title.trim().toLowerCase();
+        titleCounts[title] = (titleCounts[title] || 0) + 1;
     });
-    const duplicateCount = articles.filter(a => a.title && titleCounts[a.title.trim().toLowerCase()] > 1).length;
 
-    // ==========================================
-    // 3. FILA DE REVISÃO CRÍTICA (Com Scoring)
-    // ==========================================
-    const urgentArticles = articles.filter(a => {
-        const isDraft = a.status === 'draft' || (typeof ARTICLE_STATUS !== 'undefined' && a.status === ARTICLE_STATUS.DRAFT);
-        const isApproved = a.status === 'approved' || (typeof ARTICLE_STATUS !== 'undefined' && a.status === ARTICLE_STATUS.APPROVED);
-        
-        const ageDays = Math.floor((now - new Date(a.updatedAt || a.createdAt || now)) / msPerDay);
-        const isReported = hasReport(a);
-        const isHighViewDraft = isDraft && (a.views || 0) > 5;
-        const isStagnantDraft = isDraft && ageDays > 3;  
-        const isStale = isApproved && ageDays > 6; 
-        
-        if (!isReported && !isHighViewDraft && !isStagnantDraft && !isStale) return false;
+    const duplicateArticles = normalizedArticles.filter(article =>
+        article.title &&
+        titleCounts[article.title.trim().toLowerCase()] > 1
+    );
 
-        a._ageDays = ageDays;
-        let score = 0;
+    const reuseRate = totalViews + normalizedArticles.length > 0
+        ? Math.round((totalViews / Math.max(totalViews + normalizedArticles.length, 1)) * 100)
+        : 0;
 
-        // Atribuição de Prioridade e Peso Crítico
-        if (isReported) { 
-            a._alertReason = 'Reporte de Erro'; a._priority = 'Alta'; score += 100; 
-        } else if (isHighViewDraft) { 
-            a._alertReason = 'Alto Acesso (>5)'; a._priority = 'Alta'; score += 80; 
-        } else if (isStale) { 
-            a._alertReason = 'Revisão Vencida (> 6d)'; a._priority = 'Média'; score += 50 + ageDays; 
-        } else if (isStagnantDraft) { 
-            a._alertReason = 'Rascunho Parado (> 3d)'; a._priority = 'Baixa'; score += 20 + ageDays; 
-        }
-        
-        a._criticalityScore = score;
-        return true;
-    }).sort((a, b) => b._criticalityScore - a._criticalityScore).slice(0, 8); // Top 8 mais críticos
+    const healthyArticles = approvedArticles.filter(article => {
+        const baseDate = article._lastReviewedAt || article._updatedAt || article._createdAt || now;
+        const ageDays = (now - baseDate) / msPerDay;
+        return ageDays <= 90 && !hasReport(article) && (article.views || 0) >= 1;
+    });
 
-    // ==========================================
-    // 4. RANKINGS GERAIS
-    // ==========================================
-    let finalAnalysts = topAnalysts;
-    let finalCollaborators = topCollaborators;
+    const healthRate = approvedArticles.length > 0
+        ? Math.round((healthyArticles.length / approvedArticles.length) * 100)
+        : 0;
+
+    const urgentArticles = normalizedArticles
+        .filter(article => {
+            const ageDays = Math.floor((now - (article._updatedAt || article._createdAt || now)) / msPerDay);
+            const isReported = hasReport(article);
+            const isHighViewDraft = article._status === 'draft' && (article.views || 0) > 5;
+            const isStagnantDraft = article._status === 'draft' && ageDays > 3;
+            const isLongReview = article._status === 'review' && ageDays > 2;
+            const isStaleApproved = article._status === 'approved' && ageDays > 90;
+
+            if (!isReported && !isHighViewDraft && !isStagnantDraft && !isLongReview && !isStaleApproved) {
+                return false;
+            }
+
+            article._ageDays = ageDays;
+
+            let score = 0;
+
+            if (isReported) {
+                article._alertReason = 'Reporte de erro';
+                article._priority = 'Alta';
+                score += 100;
+            } else if (isHighViewDraft) {
+                article._alertReason = 'Rascunho com alto acesso';
+                article._priority = 'Alta';
+                score += 80;
+            } else if (isLongReview) {
+                article._alertReason = 'Revisão parada';
+                article._priority = 'Média';
+                score += 60 + ageDays;
+            } else if (isStaleApproved) {
+                article._alertReason = 'Base desatualizada';
+                article._priority = 'Média';
+                score += 50 + ageDays;
+            } else if (isStagnantDraft) {
+                article._alertReason = 'Rascunho parado';
+                article._priority = 'Baixa';
+                score += 20 + ageDays;
+            }
+
+            article._criticalityScore = score;
+            return true;
+        })
+        .sort((a, b) => b._criticalityScore - a._criticalityScore)
+        .slice(0, 8);
+
+    const agingBuckets = dashboardBuildAgingBuckets(approvedArticles, now, msPerDay);
+    const timeline = dashboardBuildTimeline(normalizedArticles, selectedPeriod, now, msPerDay);
+    const funnel = dashboardBuildFunnel(normalizedArticles);
+
+    const sortedByViews = [...approvedArticles]
+        .sort((a, b) => (b.views || 0) - (a.views || 0))
+        .slice(0, 5);
+
+    const topScripts = [...normalizedScripts]
+        .sort((a, b) => ((b.likes || []).length || 0) - ((a.likes || []).length || 0))
+        .slice(0, 5);
+
+    let finalAnalysts = topAnalysts || [];
+    let finalCollaborators = topCollaborators || [];
 
     if (!finalAnalysts.length && !finalCollaborators.length) {
         const authorStats = {};
-        articles.forEach(a => {
-            const author = a.createdBy || 'Sistema';
-            if (!authorStats[author]) authorStats[author] = { name: author, approved: 0, drafts: 0 };
-            if (a.status === 'approved' || (typeof ARTICLE_STATUS !== 'undefined' && a.status === ARTICLE_STATUS.APPROVED)) {
+
+        normalizedArticles.forEach(article => {
+            const author = article.createdBy || 'Sistema';
+
+            if (!authorStats[author]) {
+                authorStats[author] = {
+                    name: author,
+                    approved: 0,
+                    drafts: 0,
+                    views: 0,
+                    score: 0
+                };
+            }
+
+            if (article._status === 'approved') {
                 authorStats[author].approved++;
             } else {
                 authorStats[author].drafts++;
             }
+
+            authorStats[author].views += article.views || 0;
+            authorStats[author].score =
+                authorStats[author].approved * 10 +
+                authorStats[author].drafts * 3 +
+                authorStats[author].views;
         });
-        finalAnalysts = Object.values(authorStats).sort((a, b) => b.approved - a.approved).slice(0, 5);
-        finalCollaborators = Object.values(authorStats).sort((a, b) => b.drafts - a.drafts).slice(0, 5);
+
+        const authors = Object.values(authorStats);
+
+        finalAnalysts = authors
+            .sort((a, b) => b.approved - a.approved)
+            .slice(0, 5);
+
+        finalCollaborators = authors
+            .sort((a, b) => b.drafts - a.drafts)
+            .slice(0, 5);
     }
 
-    const sortedByViews = [...articles].sort((a, b) => (b.views || 0) - (a.views || 0)).slice(0, 5);
-    const topScripts = [...scripts].sort((a, b) => (b.likes || []).length - (a.likes || []).length).slice(0, 5);
+    const impactRanking = dashboardBuildImpactRanking(normalizedArticles).slice(0, 5);
 
-    // ==========================================
-    // 5. INJEÇÃO DO DOM
-    // ==========================================
     container.innerHTML = `
-        <h2 class="dash-title">
-            <i class="ph ph-chart-line-up dash-icon-main"></i> Dashboard de Governança
-        </h2>
-        
-        <div class="dash-metrics">
-            <div class="metric-card">
-                <p class="metric-label"><i class="ph ph-file-text"></i>Procedimentos</p>
-                <p class="metric-value">${articles.length}</p>
+        <div class="dash-saas-header">
+            <div>
+                <p class="dash-saas-eyebrow">Governança KCS</p>
+                <h2 class="dash-title dash-title-saas">
+                    <i class="ph ph-chart-line-up dash-icon-main"></i>
+                    Dashboard Executivo
+                </h2>
+                <p class="dash-saas-subtitle">
+                    Visão de produção, qualidade, reutilização e gargalos da base de conhecimento.
+                </p>
             </div>
-            <div class="metric-card">
-                <p class="metric-label"><i class="ph ph-check-circle"></i>Aprovados</p>
-                <p class="metric-value value-approved">${validArticles.length}</p>
-            </div>
-            <div class="metric-card">
-                <p class="metric-label"><i class="ph ph-percent"></i>Taxa de Aprovação</p>
-                <p class="metric-value value-views">${approvalRate}%</p>
-            </div>
-            <div class="metric-card">
-                <p class="metric-label"><i class="ph ph-clock"></i>Tempo Méd. Revisão</p>
-                <p class="metric-value">${avgReviewDays}d</p>
-            </div>
-            
-            <div class="metric-card">
-                <p class="metric-label"><i class="ph ph-eye"></i>Total de Acessos</p>
-                <p class="metric-value value-views">${totalViews}</p>
-            </div>
-            <div class="metric-card">
-                <p class="metric-label"><i class="ph ph-calendar-blank"></i>Desatualizados (>90d)</p>
-                <p class="metric-value ${outdatedCount > 0 ? 'value-alert' : ''}">${outdatedCount}</p>
-            </div>
-            <div class="metric-card">
-                <p class="metric-label"><i class="ph ph-shield-warning"></i>Nunca Revisados</p>
-                <p class="metric-value ${neverReviewedCount > 0 ? 'value-alert' : ''}">${neverReviewedCount}</p>
-            </div>
-            <div class="metric-card alert-metric">
-                <p class="metric-label label-alert"><i class="ph ph-warning-octagon"></i>Alerta Qualidade</p>
-                <p class="metric-value value-alert">${qualityAlertArticles.length}</p>
+
+            <div class="dash-period-filter" role="group" aria-label="Filtro de período do dashboard">
+                ${Object.entries(periodConfig).map(([key, config]) => `
+                    <button
+                        type="button"
+                        class="dash-period-btn ${selectedPeriod === key ? 'active' : ''}"
+                        onclick="window.__kcsSetDashboardPeriod('${key}')"
+                    >
+                        ${config.label}
+                    </button>
+                `).join('')}
             </div>
         </div>
 
-        <h2 class="dash-title" style="margin-top: 2rem;">
-            <i class="ph ph-heartbeat dash-icon-main"></i> Qualidade da Base
-        </h2>
+        <div class="dash-saas-grid">
+            ${dashboardMetricCard({
+                icon: 'ph-file-plus',
+                label: `Criados no período`,
+                value: articlesInPeriod.length,
+                hint: activePeriod.label,
+                tone: 'blue'
+            })}
 
-        <div class="dash-metrics">
-            <div class="metric-card">
-                <p class="metric-label"><i class="ph ph-folder-notch-minus"></i>Sem Categoria</p>
-                <p class="metric-value ${noCategoryCount > 0 ? 'value-alert' : ''}">${noCategoryCount}</p>
+            ${dashboardMetricCard({
+                icon: 'ph-seal-check',
+                label: `Publicados no período`,
+                value: approvedInPeriod.length,
+                hint: `${periodApprovalRate}% aprovação`,
+                tone: 'green'
+            })}
+
+            ${dashboardMetricCard({
+                icon: 'ph-git-pull-request',
+                label: 'Em revisão / pendentes',
+                value: pendingArticles.length,
+                hint: `${draftArticles.length} rascunhos`,
+                tone: pendingArticles.length > 0 ? 'amber' : 'green'
+            })}
+
+            ${dashboardMetricCard({
+                icon: 'ph-recycle',
+                label: 'Taxa de reutilização',
+                value: `${reuseRate}%`,
+                hint: 'proxy por acessos',
+                tone: 'purple'
+            })}
+
+            ${dashboardMetricCard({
+                icon: 'ph-clock',
+                label: 'Tempo médio até publicação',
+                value: `${avgReviewDays}d`,
+                hint: `${reviewedCount} itens medidos`,
+                tone: avgReviewDays > 5 ? 'amber' : 'blue'
+            })}
+
+            ${dashboardMetricCard({
+                icon: 'ph-heartbeat',
+                label: 'Base saudável',
+                value: `${healthRate}%`,
+                hint: `${healthyArticles.length}/${approvedArticles.length} aprovados`,
+                tone: healthRate < 70 ? 'red' : 'green'
+            })}
+        </div>
+
+        <div class="dash-saas-section-grid mt-6">
+            <div class="dash-widget dash-saas-card dash-wide">
+                <div class="widget-header-row">
+                    <div>
+                        <h3 class="widget-header header-blue">
+                            <i class="ph ph-activity"></i>
+                            Evolução KCS
+                        </h3>
+                        <p class="dash-widget-subtitle">Criados x publicados no período selecionado.</p>
+                    </div>
+                </div>
+
+                <div class="dash-timeline">
+                    ${timeline.map(day => {
+                        const max = Math.max(...timeline.map(item => Math.max(item.created, item.approved)), 1);
+                        const createdHeight = Math.max((day.created / max) * 100, day.created > 0 ? 8 : 0);
+                        const approvedHeight = Math.max((day.approved / max) * 100, day.approved > 0 ? 8 : 0);
+
+                        return `
+                            <div class="dash-timeline-item" title="${day.label}: ${day.created} criados / ${day.approved} publicados">
+                                <div class="dash-timeline-bars">
+                                    <span class="dash-bar dash-bar-created" style="height:${createdHeight}%"></span>
+                                    <span class="dash-bar dash-bar-approved" style="height:${approvedHeight}%"></span>
+                                </div>
+                                <span class="dash-timeline-label">${day.shortLabel}</span>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+
+                <div class="dash-chart-legend">
+                    <span><i class="legend-dot created"></i> Criados</span>
+                    <span><i class="legend-dot approved"></i> Publicados</span>
+                </div>
             </div>
-            <div class="metric-card">
-                <p class="metric-label"><i class="ph ph-copy"></i>Duplicados (Nomes)</p>
-                <p class="metric-value ${duplicateCount > 0 ? 'value-alert' : ''}">${duplicateCount}</p>
+
+            <div class="dash-widget dash-saas-card">
+                <h3 class="widget-header header-purple">
+                    <i class="ph ph-funnel"></i>
+                    Funil de Governança
+                </h3>
+                <p class="dash-widget-subtitle">Distribuição atual por etapa do ciclo KCS.</p>
+
+                <div class="dash-funnel">
+                    ${funnel.map(item => `
+                        <div class="dash-funnel-row">
+                            <div class="dash-funnel-label">
+                                <span>${item.label}</span>
+                                <strong>${item.value}</strong>
+                            </div>
+                            <div class="dash-funnel-track">
+                                <div class="dash-funnel-fill ${item.tone}" style="width:${item.percent}%"></div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
             </div>
-            <div class="metric-card">
-                <p class="metric-label"><i class="ph ph-trend-down"></i>Baixo Acesso (< 10)</p>
-                <p class="metric-value">${lowAccessCount}</p>
+        </div>
+
+        <div class="dash-saas-section-grid mt-6">
+            <div class="dash-widget dash-saas-card">
+                <h3 class="widget-header header-green">
+                    <i class="ph ph-shield-check"></i>
+                    Saúde da Base
+                </h3>
+                <p class="dash-widget-subtitle">Idade dos artigos aprovados por última revisão/atualização.</p>
+
+                <div class="dash-aging">
+                    ${agingBuckets.map(bucket => `
+                        <div class="dash-aging-row">
+                            <div class="dash-aging-label">
+                                <span>${bucket.label}</span>
+                                <strong>${bucket.value}</strong>
+                            </div>
+                            <div class="dash-aging-track">
+                                <div class="dash-aging-fill ${bucket.tone}" style="width:${bucket.percent}%"></div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
             </div>
-            <div class="metric-card">
-                <p class="metric-label"><i class="ph ph-user-minus"></i>Pendentes/Drafts</p>
-                <p class="metric-value">${articles.length - validArticles.length}</p>
+
+            <div class="dash-widget dash-saas-card">
+                <h3 class="widget-header header-red">
+                    <i class="ph ph-warning-octagon"></i>
+                    Alertas de Qualidade
+                </h3>
+                <p class="dash-widget-subtitle">Itens que exigem saneamento da base.</p>
+
+                <div class="dash-alert-grid">
+                    ${dashboardAlertMiniCard('Sem categoria', noCategoryArticles.length, 'ph-folder-notch-minus')}
+                    ${dashboardAlertMiniCard('Duplicados', duplicateArticles.length, 'ph-copy')}
+                    ${dashboardAlertMiniCard('Baixo acesso', lowAccessArticles.length, 'ph-trend-down')}
+                    ${dashboardAlertMiniCard('Desatualizados', outdatedArticles.length, 'ph-calendar-x')}
+                    ${dashboardAlertMiniCard('Nunca revisados', neverReviewedArticles.length, 'ph-shield-warning')}
+                    ${dashboardAlertMiniCard('Reportados', qualityAlertArticles.length, 'ph-flag')}
+                </div>
             </div>
         </div>
 
@@ -961,15 +1201,17 @@ export function renderDashboard(articles, scripts, topAnalysts = [], topCollabor
             <div class="widget-header-row">
                 <div class="widget-title-group">
                     <h3 class="widget-header header-red">
-                        <i class="ph ph-siren"></i> Fila de Revisão Crítica
+                        <i class="ph ph-siren"></i>
+                        Fila de Revisão Crítica
                     </h3>
-                    <button onclick="window.copyTableToClipboard('dash-table-urgents', this)" class="copy-btn" title="Copiar Tabela">
+                    <button onclick="window.copyTableToClipboard('dash-table-urgents', this)" class="copy-btn" title="Copiar tabela">
                         <i class="ph ph-copy"></i>
                     </button>
                 </div>
+
                 <div class="info-box hidden sm:flex">
                     <i class="ph ph-info"></i>
-                    <span><strong>Ordenado por Criticidade:</strong> Reportes e Idade do rascunho elevam a prioridade.</span>
+                    <span><strong>Criticidade:</strong> reportes, idade, rascunhos parados e base vencida elevam prioridade.</span>
                 </div>
             </div>
 
@@ -978,7 +1220,7 @@ export function renderDashboard(articles, scripts, topAnalysts = [], topCollabor
                     <thead>
                         <tr>
                             <th>KCS ID</th>
-                            <th>Título do Procedimento</th>
+                            <th>Título do procedimento</th>
                             <th class="col-center">Idade</th>
                             <th class="col-center">Prioridade</th>
                             <th>Gatilho</th>
@@ -986,75 +1228,102 @@ export function renderDashboard(articles, scripts, topAnalysts = [], topCollabor
                         </tr>
                     </thead>
                     <tbody>
-                        ${urgentArticles.map(art => `
-                            <tr class="table-row" onclick="window.__kcs.viewArticle('${art.id}')">
-                                <td class="id-cell">#${art.articleNumber || '---'}</td>
-                                <td class="title-cell-truncate" title="${escapeHtml(art.title)}">${escapeHtml(art.title)}</td>
-                                <td class="col-center stat-muted"><i class="ph ph-clock"></i> ${art._ageDays}d</td>
+                        ${urgentArticles.map(article => `
+                            <tr class="table-row" onclick="window.__kcs.viewArticle('${article.id}')">
+                                <td class="id-cell">#${article.articleNumber || '---'}</td>
+                                <td class="title-cell-truncate" title="${escapeHtml(article.title || '')}">
+                                    ${escapeHtml(article.title || 'Sem título')}
+                                </td>
+                                <td class="col-center stat-muted">
+                                    <i class="ph ph-clock"></i>
+                                    ${article._ageDays || 0}d
+                                </td>
                                 <td class="col-center">
-                                    <span class="${art._priority === 'Alta' ? 'badge-alert' : art._priority === 'Média' ? 'badge-purple' : 'badge-green'}">${art._priority}</span>
+                                    <span class="${article._priority === 'Alta' ? 'badge-alert' : article._priority === 'Média' ? 'badge-purple' : 'badge-green'}">
+                                        ${article._priority}
+                                    </span>
                                 </td>
                                 <td>
                                     <span class="badge-alert">
-                                        <i class="ph ph-warning-circle"></i> ${escapeHtml(art._alertReason)}
+                                        <i class="ph ph-warning-circle"></i>
+                                        ${escapeHtml(article._alertReason || 'Atenção')}
                                     </span>
                                 </td>
                                 <td class="col-right">
-                                    <button class="btn-review">
-                                        Revisar
-                                    </button>
+                                    <button class="btn-review">Revisar</button>
                                 </td>
                             </tr>
-                        `).join('') || '<tr><td colspan="6" class="empty-cell-success"><i class="ph ph-check-circle"></i> Nenhum alerta crítico ativo na base.</td></tr>'}
+                        `).join('') || `
+                            <tr>
+                                <td colspan="6" class="empty-cell-success">
+                                    <i class="ph ph-check-circle"></i>
+                                    Nenhum alerta crítico ativo na base.
+                                </td>
+                            </tr>
+                        `}
                     </tbody>
                 </table>
             </div>
         </div>
 
         <div class="dash-tables-row mt-6">
-            <div class="dash-widget">
+            <div class="dash-widget dash-saas-card">
                 <h3 class="widget-header header-purple">
-                    <i class="ph ph-medal"></i> Top Analistas (Curadoria)
+                    <i class="ph ph-medal"></i>
+                    Ranking de Impacto KCS
                 </h3>
+                <p class="dash-widget-subtitle">Score combina publicações, acessos e contribuição.</p>
+
                 <div class="table-wrapper">
                     <table class="table-default">
                         <tbody>
-                            ${finalAnalysts.filter(a => (a.articlesApproved || a.approved || 0) > 0).map((u, i) => `
+                            ${impactRanking.map((user, index) => `
                                 <tr class="table-row">
                                     <td class="user-cell">
-                                        <div class="rank-number">#${i + 1}</div>
-                                        <div class="avatar-mini">${(u.displayName || u.name || '?').charAt(0).toUpperCase()}</div>
-                                        <p class="user-name">${escapeHtml(formatFullName(u.displayName || u.name))}</p>
+                                        <div class="rank-number">#${index + 1}</div>
+                                        <div class="avatar-mini">${(user.name || '?').charAt(0).toUpperCase()}</div>
+                                        <p class="user-name">${escapeHtml(formatFullName(user.name || 'Usuário'))}</p>
                                     </td>
                                     <td class="stat-cell">
-                                        <span class="badge-purple">${u.articlesApproved || u.approved || 0}</span>
+                                        <span class="badge-purple">${user.score}</span>
                                     </td>
                                 </tr>
-                            `).join('') || '<tr><td colspan="2" class="empty-cell">Nenhuma aprovação registrada.</td></tr>'}
+                            `).join('') || `
+                                <tr>
+                                    <td colspan="2" class="empty-cell">Nenhum impacto registrado.</td>
+                                </tr>
+                            `}
                         </tbody>
                     </table>
                 </div>
             </div>
 
-            <div class="dash-widget">
+            <div class="dash-widget dash-saas-card">
                 <h3 class="widget-header header-green">
-                    <i class="ph ph-hand-heart"></i> Top Colaboradores (Envios)
+                    <i class="ph ph-hand-heart"></i>
+                    Top Colaboradores
                 </h3>
+                <p class="dash-widget-subtitle">Usuários com maior envio de rascunhos/contribuições.</p>
+
                 <div class="table-wrapper">
                     <table class="table-default">
                         <tbody>
-                            ${finalCollaborators.filter(c => (c.draftsSubmitted || c.drafts || 0) > 0).map((u, i) => `
+                            ${finalCollaborators.filter(user => (user.draftsSubmitted || user.drafts || 0) > 0).map((user, index) => `
                                 <tr class="table-row">
                                     <td class="user-cell">
-                                        <div class="rank-number">#${i + 1}</div>
-                                        <div class="avatar-mini">${(u.displayName || u.name || '?').charAt(0).toUpperCase()}</div>
-                                        <p class="user-name">${escapeHtml(formatFullName(u.displayName || u.name))}</p>
+                                        <div class="rank-number">#${index + 1}</div>
+                                        <div class="avatar-mini">${(user.displayName || user.name || '?').charAt(0).toUpperCase()}</div>
+                                        <p class="user-name">${escapeHtml(formatFullName(user.displayName || user.name || 'Usuário'))}</p>
                                     </td>
                                     <td class="stat-cell">
-                                        <span class="badge-green">${u.draftsSubmitted || u.drafts || 0}</span>
+                                        <span class="badge-green">${user.draftsSubmitted || user.drafts || 0}</span>
                                     </td>
                                 </tr>
-                            `).join('') || '<tr><td colspan="2" class="empty-cell">Nenhum envio registrado.</td></tr>'}
+                            `).join('') || `
+                                <tr>
+                                    <td colspan="2" class="empty-cell">Nenhum envio registrado.</td>
+                                </tr>
+                            `}
                         </tbody>
                     </table>
                 </div>
@@ -1062,16 +1331,21 @@ export function renderDashboard(articles, scripts, topAnalysts = [], topCollabor
         </div>
 
         <div class="dash-tables-row mt-6">
-            <div class="dash-widget">
+            <div class="dash-widget dash-saas-card">
                 <div class="widget-header-row">
-                    <h3 class="widget-header header-blue">
-                        <i class="ph ph-trend-up"></i> Top Acessados
-                    </h3>
-                    <button onclick="window.copyTableToClipboard('dash-table-views', this)" class="copy-btn" title="Copiar Tabela">
+                    <div>
+                        <h3 class="widget-header header-blue">
+                            <i class="ph ph-trend-up"></i>
+                            Top Acessados
+                        </h3>
+                        <p class="dash-widget-subtitle">Conteúdos com maior reutilização operacional.</p>
+                    </div>
+
+                    <button onclick="window.copyTableToClipboard('dash-table-views', this)" class="copy-btn" title="Copiar tabela">
                         <i class="ph ph-copy"></i>
                     </button>
                 </div>
-                
+
                 <div class="table-wrapper">
                     <table id="dash-table-views" class="table-default">
                         <thead>
@@ -1082,75 +1356,683 @@ export function renderDashboard(articles, scripts, topAnalysts = [], topCollabor
                             </tr>
                         </thead>
                         <tbody>
-                            ${sortedByViews.filter(a => (a.views || 0) > 0).map((a, i) => {
-                                const authorName = formatFullName(a.createdBy);
+                            ${sortedByViews.filter(article => (article.views || 0) > 0).map((article, index) => {
+                                const authorName = formatFullName(article.createdBy || 'Sistema');
+
                                 return `
-                                <tr class="table-row" onclick="window.__kcs.viewArticle('${a.id}')">
-                                    <td class="title-cell-truncate" title="${escapeHtml(a.title)}">
-                                        <span class="rank-muted">${i+1}.</span>
-                                        <span class="truncate-text">${escapeHtml(a.title)}</span>
-                                    </td>
-                                    <td>
-                                        <div class="user-badge">
-                                            <div class="avatar-mini">${authorName.charAt(0).toUpperCase()}</div>
-                                            <span class="user-name">${escapeHtml(authorName)}</span>
-                                        </div>
-                                    </td>
-                                    <td class="col-right">
-                                        <span class="badge-neutral">${a.views}</span>
-                                    </td>
-                                </tr>`;
-                            }).join('') || '<tr><td colspan="3" class="empty-cell">Nenhum dado.</td></tr>'}
+                                    <tr class="table-row" onclick="window.__kcs.viewArticle('${article.id}')">
+                                        <td class="title-cell-truncate" title="${escapeHtml(article.title || '')}">
+                                            <span class="rank-muted">${index + 1}.</span>
+                                            <span class="truncate-text">${escapeHtml(article.title || 'Sem título')}</span>
+                                        </td>
+                                        <td>
+                                            <div class="user-badge">
+                                                <div class="avatar-mini">${authorName.charAt(0).toUpperCase()}</div>
+                                                <span class="user-name">${escapeHtml(authorName)}</span>
+                                            </div>
+                                        </td>
+                                        <td class="col-right">
+                                            <span class="badge-neutral">${article.views || 0}</span>
+                                        </td>
+                                    </tr>
+                                `;
+                            }).join('') || `
+                                <tr>
+                                    <td colspan="3" class="empty-cell">Nenhum acesso registrado.</td>
+                                </tr>
+                            `}
                         </tbody>
                     </table>
                 </div>
             </div>
 
-            <div class="dash-widget">
-                <div class="widget-header-row">
-                    <h3 class="widget-header header-purple">
-                        <i class="ph ph-database"></i> Scripts Úteis
-                    </h3>
-                    <button onclick="window.copyTableToClipboard('dash-table-sql', this)" class="copy-btn" title="Copiar Tabela">
-                        <i class="ph ph-copy"></i>
-                    </button>
+            ${normalizedScripts.length > 0 ? `
+                <div class="dash-widget dash-saas-card">
+                    <div class="widget-header-row">
+                        <div>
+                            <h3 class="widget-header header-purple">
+                                <i class="ph ph-database"></i>
+                                Scripts Úteis
+                            </h3>
+                            <p class="dash-widget-subtitle">SQLs mais curtidos pela operação.</p>
+                        </div>
+
+                        <button onclick="window.copyTableToClipboard('dash-table-sql', this)" class="copy-btn" title="Copiar tabela">
+                            <i class="ph ph-copy"></i>
+                        </button>
+                    </div>
+
+                    <div class="table-wrapper">
+                        <table id="dash-table-sql" class="table-default">
+                            <thead>
+                                <tr>
+                                    <th>Nome do script</th>
+                                    <th>Autor</th>
+                                    <th class="col-right">Útil</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${topScripts.filter(script => (script.likes || []).length > 0).map((script, index) => {
+                                    const authorName = formatFullName(script.createdBy || 'Sistema');
+
+                                    return `
+                                        <tr class="table-row" onclick="window.__kcs.viewSqlScript('${script.id}')">
+                                            <td class="title-cell-truncate" title="${escapeHtml(script.name || '')}">
+                                                <span class="rank-muted">${index + 1}.</span>
+                                                <span class="truncate-text">${escapeHtml(script.name || 'Sem nome')}</span>
+                                            </td>
+                                            <td>
+                                                <div class="user-badge">
+                                                    <div class="avatar-mini">${authorName.charAt(0).toUpperCase()}</div>
+                                                    <span class="user-name">${escapeHtml(authorName)}</span>
+                                                </div>
+                                            </td>
+                                            <td class="col-right">
+                                                <span class="stat-highlight">
+                                                    <i class="ph ph-heart"></i>
+                                                    ${(script.likes || []).length}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    `;
+                                }).join('') || `
+                                    <tr>
+                                        <td colspan="3" class="empty-cell">Nenhum script útil registrado.</td>
+                                    </tr>
+                                `}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
-                
-                <div class="table-wrapper">
-                    <table id="dash-table-sql" class="table-default">
-                        <thead>
-                            <tr>
-                                <th>Nome do Script</th>
-                                <th>Autor</th>
-                                <th class="col-right">Útil</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${topScripts.filter(s => (s.likes||[]).length > 0).map((s, i) => {
-                                const authorName = formatFullName(s.createdBy);
-                                return `
-                                <tr class="table-row" onclick="window.__kcs.viewSqlScript('${s.id}')">
-                                    <td class="title-cell-truncate" title="${escapeHtml(s.name)}">
-                                        <span class="rank-muted">${i+1}.</span>
-                                        <span class="truncate-text">${escapeHtml(s.name)}</span>
-                                    </td>
-                                    <td>
-                                        <div class="user-badge">
-                                            <div class="avatar-mini">${authorName.charAt(0).toUpperCase()}</div>
-                                            <span class="user-name">${escapeHtml(authorName)}</span>
-                                        </div>
-                                    </td>
-                                    <td class="col-right">
-                                        <span class="stat-highlight"><i class="ph ph-heart"></i> ${(s.likes||[]).length}</span>
-                                    </td>
-                                </tr>`;
-                            }).join('') || '<tr><td colspan="3" class="empty-cell">Nenhum dado.</td></tr>'}
-                        </tbody>
-                    </table>
+            ` : `
+                <div class="dash-widget dash-saas-card">
+                    <h3 class="widget-header header-purple">
+                        <i class="ph ph-lock-key"></i>
+                        Biblioteca SQL
+                    </h3>
+                    <p class="dash-widget-subtitle">Funcionalidade indisponível ou sem dados para este setor.</p>
+                    <div class="empty-cell" style="padding: 2rem;">
+                        Nenhum dado SQL disponível.
+                    </div>
+                </div>
+            `}
+        </div>
+
+        <style>
+            .dash-saas-header {
+                display: flex;
+                align-items: flex-start;
+                justify-content: space-between;
+                gap: 1rem;
+                margin-bottom: 1.5rem;
+                padding-bottom: 1rem;
+                border-bottom: 1px solid rgba(255,255,255,.08);
+            }
+
+            .dash-saas-eyebrow {
+                color: #60a5fa;
+                font-size: .7rem;
+                font-weight: 800;
+                letter-spacing: .14em;
+                text-transform: uppercase;
+                margin-bottom: .35rem;
+            }
+
+            .dash-title-saas {
+                margin-bottom: .35rem;
+            }
+
+            .dash-saas-subtitle {
+                color: #9ca3af;
+                font-size: .82rem;
+                margin: 0;
+            }
+
+            .dash-period-filter {
+                display: flex;
+                gap: .35rem;
+                padding: .25rem;
+                background: rgba(255,255,255,.035);
+                border: 1px solid rgba(255,255,255,.08);
+                border-radius: .75rem;
+            }
+
+            .dash-period-btn {
+                padding: .45rem .75rem;
+                border-radius: .55rem;
+                color: #9ca3af;
+                font-size: .75rem;
+                font-weight: 700;
+                transition: all .15s ease;
+            }
+
+            .dash-period-btn:hover {
+                color: #fff;
+                background: rgba(255,255,255,.06);
+            }
+
+            .dash-period-btn.active {
+                color: #fff;
+                background: #007acc;
+                box-shadow: 0 0 0 1px rgba(96,165,250,.35);
+            }
+
+            .dash-saas-grid {
+                display: grid;
+                grid-template-columns: repeat(6, minmax(0, 1fr));
+                gap: .9rem;
+            }
+
+            .dash-saas-metric {
+                position: relative;
+                overflow: hidden;
+                background: rgba(255,255,255,.04);
+                border: 1px solid rgba(255,255,255,.08);
+                border-radius: .9rem;
+                padding: 1rem;
+                min-height: 118px;
+            }
+
+            .dash-saas-metric::after {
+                content: "";
+                position: absolute;
+                inset: auto -30px -45px auto;
+                width: 110px;
+                height: 110px;
+                border-radius: 999px;
+                background: rgba(0,122,204,.12);
+                filter: blur(18px);
+            }
+
+            .dash-metric-top {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: .75rem;
+                margin-bottom: 1rem;
+            }
+
+            .dash-metric-icon {
+                display: grid;
+                place-items: center;
+                width: 34px;
+                height: 34px;
+                border-radius: .7rem;
+                background: rgba(255,255,255,.06);
+                border: 1px solid rgba(255,255,255,.08);
+            }
+
+            .dash-metric-icon i {
+                font-size: 1.05rem;
+            }
+
+            .dash-metric-icon.blue i { color: #60a5fa; }
+            .dash-metric-icon.green i { color: #10b981; }
+            .dash-metric-icon.purple i { color: #8b5cf6; }
+            .dash-metric-icon.amber i { color: #f59e0b; }
+            .dash-metric-icon.red i { color: #ef4444; }
+
+            .dash-metric-label {
+                color: #9ca3af;
+                font-size: .72rem;
+                text-transform: uppercase;
+                letter-spacing: .04em;
+                margin: 0;
+            }
+
+            .dash-metric-value {
+                color: #f9fafb;
+                font-size: 1.65rem;
+                font-weight: 900;
+                margin: 0;
+                line-height: 1;
+            }
+
+            .dash-metric-hint {
+                color: #6b7280;
+                font-size: .72rem;
+                margin-top: .45rem;
+            }
+
+            .dash-saas-section-grid {
+                display: grid;
+                grid-template-columns: 1.4fr .9fr;
+                gap: .9rem;
+            }
+
+            .dash-saas-card {
+                background: rgba(255,255,255,.035);
+                border: 1px solid rgba(255,255,255,.08);
+                border-radius: .9rem;
+                padding: 1rem;
+            }
+
+            .dash-wide {
+                min-height: 300px;
+            }
+
+            .dash-widget-subtitle {
+                color: #8b949e;
+                font-size: .76rem;
+                margin: .15rem 0 .9rem;
+            }
+
+             .dash-timeline {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(14px, 1fr);
+    align-items: end;
+    gap: .28rem;
+    width: 100%;
+    max-width: 100%;
+    height: 190px;
+    padding: 1rem .25rem .2rem;
+    border-radius: .75rem;
+    background:
+        linear-gradient(to top, rgba(255,255,255,.05) 1px, transparent 1px);
+    background-size: 100% 38px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    contain: layout paint;
+}
+
+.dash-timeline-item {
+    min-width: 14px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: end;
+    align-items: center;
+    gap: .4rem;
+}            
+    
+.dash-widget {
+    min-width: 0;
+}
+
+.dash-saas-section-grid > * {
+    min-width: 0;
+}
+
+           
+
+            .dash-timeline-bars {
+                width: 100%;
+                height: 150px;
+                display: flex;
+                justify-content: center;
+                align-items: end;
+                gap: 3px;
+            }
+
+            .dash-bar {
+                display: block;
+                width: 7px;
+                min-height: 0;
+                border-radius: 999px 999px 0 0;
+            }
+
+            .dash-bar-created {
+                background: #3b82f6;
+            }
+
+            .dash-bar-approved {
+                background: #10b981;
+            }
+
+            .dash-timeline-label {
+                color: #6b7280;
+                font-size: .62rem;
+                white-space: nowrap;
+            }
+
+            .dash-chart-legend {
+                display: flex;
+                align-items: center;
+                gap: 1rem;
+                margin-top: .75rem;
+                color: #9ca3af;
+                font-size: .74rem;
+            }
+
+            .legend-dot {
+                display: inline-block;
+                width: .55rem;
+                height: .55rem;
+                border-radius: 999px;
+                margin-right: .3rem;
+            }
+
+            .legend-dot.created { background: #3b82f6; }
+            .legend-dot.approved { background: #10b981; }
+
+            .dash-funnel,
+            .dash-aging {
+                display: grid;
+                gap: .85rem;
+            }
+
+            .dash-funnel-label,
+            .dash-aging-label {
+                display: flex;
+                justify-content: space-between;
+                color: #cbd5e1;
+                font-size: .78rem;
+                margin-bottom: .35rem;
+            }
+
+            .dash-funnel-label strong,
+            .dash-aging-label strong {
+                color: #fff;
+            }
+
+            .dash-funnel-track,
+            .dash-aging-track {
+                height: .55rem;
+                background: rgba(255,255,255,.07);
+                border-radius: 999px;
+                overflow: hidden;
+            }
+
+            .dash-funnel-fill,
+            .dash-aging-fill {
+                height: 100%;
+                border-radius: inherit;
+            }
+
+            .dash-funnel-fill.blue,
+            .dash-aging-fill.blue { background: #3b82f6; }
+
+            .dash-funnel-fill.amber,
+            .dash-aging-fill.amber { background: #f59e0b; }
+
+            .dash-funnel-fill.green,
+            .dash-aging-fill.green { background: #10b981; }
+
+            .dash-funnel-fill.red,
+            .dash-aging-fill.red { background: #ef4444; }
+
+            .dash-alert-grid {
+                display: grid;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: .75rem;
+            }
+
+            .dash-alert-mini {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: .75rem;
+                padding: .8rem;
+                border-radius: .75rem;
+                background: rgba(255,255,255,.035);
+                border: 1px solid rgba(255,255,255,.07);
+            }
+
+            .dash-alert-mini-left {
+                display: flex;
+                align-items: center;
+                gap: .55rem;
+                color: #9ca3af;
+                font-size: .75rem;
+            }
+
+            .dash-alert-mini-left i {
+                color: #f87171;
+            }
+
+            .dash-alert-mini-value {
+                color: #fff;
+                font-weight: 900;
+            }
+
+            @media (max-width: 1280px) {
+                .dash-saas-grid {
+                    grid-template-columns: repeat(3, minmax(0, 1fr));
+                }
+
+                .dash-saas-section-grid {
+                    grid-template-columns: 1fr;
+                }
+            }
+
+            @media (max-width: 768px) {
+                .dash-saas-header {
+                    flex-direction: column;
+                }
+
+                .dash-period-filter {
+                    width: 100%;
+                    overflow-x: auto;
+                }
+
+                .dash-saas-grid {
+                    grid-template-columns: 1fr;
+                }
+
+                .dash-alert-grid {
+                    grid-template-columns: 1fr;
+                }
+            }
+        </style>
+    `;
+}
+
+function dashboardToDate(value) {
+    if (!value) return null;
+
+    if (value instanceof Date) {
+        return Number.isNaN(value.getTime()) ? null : value;
+    }
+
+    if (typeof value?.toDate === 'function') {
+        const date = value.toDate();
+        return Number.isNaN(date.getTime()) ? null : date;
+    }
+
+    if (typeof value === 'object' && typeof value.seconds === 'number') {
+        const date = new Date(value.seconds * 1000);
+        return Number.isNaN(date.getTime()) ? null : date;
+    }
+
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function dashboardNormalizeStatus(status) {
+    const normalized = String(status || '').toLowerCase();
+
+    if (normalized === 'approved' || normalized === 'publicado' || normalized === 'published') {
+        return 'approved';
+    }
+
+    if (
+        normalized === 'review' ||
+        normalized === 'pending' ||
+        normalized === 'pendente' ||
+        normalized === 'pendente_revisao' ||
+        normalized === 'in_review'
+    ) {
+        return 'review';
+    }
+
+    return 'draft';
+}
+
+function dashboardIsInPeriod(date, periodStart) {
+    if (!periodStart) return true;
+    if (!date) return false;
+
+    return date >= periodStart;
+}
+
+function dashboardMetricCard({ icon, label, value, hint, tone = 'blue' }) {
+    return `
+        <div class="dash-saas-metric">
+            <div class="dash-metric-top">
+                <p class="dash-metric-label">${escapeHtml(label)}</p>
+                <div class="dash-metric-icon ${tone}">
+                    <i class="ph ${icon}"></i>
                 </div>
             </div>
+            <p class="dash-metric-value">${value}</p>
+            <div class="dash-metric-hint">${escapeHtml(hint || '')}</div>
         </div>
     `;
+}
+
+function dashboardAlertMiniCard(label, value, icon) {
+    return `
+        <div class="dash-alert-mini">
+            <div class="dash-alert-mini-left">
+                <i class="ph ${icon}"></i>
+                <span>${escapeHtml(label)}</span>
+            </div>
+            <strong class="dash-alert-mini-value">${value}</strong>
+        </div>
+    `;
+}
+
+function dashboardBuildFunnel(articles) {
+    const total = Math.max(articles.length, 1);
+
+    const draft = articles.filter(article => article._status === 'draft').length;
+    const review = articles.filter(article => article._status === 'review').length;
+    const approved = articles.filter(article => article._status === 'approved').length;
+
+    return [
+        {
+            label: 'Rascunhos',
+            value: draft,
+            percent: Math.round((draft / total) * 100),
+            tone: 'amber'
+        },
+        {
+            label: 'Em revisão',
+            value: review,
+            percent: Math.round((review / total) * 100),
+            tone: 'blue'
+        },
+        {
+            label: 'Publicados',
+            value: approved,
+            percent: Math.round((approved / total) * 100),
+            tone: 'green'
+        }
+    ];
+}
+
+function dashboardBuildAgingBuckets(approvedArticles, now, msPerDay) {
+    const total = Math.max(approvedArticles.length, 1);
+
+    const buckets = [
+        { label: '0–30 dias', value: 0, tone: 'green' },
+        { label: '31–60 dias', value: 0, tone: 'blue' },
+        { label: '61–90 dias', value: 0, tone: 'amber' },
+        { label: '+90 dias', value: 0, tone: 'red' }
+    ];
+
+    approvedArticles.forEach(article => {
+        const baseDate = article._lastReviewedAt || article._updatedAt || article._createdAt || now;
+        const ageDays = Math.floor((now - baseDate) / msPerDay);
+
+        if (ageDays <= 30) {
+            buckets[0].value++;
+        } else if (ageDays <= 60) {
+            buckets[1].value++;
+        } else if (ageDays <= 90) {
+            buckets[2].value++;
+        } else {
+            buckets[3].value++;
+        }
+    });
+
+    return buckets.map(bucket => ({
+        ...bucket,
+        percent: Math.round((bucket.value / total) * 100)
+    }));
+}
+
+function dashboardBuildTimeline(articles, selectedPeriod, now, msPerDay) {
+    const daysByPeriod = {
+        '7d': 7,
+        '30d': 30,
+        '90d': 90,
+        'all': 30
+    };
+
+    const days = daysByPeriod[selectedPeriod] || 30;
+    const timeline = [];
+
+    for (let index = days - 1; index >= 0; index--) {
+        const date = new Date(now.getTime() - index * msPerDay);
+        const key = date.toISOString().slice(0, 10);
+
+        timeline.push({
+            key,
+            label: date.toLocaleDateString('pt-BR'),
+            shortLabel: date.toLocaleDateString('pt-BR', {
+                day: '2-digit',
+                month: '2-digit'
+            }),
+            created: 0,
+            approved: 0
+        });
+    }
+
+    const timelineMap = Object.fromEntries(timeline.map(item => [item.key, item]));
+
+    articles.forEach(article => {
+        if (article._createdAt) {
+            const createdKey = article._createdAt.toISOString().slice(0, 10);
+            if (timelineMap[createdKey]) {
+                timelineMap[createdKey].created++;
+            }
+        }
+
+        if (article._status === 'approved' && article._approvedAt) {
+            const approvedKey = article._approvedAt.toISOString().slice(0, 10);
+            if (timelineMap[approvedKey]) {
+                timelineMap[approvedKey].approved++;
+            }
+        }
+    });
+
+    return timeline;
+}
+
+function dashboardBuildImpactRanking(articles) {
+    const stats = {};
+
+    articles.forEach(article => {
+        const author = article.createdBy || 'Sistema';
+
+        if (!stats[author]) {
+            stats[author] = {
+                name: author,
+                approved: 0,
+                drafts: 0,
+                views: 0,
+                score: 0
+            };
+        }
+
+        if (article._status === 'approved') {
+            stats[author].approved++;
+        } else {
+            stats[author].drafts++;
+        }
+
+        stats[author].views += article.views || 0;
+
+        stats[author].score =
+            stats[author].approved * 10 +
+            stats[author].drafts * 3 +
+            stats[author].views;
+    });
+
+    return Object.values(stats)
+        .sort((a, b) => b.score - a.score);
 }
 
 export function toggleLoginScreen(show) {
