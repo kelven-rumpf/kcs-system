@@ -6,11 +6,32 @@ import { CONFIG, COLLECTION_SQL } from '../config.js';
 import { getCurrentUser, hasPermission } from '../auth.js';
 import { dbCloud } from './cloud.js';
 import { doc, setDoc, getDoc, getDocs, deleteDoc, collection, query, where, updateDoc } from 'https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js';
+import { canUseFeature, FEATURE_FLAGS } from './featureAccess.js';
 
 function generateId() { return `sql-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`; }
 function now() { return new Date().toISOString(); }
 
+function assertSqlLibraryAccess() {
+    if (!canUseFeature(FEATURE_FLAGS.SQL_LIBRARY)) {
+        throw new Error('Biblioteca SQL indisponível para o seu setor.');
+    }
+}
+
+function assertSqlCreateAccess() {
+    assertSqlLibraryAccess();
+    if (!canUseFeature(FEATURE_FLAGS.SQL_CREATE)) {
+        throw new Error('Criação ou alteração de SQL indisponível para o seu setor.');
+    }
+}
+
+function assertAiAccessForSql() {
+    if (!canUseFeature(FEATURE_FLAGS.AI_REFINE)) {
+        throw new Error('Recursos de IA indisponíveis para o seu setor.');
+    }
+}
+
 export async function createSqlScript(data) {
+  assertSqlCreateAccess();
   if (!hasPermission('manage_sql') && !hasPermission('create_sql')) throw new Error('Sem permissão para criar scripts SQL.');
   const user = getCurrentUser();
   if (!user) throw new Error('Usuário não autenticado.');
@@ -54,6 +75,7 @@ export async function createSqlScript(data) {
 }
 
 export async function updateSqlScript(id, data) {
+  assertSqlCreateAccess();
   const script = await getSqlScript(id);
   if (!script) throw new Error('Script não encontrado.');
   
@@ -94,6 +116,7 @@ export async function updateSqlScript(id, data) {
 }
 
 export async function toggleSqlLike(id) {
+  assertSqlLibraryAccess();
   const user = getCurrentUser();
   if (!user) throw new Error('Falha: Usuário não está logado.'); 
   
@@ -118,6 +141,7 @@ export async function toggleSqlLike(id) {
 }
 
 export async function toggleSqlFavorite(id) {
+  assertSqlLibraryAccess();
   const user = getCurrentUser();
   if (!user) throw new Error('Falha: Usuário não está logado.');
   
@@ -142,6 +166,7 @@ export async function toggleSqlFavorite(id) {
 }
 
 export async function addSqlComment(id, text) {
+  assertSqlLibraryAccess();
   const user = getCurrentUser();
   const script = await getSqlScript(id);
   if (!script || !user || !text.trim()) return;
@@ -156,6 +181,7 @@ export async function addSqlComment(id, text) {
 }
 
 export async function flagSqlScript(id, reason) {
+  assertSqlLibraryAccess();
   const user = getCurrentUser();
   const script = await getSqlScript(id);
   if (!script || !user) return;
@@ -178,17 +204,20 @@ export async function flagSqlScript(id, reason) {
 }
 
 export async function removeSqlScript(id) {
+  assertSqlCreateAccess();
   if (!hasPermission('manage_sql')) throw new Error('Apenas analistas e administradores podem excluir.');
   await deleteDoc(doc(dbCloud, COLLECTION_SQL, id));
 }
 
-export async function getSqlScript(id) { 
+export async function getSqlScript(id) {
+  assertSqlLibraryAccess();
   const docRef = doc(dbCloud, COLLECTION_SQL, id);
   const snap = await getDoc(docRef);
   return snap.exists() ? snap.data() : null;
 }
 
 export async function listSqlScripts() {
+  assertSqlLibraryAccess();
   const user = getCurrentUser();
   if (!user || !user.companyId) return [];
   
@@ -212,6 +241,8 @@ export async function listSqlScripts() {
 }
 
 export async function explicarScriptSQL(codigo) {
+    assertSqlLibraryAccess();
+    assertAiAccessForSql();
     if (!CONFIG || !CONFIG.GEMINI_API_KEY) {
         throw new Error("A chave da API do Gemini não foi encontrada no config.js.");
     }

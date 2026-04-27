@@ -9,6 +9,7 @@ import { searchDirect, searchSqlScripts } from '../services/search.js';
 import { dbCloud } from '../services/cloud.js';
 import { collection, addDoc, doc, updateDoc } from 'https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js';
 import { getCurrentUser } from '../auth.js';
+import { canUseFeature, FEATURE_FLAGS } from '../services/featureAccess.js';
 
 let isChatbotInitialized = false;
 const responseCache = new Map();
@@ -135,6 +136,11 @@ function clearChatHistory() {
 }
 
 export function initChatbot() {
+    if (!canUseFeature(FEATURE_FLAGS.CHATBOT)) {
+        console.warn('[Chatbot] Bloqueado por feature flag do setor.');
+        return;
+    }
+    
     if (isChatbotInitialized) return;
 
     initPersona();
@@ -451,6 +457,10 @@ window.__kcs_rateChat = async function(logId, isUseful, btnElement) {
 }
 
 async function processPromptWithRAGAndStream(userQuestion, botName, messagesEl, typingId) {
+    if (!canUseFeature(FEATURE_FLAGS.CHATBOT)) {
+        throw new Error('Assistente indisponível para o seu setor.');
+    }
+    
     if (!CONFIG || !CONFIG.GEMINI_API_KEY) throw new Error("API Key não configurada.");
     
     const logId = `log_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;

@@ -7,6 +7,7 @@ import { dbCloud } from './cloud.js';
 import { doc, setDoc, getDoc, getDocs, deleteDoc, collection, query, where, updateDoc, addDoc, getCountFromServer, orderBy, limit, onSnapshot, increment, runTransaction } from 'https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js';
 import { getCurrentUser } from '../auth.js';
 import { CONFIG, COLLECTION_ARTICLES } from '../config.js';
+import { canUseFeature, FEATURE_FLAGS } from './featureAccess.js';
 
 import {
     filterArticlesByUserScope,
@@ -171,7 +172,22 @@ async function callGeminiIA(systemPrompt, userOriginalText, actionType, isJson =
     return cleanedText;
 }
 
+function assertFeature(featureKey, message) {
+    if (!canUseFeature(featureKey)) {
+        throw new Error(message || 'Funcionalidade indisponível para o seu setor.');
+    }
+}
+
+function assertAiRefineAccess() {
+    assertFeature(FEATURE_FLAGS.AI_REFINE, 'Refinar com IA indisponível para o seu setor.');
+}
+
+function assertOcrAccess() {
+    assertFeature(FEATURE_FLAGS.OCR, 'OCR indisponível para o seu setor.');
+}
+
 export async function reescreverTextoTecnico(promptText) {
+    assertAiRefineAccess();
     const systemPrompt = `Atue como um especialista em documentação técnica seguindo práticas KCS.
     
 Analise o rascunho fornecido. Estruture o procedimento e extraia informações para preencher os campos automaticamente.
@@ -208,6 +224,7 @@ ${promptText}`;
 }
 
 export async function corrigirGramaticaApenas(promptText) {
+    assertAiRefineAccess();
     const systemPrompt = `Atue como um revisor gramatical. Corrija exclusivamente erros de ortografia e acentuação.
 NÃO remova marcadores como __IMAGEM_0__. Retorne APENAS o texto corrigido, sem adicionar nenhum comentário adicional.
 TEXTO ORIGINAL:
@@ -850,6 +867,7 @@ export async function logArticleRead(articleId, articleTitle) {
 }
 
 export async function extrairTextoImagemGemini(file) {
+    assertOcrAccess();
     if (!CONFIG || !CONFIG.GEMINI_API_KEY) {
         throw new Error("Chave da API Gemini não configurada.");
     }

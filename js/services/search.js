@@ -26,6 +26,7 @@ import { listArticles } from './kcsCore.js';
 import { listSqlScripts } from './sqlLibrary.js';
 import { getCurrentUser, hasPermission } from '../auth.js';
 import { CONFIG, ARTICLE_STATUS } from '../config.js';
+import { canUseFeature, FEATURE_FLAGS } from './featureAccess.js';
 
 let debounceTimer = null;
 const DEBOUNCE_DELAY = 300;
@@ -167,6 +168,10 @@ export async function searchDirect(query, skipAI = false) {
 }
 
 export async function searchSqlScripts(query, skipAI = false) {
+  if (!canUseFeature(FEATURE_FLAGS.SQL_LIBRARY)) {
+    return [];
+  }
+  
   try {
     const scripts = await listSqlScripts();
 
