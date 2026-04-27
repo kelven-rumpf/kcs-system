@@ -3,6 +3,7 @@
  * Correções visuais do Chatbot: Rodapé 'Assistente' (borda transparente) e Painel (tema dark). (v1.0.1, UTF-8)
  */
 
+import { canUseFeature, FEATURE_FLAGS } from '../services/featureAccess.js';
 import { showToast, showLoading } from './render.js';
 import { uploadImageToCloud } from '../services/cloud.js';
 import { 
@@ -230,9 +231,18 @@ export function initEditor(editorId = 'article-body') {
                 e.preventDefault();
                 if (editor.getAttribute('contenteditable') === 'false') return;
                 const format = newBtn.getAttribute('data-format');
-                if (format === 'image') {
+                if (format === 'ocr' && !canUseFeature(FEATURE_FLAGS.OCR)) {
+    newBtn.style.display = 'none';
+    return;
+}
+            if (format === 'image') {
     handleImageUpload(editor);
 } else if (format === 'ocr') {
+    if (!canUseFeature(FEATURE_FLAGS.OCR)) {
+        showToast('OCR indisponível para o seu setor.', 'warning');
+        return;
+    }
+
     handleOcrImageSelect(editor);
 } else {
     insertFormatting(format, editor);
@@ -244,7 +254,12 @@ export function initEditor(editorId = 'article-body') {
     // IA: REESCREVER TEXTO TÉCNICO (Isolado)
     // MODIFICADO: Procura o botão apenas dentro deste formulário
     const btnReescrever = form ? form.querySelector('.btn-ia-reescrever') : null;
-    if (btnReescrever) {
+
+if (btnReescrever && !canUseFeature(FEATURE_FLAGS.AI_REFINE)) {
+    btnReescrever.style.display = 'none';
+}
+
+if (btnReescrever && canUseFeature(FEATURE_FLAGS.AI_REFINE)) {
         const newBtnR = btnReescrever.cloneNode(true);
         btnReescrever.parentNode.replaceChild(newBtnR, btnReescrever);
 
@@ -365,9 +380,12 @@ export function initEditor(editorId = 'article-body') {
     // Modified to return the fetched scripts
 async function fetchMentionSources() {
     try {
+        const canMentionSql = canUseFeature(FEATURE_FLAGS.SQL_MENTION);
+        const canMentionProc = canUseFeature(FEATURE_FLAGS.PROC_MENTION);
+
         const [sqls, procedures] = await Promise.all([
-            listSqlScripts(),
-            listArticles(true)
+            canMentionSql ? listSqlScripts() : Promise.resolve([]),
+            canMentionProc ? listArticles(true) : Promise.resolve([])
         ]);
 
         availableSqls = (sqls || []).map(sql => ({
@@ -397,11 +415,6 @@ async function fetchMentionSources() {
             ...availableSqls,
             ...availableProcedures
         ];
-
-        console.log('[MENTION DEBUG] Sources loaded:', {
-            sqls: availableSqls.length,
-            procedures: availableProcedures.length
-        });
 
     } catch (error) {
         console.error('[MENTION DEBUG] Error fetching mention sources:', error);

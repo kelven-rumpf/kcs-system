@@ -3,6 +3,7 @@
  * Refatorado para Arquitetura Semântica Baseada no Design System e Sincronismo de Overlay/Dock
  */
 
+import { canUseFeature, FEATURE_FLAGS } from '../services/featureAccess.js';
 import { STATUS_LABELS, STATUS_COLORS, ARTICLE_STATUS, SECTORS } from '../config.js';
 import { getSectorDisplayName } from '../services/sectorDirectory.js';
 import { getCurrentUser, hasPermission, hasRole } from '../auth.js';
@@ -664,7 +665,7 @@ export function renderSidebar(articleCounts, sqlCounts, activeFilter = 'all', ac
   }
   
   // 4. Biblioteca SQL (Agora com 'open')
-  if (hasPermission('manage_sql') || !canEdit) {
+  if (canUseFeature(FEATURE_FLAGS.SQL_LIBRARY) && (hasPermission('manage_sql') || !canEdit)) {
     html += `
     <details id="tour-sql" class="sidebar-section-group sidebar-separator" open>
         <summary class="sidebar-section-title">

@@ -14,6 +14,12 @@ import {
     deleteSectorFromCloud
 } from '../auth.js';
 
+import {
+    getFeatureCatalog,
+    getSectorFeatureMatrix,
+    updateSectorFeature
+} from '../services/featureAccess.js';
+
 import { openPanel, openProcedurePanel, closePanel } from './mentionPanel.js';
 import { initEditor } from './editor.js'; 
 import { formatContentForView, isAppBooting } from './render.js'; 
@@ -1345,6 +1351,8 @@ export async function openSettingsModal() {
     `;
 }
 
+
+
     container.innerHTML = `<div class="p-10 flex items-center gap-3 text-blue-500"><i class="ph-bold ph-spinner animate-spin text-2xl"></i> Buscando dados...</div>`;
     window.TabManager.openTab(idUnico, 'Administração', 'ph-gear-six', container);
 
@@ -1375,6 +1383,9 @@ export async function openSettingsModal() {
         });
         
         const allSectors = Array.from(sectorMap.values());
+        const featureCatalog = getFeatureCatalog();
+        const sectorFeatureMatrix = await getSectorFeatureMatrix(currentUser.companyId, allSectors);
+        
 
         const GROUPS_BY_SECTOR = allSectors.reduce((acc, sector) => {
             acc[sector.id] = [];
@@ -1662,6 +1673,29 @@ window.handleCreateGroup = handleCreateGroup;
 window.handleDeleteGroup = handleDeleteGroup;
 window.handleToggleUserGroup = handleToggleUserGroup;
 
+async function handleToggleSectorFeature(sectorId, featureKey, enabled) {
+    try {
+        await updateSectorFeature(
+            currentUser.companyId,
+            sectorId,
+            featureKey,
+            enabled
+        );
+
+        window.__kcs.alert('Funcionalidade atualizada com sucesso.');
+
+        if (window.TabManager?.markDirty) {
+            window.TabManager.markDirty('tab-admin-panel', false);
+        }
+
+    } catch (error) {
+        console.error('[Admin] Erro ao atualizar funcionalidade do setor:', error);
+        window.__kcs.alert(error.message || 'Erro ao atualizar funcionalidade.');
+    }
+}
+
+window.handleToggleSectorFeature = handleToggleSectorFeature;
+
 
 const groupsBySectorHtml = adminSection(
     'Grupos por Setor',
@@ -1765,6 +1799,70 @@ const groupsBySectorHtml = adminSection(
                         `}
                     </div>
                 </details>
+                `;
+            }).join('')}
+        </div>
+    </div>
+    `,
+    true
+);
+
+const sectorFeaturesHtml = adminSection(
+    'Funcionalidades por Setor',
+    'ph-fill ph-sliders-horizontal',
+    'text-cyan-500',
+    `
+    <div class="space-y-4">
+        <div class="rounded-lg p-4 text-sm leading-relaxed" style="background-color: var(--color-editor-background); border: 1px solid var(--color-border-subtle); color: var(--color-text-secondary);">
+            Configure quais funcionalidades cada setor pode usar. Esta regra complementa cargos e permissões existentes.
+            <br>
+            <strong style="color: var(--color-text-primary);">Observação:</strong> Super Admin continua com acesso total.
+        </div>
+
+        <div class="space-y-4">
+            ${allSectors.map(sector => {
+                const features = sectorFeatureMatrix[sector.id] || {};
+
+                return `
+                    <details class="rounded-xl overflow-hidden" style="background-color: var(--color-sidebar-background); border: 1px solid var(--color-border-subtle);" open>
+                        <summary class="cursor-pointer px-4 py-3 flex items-center justify-between gap-3 transition-colors hover:bg-black/5 dark:hover:bg-white/5" style="color: var(--color-text-primary); list-style:none;">
+                            <div class="flex items-center gap-3">
+                                <i class="ph-bold ph-buildings text-cyan-500"></i>
+                                <div>
+                                    <p class="font-semibold" style="color: var(--color-text-inverse);">${safeText(sector.name)}</p>
+                                    <p class="text-[11px]" style="color: var(--color-text-secondary);">Controle de acesso funcional</p>
+                                </div>
+                            </div>
+                            <span class="text-[11px] font-semibold" style="color: var(--color-text-muted);">${featureCatalog.length} funcionalidades</span>
+                        </summary>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 px-4 pb-4">
+                            ${featureCatalog.map(feature => {
+                                const checked = features[feature.key] !== false;
+
+                                return `
+                                    <label class="flex items-start gap-3 rounded-lg p-3 cursor-pointer transition-colors hover:bg-black/5 dark:hover:bg-white/5" style="background-color: var(--color-editor-background); border: 1px solid var(--color-border);">
+                                        <input
+                                            type="checkbox"
+                                            class="mt-1"
+                                            data-action="toggle-sector-feature"
+                                            data-sector-id="${safeText(sector.id)}"
+                                            data-feature-key="${safeText(feature.key)}"
+                                            ${checked ? 'checked' : ''}
+                                        />
+
+                                        <div class="min-w-0">
+                                            <div class="flex items-center gap-2">
+                                                <i class="ph-bold ${safeText(feature.icon)} text-cyan-500"></i>
+                                                <span class="text-sm font-semibold" style="color: var(--color-text-primary);">${safeText(feature.label)}</span>
+                                            </div>
+                                            <p class="text-[11px] mt-1 leading-snug" style="color: var(--color-text-secondary);">${safeText(feature.description)}</p>
+                                        </div>
+                                    </label>
+                                `;
+                            }).join('')}
+                        </div>
+                    </details>
                 `;
             }).join('')}
         </div>
@@ -1934,12 +2032,27 @@ const groupsBySectorHtml = adminSection(
                     ${companiesHtml}
                     ${invitesHtml}
                     ${groupsBySectorHtml}
+                    ${sectorFeaturesHtml}
                     ${activeUsersHtml}
                     ${backupHtml}
                     <div class="h-12"></div>
                 </div>
             </div>
         `;
+
+        container.querySelectorAll('[data-action="toggle-sector-feature"]').forEach(input => {
+    input.addEventListener('change', async (event) => {
+        const target = event.currentTarget;
+
+        await window.handleToggleSectorFeature(
+            target.dataset.sectorId,
+            target.dataset.featureKey,
+            target.checked
+        );
+    });
+});
+
+
 
         // Ligar Eventos
         container.querySelectorAll('[data-action="create-company"]').forEach(btn => btn.addEventListener('click', () => window.__kcs.createNewCompany()));
@@ -2005,6 +2118,9 @@ const groupsBySectorHtml = adminSection(
         container.innerHTML = `<div class="p-10 text-red-500 font-bold">Erro de permissão ou conexão: ${e.message}</div>`; 
     }
 }
+
+
+
 
 export function asyncAlert(message) {
     const overlay = document.createElement('div');

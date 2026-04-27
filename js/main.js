@@ -1,5 +1,7 @@
 // CONTROLE DE VERSÃO DO SISTEMA
-const APP_VERSION = '1.0.1';
+const APP_VERSION = '2.0.0';
+
+import { initFeatureAccess, canUseFeature, FEATURE_FLAGS } from './services/featureAccess.js';
 
 import { 
     initAuth, 
@@ -470,12 +472,15 @@ async function enterApp(user) {
         if (loadingMsg) loadingMsg.textContent = "Carregando base de conhecimento...";
         
         // Inicia a escuta de notificações real-time
-        initArticleNotifications((title, subtitle, articleId) => {
-            addNotificationUI(title, subtitle, articleId);
-            showToast(title, 'info'); 
-        });
+// Inicia a escuta de notificações real-time
+initArticleNotifications((title, subtitle, articleId) => {
+    addNotificationUI(title, subtitle, articleId);
+    showToast(title, 'info'); 
+});
 
-        await refreshView(); 
+await initFeatureAccess(user);
+
+await refreshView(); 
     } catch (error) {
         console.error("Erro fatal ao carregar os dados:", error);
         showToast("Ocorreu um problema de conexão. Recarregue a página.", "error");
@@ -484,7 +489,12 @@ async function enterApp(user) {
         showLoading(false);
     }
     
+    if (canUseFeature(FEATURE_FLAGS.CHATBOT, user)) {
     initChatbot();
+} else {
+    const btnChatbot = document.getElementById('btn-open-chatbot');
+    if (btnChatbot) btnChatbot.style.display = 'none';
+}
 
     setTimeout(() => { 
         try { 
@@ -496,8 +506,23 @@ async function enterApp(user) {
 }
 
 function updateActionButtons() {
+    const canViewSql = canUseFeature(FEATURE_FLAGS.SQL_LIBRARY);
+    const canCreateSql = canUseFeature(FEATURE_FLAGS.SQL_CREATE);
+
     const btnImportSql = document.getElementById('btn-import-sql'); 
-    if(btnImportSql) btnImportSql.style.display = hasPermission('manage_sql') ? 'flex' : 'none';
+    if (btnImportSql) {
+        btnImportSql.style.display = hasPermission('manage_sql') && canCreateSql ? 'flex' : 'none';
+    }
+
+    const btnNewSql = document.getElementById('btn-new-sql');
+    if (btnNewSql) {
+        btnNewSql.style.display = hasPermission('manage_sql') && canViewSql && canCreateSql ? 'flex' : 'none';
+    }
+
+    const btnSqlActivity = document.querySelector('[data-view="sql"]');
+    if (btnSqlActivity) {
+        btnSqlActivity.style.display = canViewSql ? '' : 'none';
+    }
 }
 
 function injectReadmeMenuButton() {
@@ -533,8 +558,19 @@ function injectReadmeMenuButton() {
 
 async function refreshView() {
     appState.articles = await listArticles();
+
+if (canUseFeature(FEATURE_FLAGS.SQL_LIBRARY)) {
     appState.sqlScripts = await listSqlScripts();
-    updateActionButtons();
+} else {
+    appState.sqlScripts = [];
+
+    if (appState.currentView === 'sql') {
+        appState.currentView = 'articles';
+        appState.currentSqlFilter = 'all';
+    }
+}
+
+updateActionButtons();
     
     const articleCounts = computeCounts(appState.articles);
     const sqlCounts = computeSqlCounts(appState.sqlScripts);
@@ -593,8 +629,16 @@ function bindGlobalEvents() {
         });
     });
     
-    document.getElementById('btn-new-sql')?.addEventListener('click', () => {
-        openSqlModal(null, async (data) => { 
+     document.getElementById('btn-new-sql')?.addEventListener('click', () => {
+    if (
+        !canUseFeature(FEATURE_FLAGS.SQL_LIBRARY) ||
+        !canUseFeature(FEATURE_FLAGS.SQL_CREATE)
+    ) {
+        showToast('Criação de SQL indisponível para o seu setor.', 'warning');
+        return;
+    }
+
+    openSqlModal(null, async (data) => { 
             try {
                 showLoading(true);
                 await createSqlScript(data); 
@@ -1556,8 +1600,13 @@ function bindActivityBarEvents() {
                 if (window.__kcs.filterByStatus) window.__kcs.filterByStatus('all');
                 break;
             case 'sql':
-                if (window.__kcs.filterSqlByStatus) window.__kcs.filterSqlByStatus('all');
-                break;
+    if (!canUseFeature(FEATURE_FLAGS.SQL_LIBRARY)) {
+        showToast('Biblioteca SQL indisponível para o seu setor.', 'warning');
+        return;
+    }
+
+    if (window.__kcs.filterSqlByStatus) window.__kcs.filterSqlByStatus('all');
+    break;
             case 'settings':
                 document.getElementById('vscode-account-menu')?.classList.add('hidden');
                 document.getElementById('vscode-settings-menu')?.classList.toggle('hidden');

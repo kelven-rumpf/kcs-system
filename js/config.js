@@ -109,5 +109,6 @@ const ENV_PREFIX = isDev ? 'kcs_dev' : 'kcs_prod';
 
 export const COLLECTION_ARTICLES = `${ENV_PREFIX}_articles`;
 export const COLLECTION_SQL = `${ENV_PREFIX}_sqlScripts`;
+export const COLLECTION_SECTOR_FEATURES = `${ENV_PREFIX}_sectorFeatures`;
 
 console.log(`[Config] Ambiente Inicializado: ${isDev ? 'DEVELOPMENT' : 'PRODUCTION'} (Prefixo: ${ENV_PREFIX})`);
