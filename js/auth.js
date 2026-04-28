@@ -8,6 +8,15 @@ let currentUser = null;
 let authInstance = null;
 let onAuthChangeCallback = null;
 
+function normalizeApprovalStatus(user) {
+    return String(user?.approvalStatus || user?.status || '').trim().toLowerCase();
+}
+
+export function isUserApproved(user = currentUser) {
+    const status = normalizeApprovalStatus(user);
+    return status === 'active' || status === 'approved';
+}
+
 export function initAuth(callback) {
     return new Promise(async (resolve) => {
         onAuthChangeCallback = callback;
@@ -43,6 +52,11 @@ export function initAuth(callback) {
                         userData.email = user.email || '';
                         needsUpdate = true;
                     }
+                    if (!userData.approvalStatus) {
+                        userData.approvalStatus = 'active';
+                        userData.status = 'active';
+                        needsUpdate = true;
+                    }
                     if (needsUpdate) {
                         await safeSetDoc(userRef, userData, { merge: true });
                     }
@@ -53,7 +67,7 @@ export function initAuth(callback) {
                     
                     let role = ROLES.USER;
                     let companyId = 'LIMBO_TENANT';
-                    let sectorId = SECTORS[0].id;
+                    let sectorId = null;
                     
                     if (isFirstUser) {
                         role = ROLES.SUPER_ADMIN; 
@@ -67,9 +81,7 @@ export function initAuth(callback) {
                         
                         if (inviteSnap.exists()) {
                             const inviteData = inviteSnap.data();
-                            role = inviteData.role || ROLES.USER;
                             companyId = inviteData.tenantId || 'LIMBO_TENANT';
-                            sectorId = inviteData.sectorId || SECTORS[0].id;
                         } else {
                             // 3º Prioridade: Não tem convite? Tenta Auto-Provisionamento pelo Domínio
                             const companiesSnap = await getDocs(collection(dbCloud, "companies"));
@@ -84,9 +96,7 @@ export function initAuth(callback) {
                             });
 
                             if (matchedCompanyId) {
-                                role = ROLES.USER;
                                 companyId = matchedCompanyId;
-                                sectorId = SECTORS[0].id; 
                             } else {
                                 // BLOQUEIO IMEDIATO! Sem convite e sem domínio válido.
                                 const { signOut } = await import('https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js');
@@ -126,14 +136,19 @@ export function initAuth(callback) {
                         photoURL: user.photoURL || '', 
                         role: role,
                         companyId: companyId,
-                        sectorId: sectorId
+                        sectorId: isFirstUser ? SECTORS[0].id : null,
+                        group_id: null,
+                        group_ids: [],
+                        approvalStatus: isFirstUser ? 'active' : 'pending_approval',
+                        status: isFirstUser ? 'active' : 'pending_approval',
+                        approvalRequestedAt: new Date().toISOString()
                     };
                     await safeSetDoc(userRef, userData); 
                 }
 
                 // Configura as variáveis de sessão para o Front-end
                 const companyId = userData.companyId || 'LIMBO_TENANT';
-                const sectorId = userData.sectorId || SECTORS[0].id;
+                const sectorId = userData.sectorId || '';
                 let companyName = "Empresa Pendente";
                 let botName = "Assistente KCS";
                 let tenantMaxUsers = 5;
@@ -252,6 +267,7 @@ export function getCurrentUser() { return currentUser; }
 export function hasRole(role) { return currentUser && currentUser.role === role; }
 export function hasPermission(action) {
     if (!currentUser) return false;
+    if (!isUserApproved(currentUser)) return false;
     const r = currentUser.role;
     if (r === ROLES.SUPER_ADMIN) return true; 
     if (r === ROLES.ADMIN) return true; 
@@ -276,6 +292,16 @@ export async function getAllUsersFromCloud() {
     const users = [];
     snap.forEach(d => users.push(d.data()));
     return users; 
+}
+
+export async function updateUserApprovalStatusInCloud(uid, approvalStatus = 'active') {
+    const { doc } = await import('https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js');
+    await safeUpdateDoc(doc(dbCloud, "users", uid), {
+        approvalStatus,
+        status: approvalStatus,
+        approvedAt: approvalStatus === 'active' || approvalStatus === 'approved' ? new Date().toISOString() : null
+    });
+    return { success: true };
 }
 
 export async function updateUserRoleInCloud(uid, newRole) {

@@ -8,6 +8,7 @@ import {
     createGroup,
     getGroupsFromCloud,
     updateUserGroupsInCloud,
+    updateUserApprovalStatusInCloud,
     deleteGroupFromCloud,
     getCustomSectorsFromCloud,
     createSectorInCloud,
@@ -1365,6 +1366,12 @@ export async function openSettingsModal() {
     try {
         const isSuperAdmin = hasRole('super_admin');
         const currentUser = getCurrentUser();
+        const isAdmin = currentUser?.role === 'admin';
+        const canAccessAdminPanel = isSuperAdmin || isAdmin;
+        if (!canAccessAdminPanel) {
+            throw new Error('Acesso restrito ao Painel de Administração.');
+        }
+
         const users = await getAllUsersFromCloud();
         const invites = await getAllInvitedUsers();
         const groups = await getGroupsFromCloud();
@@ -1387,11 +1394,18 @@ export async function openSettingsModal() {
         });
         
         const allSectors = Array.from(sectorMap.values());
+        const managedSectors = isSuperAdmin
+            ? allSectors
+            : allSectors.filter((sector) => sector.id === currentUser.sectorId);
+        const visibleUsers = isSuperAdmin
+            ? users
+            : users.filter((user) => (user.sectorId || user.sector_id) === currentUser.sectorId);
+        const pendingApprovalUsers = users.filter((user) => String(user.approvalStatus || user.status || '').toLowerCase() === 'pending_approval');
         const featureCatalog = getFeatureCatalog();
-        const sectorFeatureMatrix = await getSectorFeatureMatrix(currentUser.companyId, allSectors);
+        const sectorFeatureMatrix = await getSectorFeatureMatrix(currentUser.companyId, managedSectors);
         
 
-        const GROUPS_BY_SECTOR = allSectors.reduce((acc, sector) => {
+        const GROUPS_BY_SECTOR = managedSectors.reduce((acc, sector) => {
             acc[sector.id] = [];
             return acc;
         }, {});
@@ -1427,7 +1441,7 @@ function sectorsOptionsHtml(userSector) {
 
     const normalizedUserSector = normalize(userSector);
 
-    return allSectors.map(s => {
+    return managedSectors.map(s => {
         const isSelected =
             normalize(s.id) === normalizedUserSector ||
             normalize(s.name) === normalizedUserSector;
@@ -1498,7 +1512,7 @@ function sectorsOptionsHtml(userSector) {
             </div>`;
         }
 
-        const invitesHtml = `
+        const invitesHtml = isSuperAdmin ? `
         <div class="mb-10">
             <h3 class="text-sm font-bold uppercase tracking-widest mb-4 flex items-center gap-2" style="color: var(--color-text-muted);"><i class="ph-fill ph-envelope-simple text-blue-500 text-lg"></i> Whitelist de Exceção (Convites)</h3>
             
@@ -1535,7 +1549,7 @@ function sectorsOptionsHtml(userSector) {
                     </tbody>
                 </table>
             </div>
-        </div>`;
+        </div>` : '';
 
      
 
@@ -1700,6 +1714,37 @@ async function handleToggleSectorFeature(sectorId, featureKey, enabled) {
 
 window.handleToggleSectorFeature = handleToggleSectorFeature;
 
+const approvalQueueHtml = isSuperAdmin ? adminSection(
+    'Fila de Aprovação de Novos Usuários',
+    'ph-fill ph-user-list',
+    'text-amber-500',
+    `
+    <div class="rounded-xl overflow-hidden shadow-sm" style="background-color: var(--color-sidebar-background); border: 1px solid var(--color-border-subtle);">
+        <table class="w-full text-left border-collapse">
+            <tbody class="divide-y" style="divide-color: var(--color-border-subtle);">
+                ${pendingApprovalUsers.map((u) => `
+                    <tr class="transition-colors hover:bg-black/5 dark:hover:bg-white/5">
+                        <td class="py-3 px-5">
+                            <p class="font-bold text-[13px]" style="color: var(--color-text-inverse);">${safeText(u.displayName || 'Usuário KCS')}</p>
+                            <p class="text-[12px]" style="color: var(--color-text-secondary);">${safeText(u.email || 'Sem e-mail')}</p>
+                        </td>
+                        <td class="py-3 px-5 text-xs" style="color: var(--color-text-secondary);">
+                            Setor: <strong>${safeText((managedSectors.find((s) => s.id === (u.sectorId || u.sector_id)) || {}).name || (u.sectorId || u.sector_id || '-'))}</strong>
+                        </td>
+                        <td class="py-3 px-5 text-right">
+                            <button class="px-3 py-1.5 rounded text-xs font-semibold text-emerald-500 transition-colors" style="background-color: var(--color-editor-background); border: 1px solid var(--color-border);" data-action="approve-user" data-id="${safeText(u.id || u.uid)}">
+                                Aprovar
+                            </button>
+                        </td>
+                    </tr>
+                `).join('') || `<tr><td colspan="3" class="py-6 text-center text-sm italic" style="color: var(--color-text-muted);">Nenhum novo usuário aguardando aprovação.</td></tr>`}
+            </tbody>
+        </table>
+    </div>
+    `,
+    false
+) : '';
+
 
 const groupsBySectorHtml = adminSection(
     'Grupos por Setor',
@@ -1708,6 +1753,7 @@ const groupsBySectorHtml = adminSection(
     `
     <div class="space-y-6">
         <!-- UI para Criar Novo Setor -->
+        ${isSuperAdmin ? `
         <div class="flex gap-2 p-4 rounded-lg" style="background-color: var(--color-editor-background); border: 1px solid var(--color-border);">
             <input
                 type="text"
@@ -1725,9 +1771,10 @@ const groupsBySectorHtml = adminSection(
                 <i class="ph-bold ph-plus mr-1"></i> Setor
             </button>
         </div>
+        ` : ''}
 
         <div class="space-y-4">
-            ${allSectors.map(sector => {
+            ${managedSectors.map(sector => {
                 const sectorGroups = GROUPS_BY_SECTOR[sector.id] || [];
                 const groupCount = sectorGroups.length;
                 const isCustom = sector.isCustom || false;
@@ -1764,7 +1811,7 @@ const groupsBySectorHtml = adminSection(
                             >
                                 Criar
                             </button>
-                            ${isCustom ? `
+                            ${isCustom && isSuperAdmin ? `
                             <button
                                 type="button"
                                 onclick="handleDeleteSector('${sector.id}', '${safeText(sector.name)}')"
@@ -1808,10 +1855,10 @@ const groupsBySectorHtml = adminSection(
         </div>
     </div>
     `,
-    true
+    false
 );
 
-const sectorFeaturesHtml = adminSection(
+const sectorFeaturesHtml = isSuperAdmin ? adminSection(
     'Funcionalidades por Setor',
     'ph-fill ph-sliders-horizontal',
     'text-cyan-500',
@@ -1824,11 +1871,11 @@ const sectorFeaturesHtml = adminSection(
         </div>
 
         <div class="space-y-4">
-            ${allSectors.map(sector => {
+            ${managedSectors.map(sector => {
                 const features = sectorFeatureMatrix[sector.id] || {};
 
                 return `
-                    <details class="rounded-xl overflow-hidden" style="background-color: var(--color-sidebar-background); border: 1px solid var(--color-border-subtle);" open>
+                    <details class="rounded-xl overflow-hidden" style="background-color: var(--color-sidebar-background); border: 1px solid var(--color-border-subtle);">
                         <summary class="cursor-pointer px-4 py-3 flex items-center justify-between gap-3 transition-colors hover:bg-black/5 dark:hover:bg-white/5" style="color: var(--color-text-primary); list-style:none;">
                             <div class="flex items-center gap-3">
                                 <i class="ph-bold ph-buildings text-cyan-500"></i>
@@ -1872,10 +1919,10 @@ const sectorFeaturesHtml = adminSection(
         </div>
     </div>
     `,
-    true
-);
+    false
+) : '';
 
-        const activeUsersHtml = adminSection(
+const activeUsersHtml = adminSection(
     'Usuários Registrados',
     'ph-fill ph-users',
     'text-green-500',
@@ -1889,14 +1936,14 @@ const sectorFeaturesHtml = adminSection(
                     <label class="block text-[11px] font-semibold mb-2" style="color: var(--color-text-secondary);">Empresa</label>
                     <select id="filter-company" class="w-full px-3 py-2 rounded-lg text-xs outline-none cursor-pointer transition-colors" style="background-color: var(--color-sidebar-background); color: var(--color-text-primary); border: 1px solid var(--color-border); focus:ring-1 focus:ring-green-500;">
                         <option value="">Todas</option>
-                        ${companies.map(c => `<option value="${c.companyId}">${safeText(c.companyName)}</option>`).join('')}
+                        ${(isSuperAdmin ? companies : [{ companyId: currentUser.companyId, companyName: currentUser.companyName }]).map(c => `<option value="${c.companyId}">${safeText(c.companyName || c.companyId)}</option>`).join('')}
                     </select>
                 </div>
                 <div>
                     <label class="block text-[11px] font-semibold mb-2" style="color: var(--color-text-secondary);">Setor</label>
                     <select id="filter-sector" class="w-full px-3 py-2 rounded-lg text-xs outline-none cursor-pointer transition-colors" style="background-color: var(--color-sidebar-background); color: var(--color-text-primary); border: 1px solid var(--color-border); focus:ring-1 focus:ring-green-500;">
                         <option value="">Todos</option>
-                        ${allSectors.map(s => `<option value="${safeText(s.id)}">${safeText(s.name)}</option>`).join('')}
+                        ${managedSectors.map(s => `<option value="${safeText(s.id)}">${safeText(s.name)}</option>`).join('')}
                     </select>
                 </div>
                 <div>
@@ -1917,7 +1964,7 @@ const sectorFeaturesHtml = adminSection(
             <table class="w-full text-left border-collapse">
                 <tbody class="divide-y" style="divide-color: var(--color-border-subtle);">
                     <tbody id="admin-users-tbody">
-                        ${users.map(u => {
+                        ${visibleUsers.map(u => {
                             const safeName = (u.displayName && String(u.displayName) !== 'undefined') ? u.displayName : 'Usuário KCS';
                             const safeEmail = (u.email && String(u.email) !== 'undefined') ? u.email : 'Sem e-mail';
                             const userSectorId = u.sectorId || u.sector_id || 'TI';
@@ -1968,6 +2015,17 @@ const sectorFeaturesHtml = adminSection(
                                 </td>
 
                                 <td class="py-3 px-5">
+                                    ${isSuperAdmin ? `
+                                        <select class="w-full px-2 py-1.5 rounded text-xs outline-none cursor-pointer" style="background-color: var(--color-editor-background); color: var(--color-text-primary); border: 1px solid var(--color-border);" data-action="update-approval" data-id="${u.id}">
+                                            <option value="active" ${(u.approvalStatus === 'active' || u.status === 'active' || u.approvalStatus === 'approved') ? 'selected' : ''}>Ativo</option>
+                                            <option value="pending_approval" ${(u.approvalStatus === 'pending_approval' || u.status === 'pending_approval') ? 'selected' : ''}>Pendente</option>
+                                        </select>
+                                    ` : `
+                                        <span class="text-xs" style="color: var(--color-text-secondary);">${(u.approvalStatus === 'pending_approval' || u.status === 'pending_approval') ? 'Pendente' : 'Ativo'}</span>
+                                    `}
+                                </td>
+
+                                <td class="py-3 px-5">
                                     <details class="rounded-lg overflow-hidden transition-colors" style="background-color: var(--color-editor-background); border: 1px solid var(--color-border);">
                                         <summary class="flex items-center justify-between gap-2 px-3 py-2 text-xs font-semibold cursor-pointer transition-colors hover:bg-black/5 dark:hover:bg-white/5" style="color: var(--color-text-primary); list-style:none;">
                                             <span class="flex items-center gap-1.5">
@@ -2000,7 +2058,7 @@ const sectorFeaturesHtml = adminSection(
                                     </button>
                                 </td>
                             </tr>`;
-                        }).join('') || `<tr><td colspan="6" class="py-6 text-center text-sm italic" style="color: var(--color-text-muted);">Nenhum usuário ativo.</td></tr>`}
+                        }).join('') || `<tr><td colspan="7" class="py-6 text-center text-sm italic" style="color: var(--color-text-muted);">Nenhum usuário ativo.</td></tr>`}
                     </tbody>
                 </tbody>
             </table>
@@ -2010,7 +2068,7 @@ const sectorFeaturesHtml = adminSection(
         <div style="display:none;"></div>
     </div>
     `,
-    true
+    false
 );
 
         const backupHtml = isSuperAdmin ? `
@@ -2035,6 +2093,7 @@ const sectorFeaturesHtml = adminSection(
                     
                     ${companiesHtml}
                     ${invitesHtml}
+                    ${approvalQueueHtml}
                     ${groupsBySectorHtml}
                     ${sectorFeaturesHtml}
                     ${activeUsersHtml}
@@ -2066,6 +2125,16 @@ const sectorFeaturesHtml = adminSection(
         }));
         container.querySelectorAll('[data-action="delete-company"]').forEach(btn => btn.addEventListener('click', (e) => window.__kcs.deleteCompany(e.currentTarget.dataset.id)));
         container.querySelectorAll('[data-action="remove-invite"]').forEach(btn => btn.addEventListener('click', (e) => window.__kcs.removeInvite(e.currentTarget.dataset.email)));
+        container.querySelectorAll('[data-action="approve-user"]').forEach(btn => btn.addEventListener('click', async (e) => {
+            const userId = e.currentTarget.dataset.id;
+            if (!userId) return;
+            await updateUserApprovalStatusInCloud(userId, 'active');
+            const existingTab = document.getElementById('view-container-tab-admin-panel');
+            if (existingTab) {
+                window.TabManager.closeTab('tab-admin-panel', false);
+            }
+            await openSettingsModal();
+        }));
         container.querySelectorAll('[data-action="update-company"]').forEach(sel => sel.addEventListener('change', (e) => window.__kcs.updateUserCompany(e.currentTarget.dataset.id, e.target.value)));
         container.querySelectorAll('[data-action="update-sector"]').forEach(sel => sel.addEventListener('change', (e) => window.__kcs.updateUserSector(e.currentTarget.dataset.id, e.target.value)));
         container.querySelectorAll('[data-action="toggle-user-group"]').forEach(input => input.addEventListener('change', (e) => {
@@ -2076,6 +2145,10 @@ const sectorFeaturesHtml = adminSection(
     );
 }));
         container.querySelectorAll('[data-action="update-role"]').forEach(sel => sel.addEventListener('change', (e) => window.__kcs.updateUserRole(e.currentTarget.dataset.id, e.target.value)));
+        container.querySelectorAll('[data-action="update-approval"]').forEach(sel => sel.addEventListener('change', async (e) => {
+            await updateUserApprovalStatusInCloud(e.currentTarget.dataset.id, e.target.value);
+            window.__kcs.showToast('Status de aprovação atualizado.', 'success');
+        }));
         container.querySelectorAll('[data-action="delete-user"]').forEach(btn => btn.addEventListener('click', (e) => window.__kcs.deleteUser(e.currentTarget.dataset.id)));
         container.querySelectorAll('[data-action="trigger-backup"]').forEach(btn => btn.addEventListener('click', () => window.__kcs.triggerManualBackup()));
 

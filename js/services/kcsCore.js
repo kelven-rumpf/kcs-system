@@ -5,7 +5,7 @@
 
 import { dbCloud, safeAddDoc, safeSetDoc, safeUpdateDoc, safeDeleteDoc } from './cloud.js';
 import { doc, getDoc, getDocs, collection, query, where, getCountFromServer, orderBy, limit, onSnapshot, increment, runTransaction } from 'https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js';
-import { getCurrentUser } from '../auth.js';
+import { getCurrentUser, hasPermission, isUserApproved } from '../auth.js';
 import { CONFIG, COLLECTION_ARTICLES } from '../config.js';
 import { COLLECTION_CHAT_LOGS, FIREBASE_ENV } from '../config/firestore.js';
 import { canUseFeature, FEATURE_FLAGS } from './featureAccess.js';
@@ -259,6 +259,7 @@ export async function listArticles(forceSync = false) {
     const user = getCurrentUser();
 
     if (!user || !user.companyId) return [];
+    if (!isUserApproved(user) || !hasPermission('read_article')) return [];
 
     if (!forceSync) {
         try {
@@ -285,6 +286,9 @@ export async function getArticle(articleId) {
   try {
     const user = getCurrentUser();
     if (!user) throw new Error('Usuário não autenticado');
+    if (!isUserApproved(user) || !hasPermission('read_article')) {
+      throw new Error('Acesso pendente de aprovação.');
+    }
 
     const ref = doc(dbCloud, COLLECTION_ARTICLES, articleId);
     const snapshot = await getDoc(ref);

@@ -4,6 +4,7 @@
  */
 
 import { dbCloud } from './cloud.js';
+import { hasPermission } from '../auth.js';
 
 async function getUsersSafely() {
     try {
@@ -21,6 +22,7 @@ async function getUsersSafely() {
 }
 
 export async function getTopAnalysts() {
+    if (!hasPermission('read_article')) return [];
     const users = await getUsersSafely();
 
     return users
@@ -30,6 +32,7 @@ export async function getTopAnalysts() {
 }
 
 export async function getTopCollaborators() {
+    if (!hasPermission('read_article')) return [];
     const users = await getUsersSafely();
 
     return users
