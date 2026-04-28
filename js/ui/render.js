@@ -64,7 +64,7 @@ if (sectorDisplay) {
 
     const btnAdminPanel = document.getElementById('btn-admin-panel');
     if (btnAdminPanel) {
-        if (user.role === 'super_admin') {
+        if (['super_admin', 'admin'].includes(user.role)) {
             btnAdminPanel.classList.remove('hidden');
         } else {
             btnAdminPanel.classList.add('hidden');
@@ -81,6 +81,16 @@ if (sectorDisplay) {
             btnCompanySettings.classList.add('hidden');
             btnCompanySettings.remove(); 
         }
+    }
+
+    const settingsAdminItem = document.getElementById('settings-admin-item');
+    if (settingsAdminItem && !hasPermission('manage_users')) {
+        settingsAdminItem.classList.add('hidden');
+    }
+
+    const activitySettingsButton = document.querySelector('.workbench-activitybar [data-view="settings"]');
+    if (activitySettingsButton && user.role === 'user') {
+        activitySettingsButton.classList.add('hidden');
     }
 
     window.addEventListener('click', (event) => {
