@@ -338,32 +338,19 @@ const appState = {
 };
 
 
-function renderEnvironmentIndicator() {
-    const existing = document.getElementById('kcs-env-indicator');
-    if (existing) existing.remove();
+function renderAccountEnvironmentInfo() {
+    const target = document.getElementById('user-environment-display');
+    if (!target) return;
 
-    const badge = document.createElement('aside');
-    badge.id = 'kcs-env-indicator';
     const envLabel = IS_PROD_DATA ? 'PROD' : 'DEV';
     const modeLabel = READ_ONLY_PROD_FROM_LOCAL ? 'READ-ONLY' : 'NORMAL';
-    const toneClass = READ_ONLY_PROD_FROM_LOCAL
-        ? 'kcs-env-warning'
-        : (IS_PROD_DATA ? 'kcs-env-prod' : 'kcs-env-dev');
-
-    badge.className = `kcs-env-indicator ${toneClass}`;
-    badge.innerHTML = `
-        <p><strong>Ambiente:</strong> ${envLabel}</p>
-        <p><strong>Fonte de dados:</strong> ${envLabel}</p>
-        <p><strong>Modo:</strong> ${modeLabel}</p>
-    `;
-
-    document.body.appendChild(badge);
+    target.textContent = `Ambiente: ${envLabel} (${modeLabel})`;
 }
 
 async function init() {
     try {
         document.body.classList.add('auth-loading');
-        renderEnvironmentIndicator();
+        renderAccountEnvironmentInfo();
 
         const savedTheme = localStorage.getItem('kcs_theme') || 'dark';
         if (savedTheme === 'light') { 
