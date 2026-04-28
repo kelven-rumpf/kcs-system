@@ -328,6 +328,8 @@ main.workbench-editor {
     align-items: center;
 
     justify-content: space-between; /* Para espaçar os itens do status bar */
+    position: relative;
+    z-index: 120;
 }
 
 /* Itens da Status Bar */
@@ -924,7 +926,8 @@ body.chatbot-open .workbench-grid {
 }
 
 .chatbot-input-area {
-    display: flex;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 40px;
     align-items: center;
     gap: 8px;
     padding: 10px;
@@ -935,10 +938,9 @@ body.chatbot-open .workbench-grid {
 }
 
 .chatbot-input-area input {
-    flex: 1 1 auto;
     height: 40px;
     box-sizing: border-box;
-    width: 100%;
+    width: 100% !important;
     min-width: 0;
     padding: 0 12px;
     border: 1px solid var(--color-border);
@@ -954,9 +956,9 @@ body.chatbot-open .workbench-grid {
 }
 
 .chatbot-send {
-    width: 40px;
+    width: 40px !important;
     height: 40px;
-    flex-shrink: 0;
+    min-width: 40px;
     display: grid;
     place-items: center;
     border: none;
