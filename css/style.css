@@ -862,7 +862,15 @@ body.chatbot-open .workbench-editor {
     transition: padding-right 180ms ease;
 }
 
+body.chatbot-open .workbench-grid {
+    padding-right: var(--chatbot-width);
+    box-sizing: border-box;
+}
+
 @media (max-width: 900px) {
+    body.chatbot-open .workbench-grid {
+        padding-right: 0;
+    }
     body.chatbot-open .workbench-titlebar,
     body.chatbot-open .workbench-editor {
         margin-right: 0;
@@ -922,13 +930,15 @@ body.chatbot-open .workbench-editor {
     border-top: 1px solid var(--color-border);
     background: inherit;
     flex-shrink: 0;
+    min-width: 0;
 }
 
 .chatbot-input-area input {
-    flex: 1;
+    flex: 1 1 auto;
     height: 40px;
     box-sizing: border-box;
     width: 100%;
+    min-width: 0;
     padding: 0 12px;
     border: 1px solid var(--color-border);
     border-radius: 8px;
@@ -945,6 +955,7 @@ body.chatbot-open .workbench-editor {
 .chatbot-send {
     width: 40px;
     height: 40px;
+    flex-shrink: 0;
     display: grid;
     place-items: center;
     border: none;
