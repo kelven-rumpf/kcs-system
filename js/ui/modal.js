@@ -1400,10 +1400,7 @@ export async function openSettingsModal() {
         const visibleUsers = isSuperAdmin
             ? users
             : users.filter((user) => (user.sectorId || user.sector_id) === currentUser.sectorId);
-        const pendingApprovalUsers = users.filter((user) => {
-            const status = String(user.approvalStatus || user.status || '').toLowerCase();
-            return status === 'pending_approval' || status === 'pending';
-        });
+        const pendingApprovalUsers = visibleUsers.filter((user) => user.approvalStatus === 'pending');
         const featureCatalog = getFeatureCatalog();
         const sectorFeatureMatrix = await getSectorFeatureMatrix(currentUser.companyId, managedSectors);
         
