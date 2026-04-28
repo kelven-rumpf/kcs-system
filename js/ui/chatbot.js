@@ -1,6 +1,6 @@
 /**
  * ui/chatbot.js — Motor do Chatbot IA (SaaS Premium)
- * Assistente Nissei Sensei: Especialista KCS Hub
+ * Assistente Sensei: Especialista KCS Hub
  * Refatorado para Design System Semântico (Workbench)
  */
 
@@ -11,7 +11,7 @@ import { collection, doc } from 'https://www.gstatic.com/firebasejs/10.8.1/fireb
 import { COLLECTION_CHAT_LOGS } from '../config/firestore.js';
 import { getCurrentUser } from '../auth.js';
 import { canUseFeature, FEATURE_FLAGS } from '../services/featureAccess.js';
-import { canUserAccessKnowledge, filterKnowledgeByAccess } from '../services/visibility.js';
+import { canViewArticle, filterArticlesByUserScope } from '../services/visibility.js';
 
 let isChatbotInitialized = false;
 const responseCache = new Map();
@@ -22,7 +22,7 @@ const SAFE_NO_KNOWLEDGE_MESSAGE = 'Não encontrei um procedimento autorizado par
 const SMART_PROMPTS = ['Resetar Senha', 'Erro de Impressora', 'Configurar Pinpad'];
 
 // =========================================================
-// INTELIGÊNCIA DE PERSONA (NISSEI SENSEI) E SAUDAÇÃO
+// INTELIGÊNCIA DE PERSONA (SENSEI) E SAUDAÇÃO
 // =========================================================
 const PLANETS = ["Marte", "Kepler-452b", "Cybertron", "Tatooine", "Gliese-Prime", "Andara-X", "Helion-9"];
 
@@ -34,7 +34,7 @@ function initPersona() {
     if (!sessionStorage.getItem("bot_planet")) {
         sessionStorage.setItem("bot_planet", getRandomPlanet());
     }
-    sessionStorage.setItem("bot_name", "Nissei Sensei");
+    sessionStorage.setItem("bot_name", "Sensei");
 }
 
 function getGreetingByTime() {
@@ -95,7 +95,7 @@ window.__kcs_trigger_article = async function(rawId) {
         const currentUser = getCurrentUser();
         const article = await getArticle(cleanIdStr);
 
-        if (!canUserAccessKnowledge(currentUser, article)) {
+        if (!canViewArticle(currentUser, article)) {
             throw new Error('Sem permissão para visualizar este procedimento.');
         }
 
@@ -115,7 +115,10 @@ window.__kcs_trigger_article = async function(rawId) {
         }
     } catch (e) {
         console.error('[KCS Bridge] Erro de execução:', e);
-        const msg = 'Você não tem permissão para abrir este procedimento completo.';
+        const rawMsg = String(e?.message || '').toLowerCase();
+        const msg = rawMsg.includes('não encontrado')
+            ? 'Procedimento não encontrado. Atualize a pesquisa e tente novamente.'
+            : 'Você não tem permissão para abrir este procedimento completo.';
         if (window.__kcs?.showToast) window.__kcs.showToast(msg, 'warning');
         else alert(`⚠️ ${msg}`);
     }
@@ -490,7 +493,7 @@ async function processPromptWithRAGAndStream(userQuestion, botName, messagesEl, 
         searchSqlScripts(userQuestion, true).catch(() => [])
     ]);
 
-    const authorizedArticles = filterKnowledgeByAccess(artResults, currentUser);
+    const authorizedArticles = filterArticlesByUserScope(artResults, currentUser);
     const topArticles = authorizedArticles.slice(0, 3);
     const topSql = sqlResults.slice(0, 1);
 
@@ -529,9 +532,10 @@ if (topArticles.length === 0) {
     if (topArticles.length > 0) {
         topArticles.forEach(a => {
             const kcsNum = a.articleNumber || 'REF';
-            const safeContent = a.content || a.steps || a.solution || a.cause || '';
-            const truncatedContent = safeContent.length > 1000 ? safeContent.substring(0, 1000) + '...' : safeContent;
-            contextString += `[ID_SISTEMA: ${a.id} | KCS: ${kcsNum} | SETOR: ${a.sectorId || 'N/I'} | VISIBILIDADE: ${a.visibility || 'public'}] TÍTULO: ${a.title} | PROCEDIMENTO: ${truncatedContent}
+            const articleId = getArticleDocumentId(a);
+            const safeContent = getProcedureSummary(a, 240);
+            const truncatedContent = safeContent.length > 240 ? safeContent.substring(0, 240) + '...' : safeContent;
+            contextString += `[ID_SISTEMA: ${articleId} | KCS: ${kcsNum} | SETOR: ${a.sectorId || 'N/I'} | VISIBILIDADE: ${a.visibility || 'public'}] TÍTULO: ${a.title} | PROCEDIMENTO: ${truncatedContent}
 `;
         });
     }
@@ -550,7 +554,7 @@ if (topArticles.length === 0) {
     const currentPlanet = sessionStorage.getItem("bot_planet");
     const currentTime = new Date().toLocaleString('pt-BR');
 
-    const systemPrompt = `Você é o Nissei Sensei, especialista técnico sênior do KCS Hub.
+    const systemPrompt = `Você é o Sensei, especialista técnico sênior do KCS Hub.
 Versão de prompt: ${CHATBOT_PROMPT_VERSION}.
 
 1) Comunicação
@@ -563,9 +567,9 @@ Versão de prompt: ${CHATBOT_PROMPT_VERSION}.
 "${SAFE_NO_KNOWLEDGE_MESSAGE}"
 
 3) Estrutura de resposta
-- Comece com um resumo curto da solução.
-- Em seguida, traga passos práticos em bullets.
-- Se houver dúvida crítica, sugira validação com equipe responsável.
+- Traga APENAS um resumo curto e objetivo da solução (máximo 3 linhas).
+- Não exponha procedimento completo no chat.
+- Oriente o usuário a clicar no botão "Ver procedimento completo" para executar o passo a passo.
 
 4) Persona
 - Horário atual: ${currentTime}.
@@ -621,12 +625,12 @@ PERGUNTA DO USUÁRIO:
 
         if (cleanId.length < 15 && topArticles.length > 0) {
             const realArticle = topArticles.find(art => String(art.articleNumber) === cleanId);
-            targetId = realArticle ? realArticle.id : topArticles[0].id;
-        } else if (topArticles.length > 0 && !topArticles.find(art => art.id === cleanId)) {
-            targetId = topArticles[0].id;
+            targetId = realArticle ? getArticleDocumentId(realArticle) : getArticleDocumentId(topArticles[0]);
+        } else if (topArticles.length > 0 && !topArticles.find(art => getArticleDocumentId(art) === cleanId)) {
+            targetId = getArticleDocumentId(topArticles[0]);
         }
 
-if (!topArticles.find(art => art.id === targetId)) {
+if (!topArticles.find(art => getArticleDocumentId(art) === targetId)) {
     a.remove();
     return;
 }
@@ -720,12 +724,10 @@ function buildRelatedProceduresHtml(articles, user) {
     }
 
     const cards = articles
-        .filter(article => canUserAccessKnowledge(user, article))
+        .filter(article => canViewArticle(user, article))
         .map(article => {
             const visibility = String(article.visibility || 'public').toLowerCase();
-            const previewRaw = article.content || article.steps || article.solution || article.cause || '';
-            const preview = escapeHtml(previewRaw.slice(0, 220) + (previewRaw.length > 220 ? '…' : ''));
-            const groupIds = Array.isArray(article.group_ids) ? article.group_ids.filter(Boolean) : [];
+            const preview = escapeHtml(getProcedureSummary(article, 180));
 
             return `
                 <article class="chat-procedure-card">
@@ -735,8 +737,7 @@ function buildRelatedProceduresHtml(articles, user) {
                     </div>
                     <h4 class="chat-procedure-title">${escapeHtml(article.title || 'Procedimento sem título')}</h4>
                     <p class="chat-procedure-preview">${preview || 'Sem prévia disponível.'}</p>
-                    <p class="chat-procedure-scope">Setor: ${escapeHtml(article.sectorId || 'N/I')} · Grupo: ${escapeHtml(groupIds.join(', ') || 'N/I')}</p>
-                    <button type="button" class="btn-open-kcs kcs-link-button" data-kcs-id="${escapeHtml(article.id)}">
+                    <button type="button" class="btn-open-kcs kcs-link-button" data-kcs-id="${escapeHtml(getArticleDocumentId(article))}">
                         <i class="ph-bold ph-book-open"></i> Ver procedimento completo
                     </button>
                 </article>
@@ -758,6 +759,27 @@ function escapeHtml(text) {
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#39;');
+}
+
+function getProcedureSummary(article, maxLength = 180) {
+    const raw = article?.summary || article?.content || article?.steps || article?.solution || article?.cause || '';
+    const cleaned = String(raw)
+        .replace(/!\[[^\]]*]\(([^)]+)\)/g, ' ')
+        .replace(/<img[^>]*>/gi, ' ')
+        .replace(/<br\s*\/?>/gi, ' ')
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/\[(.*?)\]\((https?:\/\/[^)]+)\)/g, '$1')
+        .replace(/https?:\/\/\S+/gi, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+    if (!cleaned) return '';
+    if (cleaned.length <= maxLength) return cleaned;
+    return `${cleaned.slice(0, maxLength).trimEnd()}…`;
+}
+
+function getArticleDocumentId(article) {
+    return String(article?.sourceId || article?.id || '').trim();
 }
 
 function appendUserMessage(text, container) {
