@@ -6682,6 +6682,7 @@ main.workbench-editor {
     bottom: 22px;
     width: 360px;
     max-width: 100%;
+    /* Resolução de merge: manter layout acoplado ao statusbar (evita input cortado). */
     height: auto;
     max-height: calc(100dvh - 22px);
     display: flex;
