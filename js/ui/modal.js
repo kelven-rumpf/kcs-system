@@ -1400,7 +1400,10 @@ export async function openSettingsModal() {
         const visibleUsers = isSuperAdmin
             ? users
             : users.filter((user) => (user.sectorId || user.sector_id) === currentUser.sectorId);
-        const pendingApprovalUsers = users.filter((user) => String(user.approvalStatus || user.status || '').toLowerCase() === 'pending_approval');
+        const pendingApprovalUsers = users.filter((user) => {
+            const status = String(user.approvalStatus || user.status || '').toLowerCase();
+            return status === 'pending_approval' || status === 'pending';
+        });
         const featureCatalog = getFeatureCatalog();
         const sectorFeatureMatrix = await getSectorFeatureMatrix(currentUser.companyId, managedSectors);
         
@@ -2018,10 +2021,10 @@ const activeUsersHtml = adminSection(
                                     ${isSuperAdmin ? `
                                         <select class="w-full px-2 py-1.5 rounded text-xs outline-none cursor-pointer" style="background-color: var(--color-editor-background); color: var(--color-text-primary); border: 1px solid var(--color-border);" data-action="update-approval" data-id="${u.id}">
                                             <option value="active" ${(u.approvalStatus === 'active' || u.status === 'active' || u.approvalStatus === 'approved') ? 'selected' : ''}>Ativo</option>
-                                            <option value="pending_approval" ${(u.approvalStatus === 'pending_approval' || u.status === 'pending_approval') ? 'selected' : ''}>Pendente</option>
+                                            <option value="pending_approval" ${(u.approvalStatus === 'pending_approval' || u.status === 'pending_approval' || u.approvalStatus === 'pending' || u.status === 'pending') ? 'selected' : ''}>Pendente</option>
                                         </select>
                                     ` : `
-                                        <span class="text-xs" style="color: var(--color-text-secondary);">${(u.approvalStatus === 'pending_approval' || u.status === 'pending_approval') ? 'Pendente' : 'Ativo'}</span>
+                                        <span class="text-xs" style="color: var(--color-text-secondary);">${(u.approvalStatus === 'pending_approval' || u.status === 'pending_approval' || u.approvalStatus === 'pending' || u.status === 'pending') ? 'Pendente' : 'Ativo'}</span>
                                     `}
                                 </td>
 

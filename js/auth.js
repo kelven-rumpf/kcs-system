@@ -9,7 +9,9 @@ let authInstance = null;
 let onAuthChangeCallback = null;
 
 function normalizeApprovalStatus(user) {
-    return String(user?.approvalStatus || user?.status || '').trim().toLowerCase();
+    const raw = String(user?.approvalStatus || user?.status || '').trim().toLowerCase();
+    if (raw === 'pending') return 'pending_approval';
+    return raw;
 }
 
 export function isUserApproved(user = currentUser) {
@@ -52,7 +54,7 @@ export function initAuth(callback) {
                         userData.email = user.email || '';
                         needsUpdate = true;
                     }
-                    if (!userData.approvalStatus) {
+                    if (!userData.approvalStatus && !userData.status) {
                         userData.approvalStatus = 'active';
                         userData.status = 'active';
                         needsUpdate = true;
