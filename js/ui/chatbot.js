@@ -532,10 +532,9 @@ if (topArticles.length === 0) {
     if (topArticles.length > 0) {
         topArticles.forEach(a => {
             const kcsNum = a.articleNumber || 'REF';
-            const articleId = getArticleDocumentId(a);
             const safeContent = getProcedureSummary(a, 240);
             const truncatedContent = safeContent.length > 240 ? safeContent.substring(0, 240) + '...' : safeContent;
-            contextString += `[ID_SISTEMA: ${articleId} | KCS: ${kcsNum} | SETOR: ${a.sectorId || 'N/I'} | VISIBILIDADE: ${a.visibility || 'public'}] TÍTULO: ${a.title} | PROCEDIMENTO: ${truncatedContent}
+            contextString += `[ID_SISTEMA: ${a.id} | KCS: ${kcsNum} | SETOR: ${a.sectorId || 'N/I'} | VISIBILIDADE: ${a.visibility || 'public'}] TÍTULO: ${a.title} | PROCEDIMENTO: ${truncatedContent}
 `;
         });
     }
