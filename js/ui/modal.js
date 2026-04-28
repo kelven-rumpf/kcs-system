@@ -1206,6 +1206,9 @@ export async function openCategoryModal(refreshCallback) {
     try {
         const { getFlatCategories, addCategory, removeCategory, updateCategory } = await import('../services/categories.js');
 
+        const scopeCompany = sessionStorage.getItem('kcs_company_name') || 'Empresa não identificada';
+        const scopeSector = sessionStorage.getItem('kcs_sector_id') || 'Setor não identificado';
+
         // Montagem do HTML com Layout aprimorado e formulário enxuto
         container.innerHTML = `
             <div class="flex-1 overflow-y-auto p-6 md:p-10 custom-scrollbar">
@@ -1215,6 +1218,7 @@ export async function openCategoryModal(refreshCallback) {
                             <i class="ph-bold ph-folders text-orange-500"></i> Gerenciar Categorias
                         </h2>
                         <p class="text-sm" style="color: var(--color-text-secondary);">Organize a árvore de navegação lateral da sua base de conhecimento.</p>
+                        <p class="text-xs mt-2 font-semibold" style="color: var(--color-text-muted);">Escopo atual: ${scopeCompany} / ${scopeSector}</p>
                     </div>
                     
                     <div class="grid grid-cols-1 md:grid-cols-5 gap-8">

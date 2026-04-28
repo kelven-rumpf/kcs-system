@@ -3,27 +3,74 @@
  * CRUD completo com subcategorias ilimitadas, persistido no localStorage.
  */
 
-import { DEFAULT_CATEGORY_TREE, CATEGORIES_STORAGE_KEY } from '../config.js';
+import { DEFAULT_CATEGORY_TREE, CATEGORIES_STORAGE_KEY, TENANT_KEYS } from '../config.js';
 
 /** Cache em memória da árvore de categorias */
 let categoryTree = [];
+let loadedScopeKey = null;
+
+function cloneDefaultTree() {
+  return JSON.parse(JSON.stringify(DEFAULT_CATEGORY_TREE));
+}
+
+function getCurrentScopeKey() {
+  const companyId = sessionStorage.getItem(TENANT_KEYS.COMPANY_ID) || 'GLOBAL';
+  const sectorId = sessionStorage.getItem(TENANT_KEYS.SECTOR_ID) || 'GLOBAL';
+  return `${companyId}::${sectorId}`;
+}
+
+function parseStoredCategories() {
+  const stored = localStorage.getItem(CATEGORIES_STORAGE_KEY);
+  if (!stored) return {};
+
+  const parsed = JSON.parse(stored);
+
+  // Migração retrocompatível: versões antigas salvavam apenas um array global.
+  if (Array.isArray(parsed)) {
+    return { LEGACY_GLOBAL: parsed };
+  }
+
+  return parsed && typeof parsed === 'object' ? parsed : {};
+}
+
+function saveScopedTree(scopeKey, tree) {
+  const allScopedCategories = parseStoredCategories();
+  allScopedCategories[scopeKey] = tree;
+  localStorage.setItem(CATEGORIES_STORAGE_KEY, JSON.stringify(allScopedCategories));
+}
+
+function ensureScopeLoaded() {
+  const scopeKey = getCurrentScopeKey();
+  if (scopeKey === loadedScopeKey) return;
+
+  const allScopedCategories = parseStoredCategories();
+
+  if (Array.isArray(allScopedCategories[scopeKey])) {
+    categoryTree = allScopedCategories[scopeKey];
+  } else if (Array.isArray(allScopedCategories.LEGACY_GLOBAL)) {
+    categoryTree = allScopedCategories.LEGACY_GLOBAL;
+    saveScopedTree(scopeKey, categoryTree);
+    delete allScopedCategories.LEGACY_GLOBAL;
+    localStorage.setItem(CATEGORIES_STORAGE_KEY, JSON.stringify(allScopedCategories));
+  } else {
+    categoryTree = cloneDefaultTree();
+    saveScopedTree(scopeKey, categoryTree);
+  }
+
+  loadedScopeKey = scopeKey;
+}
 
 /**
  * Inicializa a árvore de categorias a partir do localStorage ou padrão.
  */
 export function initCategories() {
   try {
-    const stored = localStorage.getItem(CATEGORIES_STORAGE_KEY);
-    if (stored) {
-      categoryTree = JSON.parse(stored);
-    } else {
-      categoryTree = JSON.parse(JSON.stringify(DEFAULT_CATEGORY_TREE));
-      saveCategories();
-    }
+    ensureScopeLoaded();
     console.log('[Categories] Árvore de categorias carregada.');
   } catch (error) {
     console.error('[Categories] Erro ao carregar categorias:', error);
-    categoryTree = JSON.parse(JSON.stringify(DEFAULT_CATEGORY_TREE));
+    categoryTree = cloneDefaultTree();
+    loadedScopeKey = getCurrentScopeKey();
     saveCategories();
   }
 }
@@ -33,7 +80,8 @@ export function initCategories() {
  */
 function saveCategories() {
   try {
-    localStorage.setItem(CATEGORIES_STORAGE_KEY, JSON.stringify(categoryTree));
+    ensureScopeLoaded();
+    saveScopedTree(loadedScopeKey, categoryTree);
   } catch (error) {
     console.error('[Categories] Erro ao salvar categorias:', error);
   }
@@ -44,6 +92,7 @@ function saveCategories() {
  * @returns {Array}
  */
 export function getCategoryTree() {
+  ensureScopeLoaded();
   return categoryTree;
 }
 
@@ -52,6 +101,7 @@ export function getCategoryTree() {
  * @returns {Array<{id: string, name: string, path: string, depth: number}>}
  */
 export function getFlatCategories() {
+  ensureScopeLoaded();
   const result = [];
   function walk(nodes, parentPath = '', depth = 0) {
     for (const node of nodes) {
@@ -72,6 +122,7 @@ export function getFlatCategories() {
  * @returns {object|null}
  */
 export function findCategoryById(id) {
+  ensureScopeLoaded();
   function search(nodes) {
     for (const node of nodes) {
       if (node.id === id) return node;
@@ -188,6 +239,7 @@ export function removeCategory(id) {
  * @returns {Array<string>}
  */
 export function getCategoryAndChildrenIds(id) {
+  ensureScopeLoaded();
   const ids = [];
   const cat = findCategoryById(id);
   if (!cat) return ids;
@@ -206,6 +258,7 @@ export function getCategoryAndChildrenIds(id) {
  * Reseta as categorias para o padrão.
  */
 export function resetCategoriesToDefault() {
-  categoryTree = JSON.parse(JSON.stringify(DEFAULT_CATEGORY_TREE));
+  ensureScopeLoaded();
+  categoryTree = cloneDefaultTree();
   saveCategories();
 }
