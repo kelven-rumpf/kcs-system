@@ -115,7 +115,10 @@ window.__kcs_trigger_article = async function(rawId) {
         }
     } catch (e) {
         console.error('[KCS Bridge] Erro de execução:', e);
-        const msg = 'Você não tem permissão para abrir este procedimento completo.';
+        const rawMsg = String(e?.message || '').toLowerCase();
+        const msg = rawMsg.includes('não encontrado')
+            ? 'Procedimento não encontrado. Atualize a pesquisa e tente novamente.'
+            : 'Você não tem permissão para abrir este procedimento completo.';
         if (window.__kcs?.showToast) window.__kcs.showToast(msg, 'warning');
         else alert(`⚠️ ${msg}`);
     }
@@ -621,12 +624,12 @@ PERGUNTA DO USUÁRIO:
 
         if (cleanId.length < 15 && topArticles.length > 0) {
             const realArticle = topArticles.find(art => String(art.articleNumber) === cleanId);
-            targetId = realArticle ? realArticle.id : topArticles[0].id;
-        } else if (topArticles.length > 0 && !topArticles.find(art => art.id === cleanId)) {
-            targetId = topArticles[0].id;
+            targetId = realArticle ? getArticleDocumentId(realArticle) : getArticleDocumentId(topArticles[0]);
+        } else if (topArticles.length > 0 && !topArticles.find(art => getArticleDocumentId(art) === cleanId)) {
+            targetId = getArticleDocumentId(topArticles[0]);
         }
 
-if (!topArticles.find(art => art.id === targetId)) {
+if (!topArticles.find(art => getArticleDocumentId(art) === targetId)) {
     a.remove();
     return;
 }
@@ -733,7 +736,7 @@ function buildRelatedProceduresHtml(articles, user) {
                     </div>
                     <h4 class="chat-procedure-title">${escapeHtml(article.title || 'Procedimento sem título')}</h4>
                     <p class="chat-procedure-preview">${preview || 'Sem prévia disponível.'}</p>
-                    <button type="button" class="btn-open-kcs kcs-link-button" data-kcs-id="${escapeHtml(article.id)}">
+                    <button type="button" class="btn-open-kcs kcs-link-button" data-kcs-id="${escapeHtml(getArticleDocumentId(article))}">
                         <i class="ph-bold ph-book-open"></i> Ver procedimento completo
                     </button>
                 </article>
@@ -772,6 +775,10 @@ function getProcedureSummary(article, maxLength = 180) {
     if (!cleaned) return '';
     if (cleaned.length <= maxLength) return cleaned;
     return `${cleaned.slice(0, maxLength).trimEnd()}…`;
+}
+
+function getArticleDocumentId(article) {
+    return String(article?.sourceId || article?.id || '').trim();
 }
 
 function appendUserMessage(text, container) {

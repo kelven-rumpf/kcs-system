@@ -80,6 +80,7 @@ function formatSearchResult(item) {
     const rawContent = item.steps || item.solution || item.cause || '';
     return {
         ...item,
+        sourceId: item.id,
         id: item.articleNumber || item.id,
         content: rawContent.length > 1000 ? rawContent.substring(0, 1000) + '...' : (rawContent || 'Procedimento não detalhado.'),
         url: item.url || null
