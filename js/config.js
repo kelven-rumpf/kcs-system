@@ -2,6 +2,9 @@
  * config.js — Configurações globais do sistema KCS e Controle de Ambiente
  */
 
+import { FIREBASE_ENV, IS_LOCAL, IS_PROD_DATA, READ_ONLY_PROD_FROM_LOCAL, COLLECTION_ARTICLES, COLLECTION_SQL, COLLECTION_SECTOR_FEATURES } from './config/firestore.js';
+// 👉 Para alternar DEV/PROD, ajuste apenas VITE_FIREBASE_ENV em js/config/firestore.js (ou no .env do Vite).
+
 export const CONFIG = {
   GEMINI_API_KEY: "AIzaSyCxmmZMbCU0U4V0ZfFPVeXUFYGNPAtTVPY", // Substitua pela sua chave real
 };
@@ -104,11 +107,7 @@ export const SECTORS = Object.freeze([
     { id: 'OPE', name: 'Operações' }
 ]);
 
-export const isDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.hostname === '';
-const ENV_PREFIX = isDev ? 'kcs_dev' : 'kcs_prod';
 
-export const COLLECTION_ARTICLES = `${ENV_PREFIX}_articles`;
-export const COLLECTION_SQL = `${ENV_PREFIX}_sqlScripts`;
-export const COLLECTION_SECTOR_FEATURES = `${ENV_PREFIX}_sectorFeatures`;
+export { FIREBASE_ENV, IS_LOCAL, IS_PROD_DATA, READ_ONLY_PROD_FROM_LOCAL, COLLECTION_ARTICLES, COLLECTION_SQL, COLLECTION_SECTOR_FEATURES };
 
-console.log(`[Config] Ambiente Inicializado: ${isDev ? 'DEVELOPMENT' : 'PRODUCTION'} (Prefixo: ${ENV_PREFIX})`);
+console.log(`[Config] Ambiente Inicializado: ${FIREBASE_ENV.toUpperCase()} (Local: ${IS_LOCAL ? 'SIM' : 'NÃO'})`);

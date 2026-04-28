@@ -84,6 +84,7 @@ import {
 } from './ui/modal.js';
 import { initEditor, insertFormatting, resetEditor } from './ui/editor.js';
 import { TENANT_KEYS } from './config.js';
+import { FIREBASE_ENV, IS_PROD_DATA, READ_ONLY_PROD_FROM_LOCAL } from './config/firestore.js';
 
 // Alteração para quebra e mudança de CACHE
 import { initChatbot } from './ui/chatbot.js?v=12';
@@ -336,9 +337,33 @@ const appState = {
     }
 };
 
+
+function renderEnvironmentIndicator() {
+    const existing = document.getElementById('kcs-env-indicator');
+    if (existing) existing.remove();
+
+    const badge = document.createElement('aside');
+    badge.id = 'kcs-env-indicator';
+    const envLabel = IS_PROD_DATA ? 'PROD' : 'DEV';
+    const modeLabel = READ_ONLY_PROD_FROM_LOCAL ? 'READ-ONLY' : 'NORMAL';
+    const toneClass = READ_ONLY_PROD_FROM_LOCAL
+        ? 'kcs-env-warning'
+        : (IS_PROD_DATA ? 'kcs-env-prod' : 'kcs-env-dev');
+
+    badge.className = `kcs-env-indicator ${toneClass}`;
+    badge.innerHTML = `
+        <p><strong>Ambiente:</strong> ${envLabel}</p>
+        <p><strong>Fonte de dados:</strong> ${envLabel}</p>
+        <p><strong>Modo:</strong> ${modeLabel}</p>
+    `;
+
+    document.body.appendChild(badge);
+}
+
 async function init() {
     try {
         document.body.classList.add('auth-loading');
+        renderEnvironmentIndicator();
 
         const savedTheme = localStorage.getItem('kcs_theme') || 'dark';
         if (savedTheme === 'light') { 

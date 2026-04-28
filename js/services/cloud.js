@@ -24,7 +24,8 @@ import {
 } from 'https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.8.1/firebase-storage.js';
 import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/10.8.1/firebase-functions.js';
-import { PLANS } from '../config.js'; 
+import { PLANS } from '../config.js';
+import { READ_ONLY_PROD_FROM_LOCAL, FIREBASE_ENV, COLLECTION_ARTICLES } from '../config/firestore.js';
 
 export const FIREBASE_CONFIG = {
     apiKey: "AIzaSyC_S8IW_iuTrKHRv76DQ3ve-pZCHqNVimA",
@@ -45,15 +46,48 @@ export const functionsCloud = getFunctions(appCloud, "us-central1");
 
 export { onSnapshot, serverTimestamp };
 
+function assertWriteAllowed(operation) {
+    if (READ_ONLY_PROD_FROM_LOCAL) {
+        const msg = 'Ambiente local conectado ao PROD em modo somente leitura.';
+        console.warn(msg, { operation, env: FIREBASE_ENV });
+        const err = new Error(msg);
+        err.code = 'readonly-prod-local';
+        throw err;
+    }
+}
+
+export async function safeAddDoc(collectionRef, data) {
+    assertWriteAllowed('addDoc');
+    const { addDoc } = await import('https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js');
+    return addDoc(collectionRef, data);
+}
+
+export async function safeSetDoc(docRef, data, options) {
+    assertWriteAllowed('setDoc');
+    return setDoc(docRef, data, options);
+}
+
+export async function safeUpdateDoc(docRef, data) {
+    assertWriteAllowed('updateDoc');
+    const { updateDoc } = await import('https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js');
+    return updateDoc(docRef, data);
+}
+
+export async function safeDeleteDoc(docRef) {
+    assertWriteAllowed('deleteDoc');
+    return deleteDoc(docRef);
+}
+
+
 // ==========================================
 // OPERAÇÕES DIRETAS (FIRESTORE-FIRST)
 // ==========================================
 export async function setDocInCloud(collectionName, docId, data) {
-    await setDoc(doc(dbCloud, collectionName, docId), data);
+    await safeSetDoc(doc(dbCloud, collectionName, docId), data);
 }
 
 export async function deleteDocFromCloud(collectionName, docId) {
-    await deleteDoc(doc(dbCloud, collectionName, docId));
+    await safeDeleteDoc(doc(dbCloud, collectionName, docId));
 }
 
 export async function fetchAllFromCloud(collectionName, companyId) {
@@ -143,7 +177,7 @@ export async function triggerCloudBackup() {
 export async function fetchPaginatedArticles(companyId, pageSize = 10, cursorDoc = null, direction = 'next', statusFilter = 'all') {
     if (!companyId) throw new Error("Company ID não encontrado.");
     
-    const articlesRef = collection(dbCloud, "articles");
+    const articlesRef = collection(dbCloud, COLLECTION_ARTICLES);
     let queryConstraints = [where("companyId", "==", companyId)];
 
     if (statusFilter !== 'all') {
