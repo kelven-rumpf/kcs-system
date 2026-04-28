@@ -4,8 +4,8 @@
 
 import { CONFIG, COLLECTION_SQL } from '../config.js';
 import { getCurrentUser, hasPermission } from '../auth.js';
-import { dbCloud } from './cloud.js';
-import { doc, setDoc, getDoc, getDocs, deleteDoc, collection, query, where, updateDoc } from 'https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js';
+import { dbCloud, safeSetDoc, safeUpdateDoc, safeDeleteDoc } from './cloud.js';
+import { doc, getDoc, getDocs, collection, query, where } from 'https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js';
 import { canUseFeature, FEATURE_FLAGS } from './featureAccess.js';
 
 function generateId() { return `sql-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`; }
@@ -70,7 +70,7 @@ export async function createSqlScript(data) {
     version: 1,
   };
 
-  await setDoc(doc(dbCloud, COLLECTION_SQL, script.id), script);
+  await safeSetDoc(doc(dbCloud, COLLECTION_SQL, script.id), script);
   return script;
 }
 
@@ -111,7 +111,7 @@ export async function updateSqlScript(id, data) {
   script.version = (script.version || 1) + 1;
   script.updatedBy = authorName;
 
-  await updateDoc(doc(dbCloud, COLLECTION_SQL, id), script);
+  await safeUpdateDoc(doc(dbCloud, COLLECTION_SQL, id), script);
   return script;
 }
 
@@ -136,7 +136,7 @@ export async function toggleSqlLike(id) {
       likes.push(userId);
   }
   
-  await updateDoc(doc(dbCloud, COLLECTION_SQL, id), { likes });
+  await safeUpdateDoc(doc(dbCloud, COLLECTION_SQL, id), { likes });
   return likes; 
 }
 
@@ -161,7 +161,7 @@ export async function toggleSqlFavorite(id) {
       favorites.push(userId);
   }
   
-  await updateDoc(doc(dbCloud, COLLECTION_SQL, id), { favorites });
+  await safeUpdateDoc(doc(dbCloud, COLLECTION_SQL, id), { favorites });
   return favorites;
 }
 
@@ -177,7 +177,7 @@ export async function addSqlComment(id, text) {
   const safeText = text.replace(/</g, '&lt;').replace(/>/g, '&gt;');
   comments.push({ userId: userId, userName: authorName, date: now(), text: safeText.trim() });
   
-  await updateDoc(doc(dbCloud, COLLECTION_SQL, id), { comments });
+  await safeUpdateDoc(doc(dbCloud, COLLECTION_SQL, id), { comments });
 }
 
 export async function flagSqlScript(id, reason) {
@@ -196,7 +196,7 @@ export async function flagSqlScript(id, reason) {
       text: `O utilizador ${authorName} relatou um erro ou melhoria neste script. Motivo: "${safeReason}"` 
   });
   
-  await updateDoc(doc(dbCloud, COLLECTION_SQL, id), {
+  await safeUpdateDoc(doc(dbCloud, COLLECTION_SQL, id), {
       status: 'review',
       updatedAt: now(),
       comments: comments
@@ -206,7 +206,7 @@ export async function flagSqlScript(id, reason) {
 export async function removeSqlScript(id) {
   assertSqlCreateAccess();
   if (!hasPermission('manage_sql')) throw new Error('Apenas analistas e administradores podem excluir.');
-  await deleteDoc(doc(dbCloud, COLLECTION_SQL, id));
+  await safeDeleteDoc(doc(dbCloud, COLLECTION_SQL, id));
 }
 
 export async function getSqlScript(id) {

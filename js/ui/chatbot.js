@@ -6,8 +6,9 @@
 
 import { CONFIG, TENANT_KEYS } from '../config.js';
 import { searchDirect, searchSqlScripts } from '../services/search.js';
-import { dbCloud } from '../services/cloud.js';
-import { collection, addDoc, doc, updateDoc } from 'https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js';
+import { dbCloud, safeAddDoc, safeUpdateDoc } from '../services/cloud.js';
+import { collection, doc } from 'https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js';
+import { COLLECTION_CHAT_LOGS } from '../config/firestore.js';
 import { getCurrentUser } from '../auth.js';
 import { canUseFeature, FEATURE_FLAGS } from '../services/featureAccess.js';
 import { canUserAccessKnowledge, filterKnowledgeByAccess } from '../services/visibility.js';
@@ -425,8 +426,8 @@ async function saveAuditLogAsync(logId, userQuestion, fullResponse) {
     const safeTenantId = user ? (user.companyId || 'LIMBO_TENANT') : 'LIMBO_TENANT';
 
     try {
-        const logRef = doc(dbCloud, 'chat_logs', logId);
-        await updateDoc(logRef, {
+        const logRef = doc(dbCloud, COLLECTION_CHAT_LOGS, logId);
+        await safeUpdateDoc(logRef, {
             userId: safeUserId,
             userName: safeUserName,
             tenantId: safeTenantId,
@@ -436,7 +437,7 @@ async function saveAuditLogAsync(logId, userQuestion, fullResponse) {
             status: 'completed'
         });
     } catch (e) {
-        addDoc(collection(dbCloud, 'chat_logs'), {
+        safeAddDoc(collection(dbCloud, COLLECTION_CHAT_LOGS), {
             _id: logId,
             userId: safeUserId,
             userName: safeUserName,
@@ -457,14 +458,14 @@ window.__kcs_rateChat = async function(logId, isUseful, btnElement) {
     if (messagesEl) syncChatState(messagesEl);
 
     try {
-        const logRef = doc(dbCloud, 'chat_logs', logId);
-        await updateDoc(logRef, { isUseful: isUseful });
+        const logRef = doc(dbCloud, COLLECTION_CHAT_LOGS, logId);
+        await safeUpdateDoc(logRef, { isUseful: isUseful });
     } catch (e) {}
 
     const feedbackContext = chatResponseRegistry.get(logId);
     if (!feedbackContext) return;
 
-    addDoc(collection(dbCloud, 'chat_feedback_queue'), {
+    safeAddDoc(collection(dbCloud, 'chat_feedback_queue'), {
         ...feedbackContext,
         rating: isUseful ? 'useful' : 'not_useful',
         createdAt: new Date().toISOString()
@@ -481,7 +482,7 @@ async function processPromptWithRAGAndStream(userQuestion, botName, messagesEl, 
     const currentUser = getCurrentUser();
     const logId = `log_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
 
-    addDoc(collection(dbCloud, 'chat_logs'), { _id: logId, status: 'pending' })
+    safeAddDoc(collection(dbCloud, COLLECTION_CHAT_LOGS), { _id: logId, status: 'pending' })
         .then(docRef => { logId._realFirebaseId = docRef.id; }).catch(() => {});
 
     const [artResults, sqlResults] = await Promise.all([
