@@ -6679,14 +6679,16 @@ main.workbench-editor {
     position: fixed;
     right: 0;
     top: 0;
+    bottom: 22px;
     width: 360px;
     max-width: 100%;
-    height: 100%;
-    max-height: 100dvh;
+    height: auto;
+    max-height: calc(100dvh - 22px);
     display: flex;
     flex-direction: column;
     min-height: 0;
     overflow: hidden;
+}
     z-index: 50;
     background: var(--surface-color) !important;
     color: var(--color-text-primary);
@@ -6694,6 +6696,12 @@ main.workbench-editor {
     transition: transform 0.25s ease;
     box-shadow: -24px 0 60px rgba(15, 23, 42, 0.2);
     pointer-events: auto;
+}
+.chatbot-popout-mode .chatbot-panel,
+.chatbot-panel.chatbot-popout-mode,
+#chatbot-container.chatbot-popout-mode .chatbot-panel {
+    bottom: 0;
+    max-height: 100dvh;
 }
 .chatbot-container.active,
 .chatbot-panel.active {
@@ -7513,9 +7521,6 @@ header.workbench-titlebar .flex-col {
     justify-content: center;
     align-items: flex-start !important; /* Alinha o selo rente ao logo à esquerda */
 }
-
-
-
 /* Tipografia técnica refinada inspirada na Status Bar do VS Code */
 .kcs-plan-badge {
     display: inline-flex;
@@ -7532,9 +7537,6 @@ header.workbench-titlebar .flex-col {
     line-height: 1 !important;
     letter-spacing: 0.05em;
 }
-
-
-
 /* ==========================================================================
    CORREÇÃO 5: Isolamento da Tela de Login + BARREIRA DE AUTENTICAÇÃO
    ========================================================================== */
@@ -7590,11 +7592,6 @@ body.auth-authenticated #app-screen {
 #overlay-root.visible {
     pointer-events: auto !important;
 }
-
-
-
-
-
 /* ==========================================================================
    CORREÇÃO 7: Cores do Header e Fontes do Chatbot (Light/Dark Mode)
    ========================================================================== */
@@ -7602,10 +7599,6 @@ body.auth-authenticated #app-screen {
 header.workbench-titlebar .text-sm.font-bold {
     color: var(--color-text-primary) !important;
 }
-
-
-
-
 /* Força a cor primária no Chatbot para ser legível no modo claro */
 .chat-greet-title,
 .chat-greet-subtitle,
@@ -7615,9 +7608,6 @@ header.workbench-titlebar .text-sm.font-bold {
 .chat-bot-bubble {
     color: var(--color-text-primary) !important;
 }
-
-
-
 /* ==========================================================================
    CORREÇÃO 8: Restauração do Layout de Artigos e Tabelas (ATUALIZADA)
    ========================================================================== */
