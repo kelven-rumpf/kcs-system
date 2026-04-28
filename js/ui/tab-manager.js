@@ -65,8 +65,11 @@ export const TabManager = (() => {
             e.stopPropagation(); closeTab(id);
         });
 
-        // 6. Monitor de "Dirty State" (Qualquer input dispara a bolinha)
-        contentPanel.addEventListener('input', () => markDirty(id, true));
+        // 6. Monitor de "Dirty State" (Qualquer input dispara a bolinha), com exceções de abas gerenciais
+        contentPanel.addEventListener('input', () => {
+            if (id === 'tab-admin-panel' || id === 'tab-category-manager') return;
+            markDirty(id, true);
+        });
 
         switchTab(id);
     }
