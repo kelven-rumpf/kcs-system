@@ -176,10 +176,8 @@ export async function openSqlPanel(sqlId) {
         panel.querySelector('#panel-sql-category').textContent = sqlScript.sqlCategory || 'N/A';
 
         const codeElement = panel.querySelector('#panel-sql-code');
-        const sqlCode = sqlScript.code || '// Código SQL não disponível';
-
-        codeElement.textContent = formatSqlForDisplay(sqlCode);
-        highlightSqlSyntax(codeElement);
+        const sqlCode = sqlScript.code || '-- Código SQL não disponível';
+        codeElement.textContent = sqlCode;
 
     } catch (error) {
         console.error('[MENTION PANEL] Erro ao carregar SQL:', error);
@@ -296,112 +294,5 @@ export function isPanelOpen() {
 
 export function getCurrentPanelSqlId() {
     return currentSqlId;
-}
-
-// Enhanced SQL syntax highlighting for SQL Server
-function highlightSqlSyntax(codeElement) {
-    const text = codeElement.textContent;
-    let highlightedText = text;
-
-    // SQL Server Keywords (common ones, case-insensitive match)
-    const keywords = [
-        'SELECT', 'FROM', 'WHERE', 'AND', 'OR', 'INSERT', 'INTO', 'VALUES', 'UPDATE', 'SET',
-        'DELETE', 'TRUNCATE', 'JOIN', 'LEFT JOIN', 'RIGHT JOIN', 'INNER JOIN', 'ON',
-        'GROUP BY', 'ORDER BY', 'HAVING', 'TOP', 'DISTINCT', 'COUNT', 'SUM', 'AVG',
-        'MIN', 'MAX', 'AS', 'CREATE', 'TABLE', 'ALTER', 'ADD', 'DROP', 'INDEX',
-        'VIEW', 'DATABASE', 'USE', 'EXEC', 'DECLARE', 'BEGIN', 'END', 'CASE',
-        'WHEN', 'THEN', 'ELSE', 'GO', 'NOLOCK', 'WITH', 'AS', 'BEGIN TRANSACTION',
-        'COMMIT TRANSACTION', 'ROLLBACK TRANSACTION', 'PRIMARY KEY', 'FOREIGN KEY',
-        'CONSTRAINT', 'DEFAULT', 'NULL', 'NOT NULL', 'IDENTITY', 'EXISTS', 'NOT EXISTS',
-        'UNION', 'UNION ALL', 'EXCEPT', 'INTERSECT', 'MERGE', 'OUTPUT', 'PIVOT', 'UNPIVOT',
-        'ROW_NUMBER', 'RANK', 'DENSE_RANK', 'NTILE', 'OVER', 'PARTITION BY', 'IS',
-        'COALESCE', 'IIF', 'CHOOSE', 'CAST', 'CONVERT', 'GETDATE', 'SYSDATETIME', 'DATEADD', 'DATEDIFF',
-        'DATEPART', 'DATENAME', 'FORMAT', 'LIKE', 'IN', 'BETWEEN', 'AND', 'OR', 'NOT',
-        'OPENROWSET', 'OPENQUERY', 'OPENDATASOURCE', 'DBCC', 'WAITFOR', 'PRINT', 'RAISERROR'
-    ];
-    const operators = [
-        '=', '!=', '<', '>', '<=', '>=', '<>', 'LIKE', 'IN', 'NOT IN', 'IS NULL',
-        'IS NOT NULL', '+', '-', '*', '/', '%', '&', '|', '^', '~', '!',
-        '||', 'AND', 'OR'
-    ]; // AND/OR added to operators for distinct color if not matched as keyword
-    const functions = [
-        'AVG', 'COUNT', 'MAX', 'MIN', 'SUM', 'CONCAT', 'SUBSTRING', 'LEN', 'GETDATE',
-        'DATEADD', 'DATEDIFF', 'DATEPART', 'DATENAME', 'CAST', 'CONVERT', 'COALESCE',
-        'IIF', 'CHOOSE', 'FORMAT', 'REPLACE', 'UPPER', 'LOWER', 'LTRIM', 'RTRIM',
-        'TRIM', 'ROUND', 'FLOOR', 'CEILING', 'ABS', 'ISNULL', 'DB_NAME', 'SUSER_SNAME',
-        'SCHEMA_NAME', 'OBJECT_NAME', 'COL_NAME', 'ROW_NUMBER', 'RANK', 'DENSE_RANK', 'NTILE'
-    ];
-
-    // Regular expressions for different tokens
-    const patterns = [
-        { regex: /(--.*?)(?=\n|$)/g, class: 'sql-comment' }, // Single-line comments
-        { regex: /(\/\*[\s\S]*?\*\/)/g, class: 'sql-comment' }, // Multi-line comments
-        { regex: /(\'.*?\')/g, class: 'sql-string' }, // Strings
-        { regex: /\b\d+(\.\d+)?\b/g, class: 'sql-number' }, // Numbers
-        { regex: /@[a-zA-Z_][a-zA-Z0-9_]*/g, class: 'sql-variable' }, // Variables (e.g., @variable)
-    ];
-
-    // Apply patterns first to protect their content from keyword matching
-    patterns.forEach(p => {
-        highlightedText = highlightedText.replace(p.regex, (match) => {
-            return `<span class="${p.class}">${match}</span>`;
-        });
-    });
-
-    // Apply keywords (case-insensitive, ensuring whole word match and not inside already highlighted spans)
-    keywords.forEach(kw => {
-        // Use a negative lookbehind/lookahead to prevent matching inside other spans
-        const keywordRegex = new RegExp(`(?<!<span[^>]*>)\\b(${escapeRegExp(kw)})\\b(?!<\/span>)`, 'gi');
-        highlightedText = highlightedText.replace(keywordRegex, '<span class="sql-keyword">$&</span>');
-    });
-
-    // Apply functions
-    functions.forEach(func => {
-        const functionRegex = new RegExp(`(?<!<span[^>]*>)\\b(${escapeRegExp(func)})\\b(?=\\()`, 'gi');
-        highlightedText = highlightedText.replace(functionRegex, '<span class="sql-function">$&</span>');
-    });
-
-    // Apply operators
-    operators.forEach(op => {
-        // Only highlight if not already part of a keyword or other highlighted span
-        const operatorRegex = new RegExp(`(?<!<span[^>]*>)(?<![a-zA-Z0-9_])(${escapeRegExp(op)})(?![a-zA-Z0-9_])(?!<\/span>)`, 'g');
-        highlightedText = highlightedText.replace(operatorRegex, '<span class="sql-operator">$&</span>');
-    });
-
-    codeElement.innerHTML = highlightedText;
-}
-
-// Helper to format SQL code for display (e.g., uppercase keywords)
-function formatSqlForDisplay(sqlCode) {
-    // Preserve original indentation and line breaks
-    // Optionally, convert keywords to uppercase for better readability, but not the entire code.
-    const keywordsToUppercase = [
-        'select', 'from', 'where', 'and', 'or', 'insert', 'into', 'values', 'update', 'set',
-        'delete', 'truncate', 'join', 'left join', 'right join', 'inner join', 'on',
-        'group by', 'order by', 'having', 'top', 'distinct', 'count', 'sum', 'avg',
-        'min', 'max', 'as', 'create', 'table', 'alter', 'add', 'drop', 'index',
-        'view', 'database', 'use', 'exec', 'declare', 'begin', 'end', 'case',
-        'when', 'then', 'else', 'go', 'nolock', 'with', 'begin transaction',
-        'commit transaction', 'rollback transaction', 'primary key', 'foreign key',
-        'constraint', 'default', 'null', 'not null', 'identity', 'exists', 'not exists',
-        'union', 'union all', 'except', 'intersect', 'merge', 'output', 'pivot', 'unpivot',
-        'row_number', 'rank', 'dense_rank', 'ntile', 'over', 'partition by', 'is',
-        'coalesce', 'iif', 'choose', 'cast', 'convert', 'getdate', 'sysdatetime', 'dateadd', 'datediff',
-        'datepart', 'datename', 'format', 'like', 'in', 'between', 'not',
-        'openrowset', 'openquery', 'opendatasource', 'dbcc', 'waitfor', 'print', 'raiserror'
-    ];
-
-    let formattedCode = sqlCode;
-    keywordsToUppercase.forEach(kw => {
-        // Use regex to find whole words and convert only them to uppercase
-        // Ensure it doesn't affect strings or comments already
-        formattedCode = formattedCode.replace(new RegExp(`\\b${kw}\\b`, 'gi'), (match) => match.toUpperCase());
-    });
-
-    return formattedCode;
-}
-
-function escapeRegExp(string) {
-    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string
 }
 
