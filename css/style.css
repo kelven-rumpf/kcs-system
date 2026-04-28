@@ -828,11 +828,12 @@ main.workbench-editor {
     position: fixed;
     right: 0;
     top: 48px;
-    bottom: 22px;
-    width: 360px;
-    max-width: 100%;
-    height: auto;
-    max-height: calc(100dvh - 70px);
+bottom: 22px;
+bottom: calc(22px + env(safe-area-inset-bottom, 0px));
+
+max-height: calc(100vh - 72px);
+max-height: calc(100dvh - 72px - env(safe-area-inset-bottom, 0px));
+overflow-y: auto;
     display: flex;
     flex-direction: column;
     min-height: 0;
@@ -935,6 +936,8 @@ body.chatbot-open .workbench-grid {
     background: inherit;
     flex-shrink: 0;
     min-width: 0;
+width: 100%;
+box-sizing: border-box;
 }
 
 .chatbot-input-area input {
@@ -948,6 +951,11 @@ body.chatbot-open .workbench-grid {
     background: var(--color-editor-background);
     color: var(--color-text-primary);
     outline: none;
+}
+
+#chatbot-form,
+#chatbot-input {
+    min-width: 0;
 }
 
 .chatbot-input-area input:focus {
