@@ -10,13 +10,14 @@ let onAuthChangeCallback = null;
 
 function normalizeApprovalStatus(user) {
     const raw = String(user?.approvalStatus || user?.status || '').trim().toLowerCase();
-    if (raw === 'pending') return 'pending_approval';
+    if (raw === 'active') return 'approved';
+    if (raw === 'pending_approval') return 'pending';
     return raw;
 }
 
 export function isUserApproved(user = currentUser) {
     const status = normalizeApprovalStatus(user);
-    return status === 'active' || status === 'approved';
+    return status === 'approved';
 }
 
 export function initAuth(callback) {
@@ -55,8 +56,8 @@ export function initAuth(callback) {
                         needsUpdate = true;
                     }
                     if (!userData.approvalStatus && !userData.status) {
-                        userData.approvalStatus = 'active';
-                        userData.status = 'active';
+                        userData.approvalStatus = 'approved';
+                        userData.status = 'approved';
                         needsUpdate = true;
                     }
                     if (needsUpdate) {
@@ -141,8 +142,8 @@ export function initAuth(callback) {
                         sectorId: isFirstUser ? SECTORS[0].id : null,
                         group_id: null,
                         group_ids: [],
-                        approvalStatus: isFirstUser ? 'active' : 'pending_approval',
-                        status: isFirstUser ? 'active' : 'pending_approval',
+                        approvalStatus: isFirstUser ? 'approved' : 'pending',
+                        status: isFirstUser ? 'approved' : 'pending',
                         approvalRequestedAt: new Date().toISOString()
                     };
                     await safeSetDoc(userRef, userData); 
@@ -296,12 +297,12 @@ export async function getAllUsersFromCloud() {
     return users; 
 }
 
-export async function updateUserApprovalStatusInCloud(uid, approvalStatus = 'active') {
+export async function updateUserApprovalStatusInCloud(uid, approvalStatus = 'approved') {
     const { doc } = await import('https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js');
     await safeUpdateDoc(doc(dbCloud, "users", uid), {
         approvalStatus,
         status: approvalStatus,
-        approvedAt: approvalStatus === 'active' || approvalStatus === 'approved' ? new Date().toISOString() : null
+        approvedAt: approvalStatus === 'approved' ? new Date().toISOString() : null
     });
     return { success: true };
 }

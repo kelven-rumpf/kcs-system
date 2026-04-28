@@ -2020,8 +2020,8 @@ const activeUsersHtml = adminSection(
                                 <td class="py-3 px-5">
                                     ${isSuperAdmin ? `
                                         <select class="w-full px-2 py-1.5 rounded text-xs outline-none cursor-pointer" style="background-color: var(--color-editor-background); color: var(--color-text-primary); border: 1px solid var(--color-border);" data-action="update-approval" data-id="${u.id}">
-                                            <option value="active" ${(u.approvalStatus === 'active' || u.status === 'active' || u.approvalStatus === 'approved') ? 'selected' : ''}>Ativo</option>
-                                            <option value="pending_approval" ${(u.approvalStatus === 'pending_approval' || u.status === 'pending_approval' || u.approvalStatus === 'pending' || u.status === 'pending') ? 'selected' : ''}>Pendente</option>
+                                            <option value="approved" ${(u.approvalStatus === 'approved' || u.status === 'approved' || u.approvalStatus === 'active') ? 'selected' : ''}>Ativo</option>
+                                            <option value="pending" ${(u.approvalStatus === 'pending_approval' || u.status === 'pending_approval' || u.approvalStatus === 'pending' || u.status === 'pending') ? 'selected' : ''}>Pendente</option>
                                         </select>
                                     ` : `
                                         <span class="text-xs" style="color: var(--color-text-secondary);">${(u.approvalStatus === 'pending_approval' || u.status === 'pending_approval' || u.approvalStatus === 'pending' || u.status === 'pending') ? 'Pendente' : 'Ativo'}</span>
@@ -2131,7 +2131,7 @@ const activeUsersHtml = adminSection(
         container.querySelectorAll('[data-action="approve-user"]').forEach(btn => btn.addEventListener('click', async (e) => {
             const userId = e.currentTarget.dataset.id;
             if (!userId) return;
-            await updateUserApprovalStatusInCloud(userId, 'active');
+            await updateUserApprovalStatusInCloud(userId, 'approved');
             const existingTab = document.getElementById('view-container-tab-admin-panel');
             if (existingTab) {
                 window.TabManager.closeTab('tab-admin-panel', false);
