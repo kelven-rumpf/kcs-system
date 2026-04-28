@@ -12,7 +12,7 @@ const LOCAL_HOSTNAMES = new Set(['localhost', '127.0.0.1', '::1', '']);
  *   .env.local: VITE_FIREBASE_ENV=prod
  */
 const rawEnv = (typeof import.meta !== 'undefined' && import.meta?.env?.VITE_FIREBASE_ENV)
-    || (typeof window !== 'undefined' ? window?.VITE_FIREBASE_ENV : null)
+    || (typeof window !== 'undefined' ? window?.VITE_FIREBASE_ENV : 'dev')
     || 'dev';
 
 // Qualquer valor diferente de 'prod' cai para 'dev' por segurança.
