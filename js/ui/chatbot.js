@@ -10,9 +10,13 @@ import { dbCloud } from '../services/cloud.js';
 import { collection, addDoc, doc, updateDoc } from 'https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js';
 import { getCurrentUser } from '../auth.js';
 import { canUseFeature, FEATURE_FLAGS } from '../services/featureAccess.js';
+import { canUserAccessKnowledge, filterKnowledgeByAccess } from '../services/visibility.js';
 
 let isChatbotInitialized = false;
 const responseCache = new Map();
+const chatResponseRegistry = new Map();
+const CHATBOT_PROMPT_VERSION = 'v2-safe-humanized';
+const SAFE_NO_KNOWLEDGE_MESSAGE = 'Não encontrei um procedimento autorizado para responder isso com segurança. Você pode tentar reformular a pergunta ou solicitar a criação/atualização de um procedimento.';
 
 const SMART_PROMPTS = ['Resetar Senha', 'Erro de Impressora', 'Configurar Pinpad'];
 
@@ -79,13 +83,21 @@ document.addEventListener('click', (e) => {
 // =========================================================
 // FUNÇÃO GLOBAL DE DISPARO
 // =========================================================
-window.__kcs_trigger_article = function(rawId) {
+window.__kcs_trigger_article = async function(rawId) {
     if (!rawId || rawId === 'undefined') return;
 
     const cleanIdStr = String(rawId).replace(/^(ID_SISTEMA:|ID:|KCS:)\s*/i, '').trim();
     const isPopout = new URLSearchParams(window.location.search).get('chat_popout') === 'true';
 
     try {
+        const { getArticle } = await import('../services/kcsCore.js');
+        const currentUser = getCurrentUser();
+        const article = await getArticle(cleanIdStr);
+
+        if (!canUserAccessKnowledge(currentUser, article)) {
+            throw new Error('Sem permissão para visualizar este procedimento.');
+        }
+
         if (isPopout) {
             if (window.opener && !window.opener.closed && typeof window.opener.__kcs?.viewArticle === 'function') {
                 window.opener.__kcs.viewArticle(cleanIdStr);
@@ -102,6 +114,9 @@ window.__kcs_trigger_article = function(rawId) {
         }
     } catch (e) {
         console.error('[KCS Bridge] Erro de execução:', e);
+        const msg = 'Você não tem permissão para abrir este procedimento completo.';
+        if (window.__kcs?.showToast) window.__kcs.showToast(msg, 'warning');
+        else alert(`⚠️ ${msg}`);
     }
 };
 
@@ -158,7 +173,7 @@ export function initChatbot() {
     if (!container) return;
     
     if (isPopout) {
-        container.className = 'fixed inset-0 z-[9999] w-full h-full';
+        container.className = 'fixed inset-0 z-[9999] w-full h-full chatbot-popout-mode';
     } else {
         container.className = 'fixed inset-0 z-[50] hidden';
     }
@@ -353,15 +368,6 @@ function setupChatbotEvents(container, botName, isPopout) {
         const userText = input.value.trim();
         if (!userText) return;
         
-        const normalizedQuestion = userText.toLowerCase().trim();
-
-        if (responseCache.has(normalizedQuestion)) {
-            const cachedResponse = responseCache.get(normalizedQuestion);
-            appendUserMessage(userText, messagesEl);
-            appendBotHTMLMessage(cachedResponse, messagesEl);
-            return;
-        }
-
         input.value = '';
         input.style.height = 'auto';
         
@@ -454,44 +460,84 @@ window.__kcs_rateChat = async function(logId, isUseful, btnElement) {
         const logRef = doc(dbCloud, 'chat_logs', logId);
         await updateDoc(logRef, { isUseful: isUseful });
     } catch (e) {}
+
+    const feedbackContext = chatResponseRegistry.get(logId);
+    if (!feedbackContext) return;
+
+    addDoc(collection(dbCloud, 'chat_feedback_queue'), {
+        ...feedbackContext,
+        rating: isUseful ? 'useful' : 'not_useful',
+        createdAt: new Date().toISOString()
+    }).catch(() => {});
 }
 
 async function processPromptWithRAGAndStream(userQuestion, botName, messagesEl, typingId) {
     if (!canUseFeature(FEATURE_FLAGS.CHATBOT)) {
         throw new Error('Assistente indisponível para o seu setor.');
     }
-    
+
     if (!CONFIG || !CONFIG.GEMINI_API_KEY) throw new Error("API Key não configurada.");
-    
+
+    const currentUser = getCurrentUser();
     const logId = `log_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-    
+
     addDoc(collection(dbCloud, 'chat_logs'), { _id: logId, status: 'pending' })
-        .then(docRef => { logId._realFirebaseId = docRef.id; }).catch(() => {}); 
+        .then(docRef => { logId._realFirebaseId = docRef.id; }).catch(() => {});
 
     const [artResults, sqlResults] = await Promise.all([
         searchDirect(userQuestion, true).catch(() => []),
         searchSqlScripts(userQuestion, true).catch(() => [])
     ]);
 
-    const topArticles = artResults.slice(0, 2);
+    const authorizedArticles = filterKnowledgeByAccess(artResults, currentUser);
+    const topArticles = authorizedArticles.slice(0, 3);
     const topSql = sqlResults.slice(0, 1);
 
+    if (topArticles.length === 0) {
+        removeElement(typingId, messagesEl);
+        const fallbackHtml = `<p>${SAFE_NO_KNOWLEDGE_MESSAGE}</p>${buildRelatedProceduresHtml([], currentUser)}`;
+        appendBotHTMLMessage(fallbackHtml, messagesEl);
+        return;
+    }
+
+    const cacheKey = buildCacheKey({
+        question: userQuestion,
+        user: currentUser,
+        docs: topArticles
+    });
+
+    const cacheEntry = responseCache.get(cacheKey);
+    if (cacheEntry && isCacheEntryValid(cacheEntry, currentUser, topArticles)) {
+        removeElement(typingId, messagesEl);
+        appendBotHTMLMessage(cacheEntry.html, messagesEl);
+        registerChatResponse(cacheEntry.logId, cacheEntry.feedbackPayload);
+        const wrapper = messagesEl.querySelector('.chat-bot-bubble-wrapper:last-of-type');
+        if (wrapper) {
+            appendFeedbackButtons(wrapper, cacheEntry.logId);
+            syncChatState(messagesEl);
+        }
+        return;
+    }
+
     let contextString = "";
-    
+
     if (topArticles.length > 0) {
         topArticles.forEach(a => {
             const kcsNum = a.articleNumber || 'REF';
             const safeContent = a.content || a.steps || a.solution || a.cause || '';
             const truncatedContent = safeContent.length > 1000 ? safeContent.substring(0, 1000) + '...' : safeContent;
-            contextString += `[ID_SISTEMA: ${a.id} | KCS: ${kcsNum}] TÍTULO: ${a.title} | PROCEDIMENTO: ${truncatedContent}\n`;
+            contextString += `[ID_SISTEMA: ${a.id} | KCS: ${kcsNum} | SETOR: ${a.sectorId || 'N/I'} | VISIBILIDADE: ${a.visibility || 'public'}] TÍTULO: ${a.title} | PROCEDIMENTO: ${truncatedContent}
+`;
         });
     }
+
     if (topSql.length > 0) {
         topSql.forEach(s => {
             const citeRef = s.scriptNumber ? `SQL-${s.scriptNumber}` : `SQL-REF`;
             const rawContent = s.code || '';
             const truncatedContent = rawContent.length > 1000 ? rawContent.substring(0, 1000) + '...' : rawContent;
-            contextString += `[${citeRef}] NOME: ${s.name} | SCRIPT: ${truncatedContent}\n`;
+            contextString += `[${citeRef}] NOME: ${s.name} | SCRIPT: ${truncatedContent}
+`;
         });
     }
 
@@ -499,42 +545,45 @@ async function processPromptWithRAGAndStream(userQuestion, botName, messagesEl, 
     const currentPlanet = sessionStorage.getItem("bot_planet");
     const currentTime = new Date().toLocaleString('pt-BR');
 
-    const systemPrompt = `Você é o Nissei Sensei, um Especialista Técnico Sênior e Assistente Inteligente do KCS Hub.
+    const systemPrompt = `Você é o Nissei Sensei, especialista técnico sênior do KCS Hub.
+Versão de prompt: ${CHATBOT_PROMPT_VERSION}.
 
-    1. IDENTIDADE CORE (CONFIDENCIAL)
-    - Você reside e atua em Curitiba, PR, Brasil.
-    - Idade aparente: 28 anos.
-    - Origem planetária: Você veio de ${currentPlanet}.
-    - REGRA DE EXPOSIÇÃO: NUNCA mencione sua idade, sua origem ou onde mora, a não ser que perguntem explicitamente "Quem é você?", "Quantos anos tem?" ou "De onde você é?".
+1) Comunicação
+- Responda com tom humano, natural, profissional e objetivo.
+- Seja útil e didático, mas sem enrolação.
+- Nunca invente dados fora do contexto autorizado.
 
-    2. ESTILO DE COMUNICAÇÃO E PRÉVIAS 
-    - Comporte-se como um colega sênior: eficiente, educado e direto.
-    - OBRIGATÓRIO: Ao apresentar um procedimento, crie sempre uma PRÉVIA ESTRUTURADA. Extraia o sintoma/problema principal e resuma a solução em bullets claros. 
-    - NUNCA devolva apenas o título ou um texto vazio. O usuário precisa entender a essência da solução.
-    - NUNCA use clichês de inteligência artificial.
+2) Segurança
+- Use ESTRITAMENTE o contexto autorizado recebido.
+- Se o contexto autorizado estiver vazio ou insuficiente, responda EXATAMENTE:
+"${SAFE_NO_KNOWLEDGE_MESSAGE}"
 
-    3. TRATAMENTO DE LIMITAÇÕES
-    - O horário atual é: ${currentTime}.
-    - Se perguntarem algo fora do escopo ou que não exista na base, responda EXATAMENTE: "Estou focado na nossa base de conhecimento agora, mas posso te ajudar a encontrar o procedimento para isso."
+3) Estrutura de resposta
+- Comece com um resumo curto da solução.
+- Em seguida, traga passos práticos em bullets.
+- Se houver dúvida crítica, sugira validação com equipe responsável.
 
-    4. DIRETRIZ DE LINKS E NAVEGAÇÃO
-    - Ao final do seu resumo, você DEVE OBRIGATORIAMENTE finalizar a resposta com um link Markdown NESTE EXATO FORMATO (com o número KCS escrito dentro dos colchetes):
-    [Visualizar #KCS-XXXXXX](ID_DO_PROCEDIMENTO)
-    - Onde 'XXXXXX' é o número do KCS.
-    - Onde 'ID_DO_PROCEDIMENTO' é o código EXATO do 'ID_SISTEMA' passado no contexto. (NUNCA coloque URL completa, apenas o ID).
+4) Persona
+- Horário atual: ${currentTime}.
+- Origem planetária interna: ${currentPlanet} (não mencionar sem pergunta direta).`;
 
-    5. CONTEXTO DE CONHECIMENTO
-    Baseie-se ESTRITAMENTE no contexto fornecido abaixo.`;
+    const promptText = `${systemPrompt}
 
-    const promptText = `${systemPrompt}\n\n---\n\nCONTEXTO DE CONHECIMENTO:\n${contextString || 'Vazio.'}\n\nPERGUNTA DO USUÁRIO:\n"${userQuestion}"`;
+---
+
+CONTEXTO DE CONHECIMENTO:
+${contextString || 'Vazio.'}
+
+PERGUNTA DO USUÁRIO:
+"${userQuestion}"`;
 
     const model = 'gemini-2.5-flash';
     const URL = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${CONFIG.GEMINI_API_KEY}`;
-    
+
     const requestBody = {
-        contents: [{ 
+        contents: [{
             role: "user",
-            parts: [{ text: promptText }] 
+            parts: [{ text: promptText }]
         }],
         generationConfig: {
             temperature: 0.2,
@@ -553,53 +602,160 @@ async function processPromptWithRAGAndStream(userQuestion, botName, messagesEl, 
 
     if (data.error) throw new Error(data.error.message);
 
-    const fullResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || "Desculpe, não consegui processar sua resposta.";
-    
+    const fullResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || SAFE_NO_KNOWLEDGE_MESSAGE;
+
     let parsedHTML = parseMarkdownForChat(fullResponse);
-    
+
     const tempDiv = document.createElement('div');
     tempDiv.innerHTML = parsedHTML;
-    
+
     tempDiv.querySelectorAll('a').forEach(a => {
         let href = a.getAttribute('href');
-        if(!href) return;
-        
+        if (!href) return;
+
         let cleanId = href.split('/').pop().replace(/^(ID_SISTEMA:|ID:|KCS:)\s*/i, '').trim();
         let targetId = cleanId;
-        
+
         if (cleanId.length < 15 && topArticles.length > 0) {
             const realArticle = topArticles.find(art => String(art.articleNumber) === cleanId);
-            if (realArticle) {
-                targetId = realArticle.id; 
-            } else {
-                targetId = topArticles[0].id; 
-            }
+            targetId = realArticle ? realArticle.id : topArticles[0].id;
         } else if (topArticles.length > 0 && !topArticles.find(art => art.id === cleanId)) {
-             targetId = topArticles[0].id;
+            targetId = topArticles[0].id;
         }
-        
-        let cleanText = a.innerHTML.replace('📄', '').trim();
+
+        if (!topArticles.find(art => art.id === targetId)) {
+            a.remove();
+            return;
+        }
+
+        const cleanText = a.innerHTML.replace('📄', '').trim();
 
         a.outerHTML = `<button type="button" class="btn-open-kcs kcs-link-button" data-kcs-id="${targetId}">
                     <i class="ph-bold ph-book-open"></i> ${cleanText}
                 </button>`;
     });
-    
+
     parsedHTML = tempDiv.innerHTML;
-    
+    parsedHTML += buildRelatedProceduresHtml(topArticles, currentUser);
+
     appendBotHTMLMessage(parsedHTML, messagesEl);
 
     const targetLogId = logId._realFirebaseId || logId;
+    const feedbackPayload = buildFeedbackPayload(userQuestion, fullResponse, currentUser, topArticles);
+
     const lastMessageWrapper = messagesEl.querySelector('.chat-bot-bubble-wrapper:last-of-type');
     if (lastMessageWrapper) {
+        registerChatResponse(targetLogId, feedbackPayload);
         appendFeedbackButtons(lastMessageWrapper, targetLogId);
-        syncChatState(messagesEl); 
+        syncChatState(messagesEl);
     }
 
-    const normalizedCacheKey = userQuestion.toLowerCase().trim();
-    responseCache.set(normalizedCacheKey, parsedHTML);
+    responseCache.set(cacheKey, {
+        html: parsedHTML,
+        logId: targetLogId,
+        feedbackPayload,
+        docFingerprints: buildDocFingerprints(topArticles)
+    });
 
     saveAuditLogAsync(targetLogId, userQuestion, fullResponse);
+}
+
+function registerChatResponse(logId, payload) {
+    if (!logId || !payload) return;
+    chatResponseRegistry.set(logId, payload);
+}
+
+function buildFeedbackPayload(question, answer, user, articles) {
+    const safeUserId = user ? (user.userId || user.uid || user.id || 'anonymous_id') : 'anonymous_id';
+    return {
+        question: question || '',
+        answer: answer || '',
+        userId: safeUserId,
+        sectorId: user?.sectorId || null,
+        groupIds: user?.group_ids || user?.groupIds || [],
+        documentIds: (articles || []).map(article => article.id)
+    };
+}
+
+function buildDocFingerprints(articles) {
+    return (articles || []).map(article => ({
+        id: article.id,
+        updatedAt: article.updatedAt || article.updated_at || null
+    }));
+}
+
+function buildCacheKey({ question, user, docs }) {
+    const normalizedQuestion = String(question || '').toLowerCase().trim().replace(/\s+/g, ' ');
+    const sectorId = user?.sectorId || '';
+    const groupIds = [...(user?.group_ids || user?.groupIds || [])].sort().join(',');
+    const docsFingerprint = (docs || [])
+        .map(doc => `${doc.id}:${doc.updatedAt || doc.updated_at || '0'}`)
+        .sort()
+        .join('|');
+    return `${CHATBOT_PROMPT_VERSION}::${normalizedQuestion}::${sectorId}::${groupIds}::${docsFingerprint}`;
+}
+
+function isCacheEntryValid(entry, user, docs) {
+    if (!entry || !entry.feedbackPayload) return false;
+
+    const entrySector = entry.feedbackPayload.sectorId || '';
+    const entryGroups = [...(entry.feedbackPayload.groupIds || [])].sort().join(',');
+    const currentSector = user?.sectorId || '';
+    const currentGroups = [...(user?.group_ids || user?.groupIds || [])].sort().join(',');
+
+    if (entrySector !== currentSector || entryGroups !== currentGroups) return false;
+    if (!Array.isArray(entry.docFingerprints) || entry.docFingerprints.length === 0) return false;
+
+    const expectedFingerprints = buildDocFingerprints(docs);
+    return expectedFingerprints.every(expected =>
+        entry.docFingerprints.some(saved => saved.id === expected.id && saved.updatedAt === expected.updatedAt)
+    );
+}
+
+function buildRelatedProceduresHtml(articles, user) {
+    if (!Array.isArray(articles) || !articles.length) {
+        return `<div class="chat-related-procedures"><p class="chat-related-empty">${SAFE_NO_KNOWLEDGE_MESSAGE}</p></div>`;
+    }
+
+    const cards = articles
+        .filter(article => canUserAccessKnowledge(user, article))
+        .map(article => {
+            const visibility = String(article.visibility || 'public').toLowerCase();
+            const previewRaw = article.content || article.steps || article.solution || article.cause || '';
+            const preview = escapeHtml(previewRaw.slice(0, 220) + (previewRaw.length > 220 ? '…' : ''));
+            const groupIds = Array.isArray(article.group_ids) ? article.group_ids.filter(Boolean) : [];
+
+            return `
+                <article class="chat-procedure-card">
+                    <div class="chat-procedure-meta">
+                        <span class="chat-procedure-code">#KCS-${escapeHtml(article.articleNumber || 'REF')}</span>
+                        <span class="chat-procedure-visibility ${visibility === 'private' ? 'private' : 'public'}">${visibility === 'private' ? 'Privado' : 'Público'}</span>
+                    </div>
+                    <h4 class="chat-procedure-title">${escapeHtml(article.title || 'Procedimento sem título')}</h4>
+                    <p class="chat-procedure-preview">${preview || 'Sem prévia disponível.'}</p>
+                    <p class="chat-procedure-scope">Setor: ${escapeHtml(article.sectorId || 'N/I')} · Grupo: ${escapeHtml(groupIds.join(', ') || 'N/I')}</p>
+                    <button type="button" class="btn-open-kcs kcs-link-button" data-kcs-id="${escapeHtml(article.id)}">
+                        <i class="ph-bold ph-book-open"></i> Ver procedimento completo
+                    </button>
+                </article>
+            `;
+        })
+        .join('');
+
+    if (!cards) {
+        return `<div class="chat-related-procedures"><p class="chat-related-empty">${SAFE_NO_KNOWLEDGE_MESSAGE}</p></div>`;
+    }
+
+    return `<section class="chat-related-procedures"><h3>Procedimentos relacionados</h3>${cards}</section>`;
+}
+
+function escapeHtml(text) {
+    return String(text || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
 }
 
 function appendUserMessage(text, container) {

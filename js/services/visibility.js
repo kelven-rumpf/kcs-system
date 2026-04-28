@@ -41,6 +41,43 @@ export function normalizeGroupIds(entity) {
   return [];
 }
 
+export function normalizeVisibility(value) {
+  return String(value || 'public').trim().toLowerCase();
+}
+
+export function canUserAccessKnowledge(user, knowledge) {
+  if (!user || !knowledge) return false;
+
+  if (isSuperAdmin(user)) return true;
+
+  if (!hasSameCompany(user, knowledge)) return false;
+
+  const visibility = normalizeVisibility(knowledge.visibility);
+  if (visibility === VISIBILITY.PUBLIC) return true;
+
+  const sameSector = hasSectorAccess(user, knowledge);
+  const knowledgeGroups = normalizeGroupIds(knowledge);
+  const userGroups = Array.isArray(user?.group_ids)
+    ? user.group_ids
+    : Array.isArray(user?.groupIds)
+      ? user.groupIds
+      : [];
+  const sameGroup = knowledgeGroups.length > 0 && userGroups.length > 0
+    ? knowledgeGroups.some(groupId => userGroups.includes(groupId))
+    : false;
+  return sameSector && sameGroup;
+}
+
+export function buildKnowledgeAccessFilter(user) {
+  return (knowledge) => canUserAccessKnowledge(user, knowledge);
+}
+
+export function filterKnowledgeByAccess(items, user) {
+  if (!Array.isArray(items)) return [];
+  const matcher = buildKnowledgeAccessFilter(user);
+  return items.filter(matcher);
+}
+
 // ======================
 // Regras base
 // ======================
