@@ -3,10 +3,11 @@
  * Refatoração SRE: Cache-First (Dexie), Segurança de Tipos JSON e Firebase Reads Optimization
  */
 
-import { dbCloud } from './cloud.js';
-import { doc, setDoc, getDoc, getDocs, deleteDoc, collection, query, where, updateDoc, addDoc, getCountFromServer, orderBy, limit, onSnapshot, increment, runTransaction } from 'https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js';
+import { dbCloud, safeAddDoc, safeSetDoc, safeUpdateDoc, safeDeleteDoc } from './cloud.js';
+import { doc, getDoc, getDocs, collection, query, where, getCountFromServer, orderBy, limit, onSnapshot, increment, runTransaction } from 'https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js';
 import { getCurrentUser } from '../auth.js';
 import { CONFIG, COLLECTION_ARTICLES } from '../config.js';
+import { COLLECTION_CHAT_LOGS, FIREBASE_ENV } from '../config/firestore.js';
 import { canUseFeature, FEATURE_FLAGS } from './featureAccess.js';
 
 import {
@@ -18,12 +19,13 @@ import {
 
 // ID de Sessão Único (Protege contra o mesmo usuário abrindo 2 abas)
 export const SESSION_ID = Math.random().toString(36).substring(2, 15);
+const ARTICLE_READS_COLLECTION = `article_reads_${FIREBASE_ENV}`;
 
 // ==========================================
 // INICIALIZAÇÃO DO CACHE LOCAL (DEXIE.JS)
 // Economia de 90% das leituras do Firebase
 // ==========================================
-export const dbLocal = new Dexie('KCS_CacheDB');
+export const dbLocal = new Dexie(`KCS_CacheDB_${FIREBASE_ENV}`);
 dbLocal.version(1).stores({
     articles: 'id, companyId, status, categoryId, updatedAt'
 });
@@ -151,8 +153,7 @@ async function callGeminiIA(systemPrompt, userOriginalText, actionType, isJson =
 
     // Auditoria Assíncrona
     try {
-        const envPrefix = COLLECTION_ARTICLES.split('_')[0];
-        addDoc(collection(dbCloud, `${envPrefix}_chat_logs`), {
+        safeAddDoc(collection(dbCloud, COLLECTION_CHAT_LOGS), {
             userId: user?.uid || user?.id || 'system',
             userName: user?.displayName || 'Usuário Editor',
             action: actionType,
@@ -420,14 +421,14 @@ export async function createArticle(data) {
             article.status = requestedStatus || 'pendente_revisao';
         }
 
-        const docRef = await addDoc(
+        const docRef = await safeAddDoc(
             collection(dbCloud, COLLECTION_ARTICLES),
             article
         );
 
         article.id = docRef.id;
 
-        await setDoc(
+        await safeSetDoc(
             doc(dbCloud, COLLECTION_ARTICLES, docRef.id),
             {
                 id: docRef.id
@@ -536,7 +537,7 @@ export async function updateArticle(articleId, updates) {
 
         delete payload.id;
 
-        await updateDoc(ref, payload);
+        await safeUpdateDoc(ref, payload);
 
         const updatedArticle = {
             ...existingArticle,
@@ -558,7 +559,7 @@ export async function updateArticle(articleId, updates) {
 }
 
 export async function removeArticle(id) { 
-    await deleteDoc(doc(dbCloud, COLLECTION_ARTICLES, id));
+    await safeDeleteDoc(doc(dbCloud, COLLECTION_ARTICLES, id));
     await dbLocal.articles.delete(id).catch(() => {}); // Remove do cache
 }
 
@@ -573,7 +574,7 @@ export async function flagArticle(id, reason) {
     const comments = Array.isArray(existing.comments) ? existing.comments.filter(val => val != null) : [];
     comments.push({ id: `cmt_${Date.now()}`, userId: userId, userName: user.displayName || user.email || 'Usuário', text: `⚠️ [SINALIZADO]: ${reason}`, date: new Date().toISOString() });
     
-    await updateDoc(doc(dbCloud, COLLECTION_ARTICLES, id), { status: 'pendente_revisao', comments: comments });
+    await safeUpdateDoc(doc(dbCloud, COLLECTION_ARTICLES, id), { status: 'pendente_revisao', comments: comments });
 }
 
 export async function toggleLike(id) {
@@ -592,7 +593,7 @@ export async function toggleLike(id) {
     if (idx > -1) likes.splice(idx, 1);
     else likes.push(userId);
     
-    await updateDoc(docRef, { likes });
+    await safeUpdateDoc(docRef, { likes });
 }
 
 export async function toggleFavorite(id) {
@@ -614,7 +615,7 @@ export async function toggleFavorite(id) {
         favorites.push(userId);
     }
     
-    await updateDoc(docRef, { favorites });
+    await safeUpdateDoc(docRef, { favorites });
 }
 
 export async function addComment(id, text) {
@@ -628,7 +629,7 @@ export async function addComment(id, text) {
     let comments = Array.isArray(data.comments) ? [...data.comments] : [];
     comments.push({ id: `cmt_${Date.now()}`, userId: userId, userName: user.displayName || 'Usuário', text: text, date: new Date().toISOString() });
     
-    await updateDoc(docRef, { comments });
+    await safeUpdateDoc(docRef, { comments });
 }
 
 // ==========================================
@@ -636,7 +637,7 @@ export async function addComment(id, text) {
 // ==========================================
 export async function getDashboardMetrics() {
     try {
-        const readsColl = collection(dbCloud, 'article_reads');
+        const readsColl = collection(dbCloud, ARTICLE_READS_COLLECTION);
         const readsSnap = await getCountFromServer(readsColl);
         const totalAcessos = readsSnap.data().count;
 
@@ -734,7 +735,7 @@ export async function forceReleaseLock(articleId) {
     if (!user || user.role !== 'super_admin') throw new Error("Acesso Negado. Apenas super administradores podem ejetar editores.");
     
     const docRef = doc(dbCloud, COLLECTION_ARTICLES, articleId);
-    await updateDoc(docRef, {
+    await safeUpdateDoc(docRef, {
         currentEditorId: null,
         currentEditorName: null,
         currentEditorSession: null,
@@ -849,11 +850,11 @@ export async function logArticleRead(articleId, articleTitle) {
     
     try {
         const articleRef = doc(dbCloud, COLLECTION_ARTICLES, articleId);
-        await updateDoc(articleRef, {
+        await safeUpdateDoc(articleRef, {
             views: increment(1)
         });
 
-        addDoc(collection(dbCloud, 'article_reads'), {
+        safeAddDoc(collection(dbCloud, ARTICLE_READS_COLLECTION), {
             articleId: articleId,
             articleTitle: articleTitle,
             userId: userId,

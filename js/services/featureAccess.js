@@ -12,13 +12,12 @@ import {
     collection,
     doc,
     getDocs,
-    setDoc,
     query,
     where,
     serverTimestamp
 } from 'https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js';
 
-import { dbCloud } from './cloud.js';
+import { dbCloud, safeSetDoc } from './cloud.js';
 import { COLLECTION_SECTOR_FEATURES } from '../config.js';
 import { getCurrentUser } from '../auth.js';
 
@@ -242,7 +241,7 @@ export async function updateSectorFeature(companyId, sectorId, featureKey, enabl
         updatedByName: currentUser.name || currentUser.email || 'Administrador'
     };
 
-    await setDoc(
+    await safeSetDoc(
         doc(dbCloud, COLLECTION_SECTOR_FEATURES, payload.id),
         payload,
         { merge: true }

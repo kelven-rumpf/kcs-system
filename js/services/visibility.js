@@ -56,10 +56,10 @@ export function canUserAccessKnowledge(user, knowledge) {
   if (visibility === VISIBILITY.PUBLIC) return true;
 
   const sameSector = hasSectorAccess(user, knowledge);
-const sameSector = hasSectorAccess(user, knowledge);
-const sameGroup = hasGroupAccess(user, knowledge);
+  const sameGroup = hasGroupAccess(user, knowledge);
 
-return sameSector && sameGroup;
+  return sameSector && sameGroup;
+}
 
 export function buildKnowledgeAccessFilter(user) {
   return (knowledge) => canUserAccessKnowledge(user, knowledge);
