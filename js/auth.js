@@ -8,6 +8,18 @@ let currentUser = null;
 let authInstance = null;
 let onAuthChangeCallback = null;
 
+function normalizeApprovalStatus(user) {
+    const raw = String(user?.approvalStatus || user?.status || '').trim().toLowerCase();
+    if (raw === 'active') return 'approved';
+    if (raw === 'pending_approval') return 'pending';
+    return raw;
+}
+
+export function isUserApproved(user = currentUser) {
+    const status = normalizeApprovalStatus(user);
+    return status === 'approved';
+}
+
 export function initAuth(callback) {
     return new Promise(async (resolve) => {
         onAuthChangeCallback = callback;
@@ -47,6 +59,10 @@ export function initAuth(callback) {
                         userData.approvalStatus = 'approved';
                         needsUpdate = true;
                     }
+                    if (!userData.status) {
+                        userData.status = userData.approvalStatus || 'approved';
+                        needsUpdate = true;
+                    }
                     if (needsUpdate) {
                         await safeSetDoc(userRef, userData, { merge: true });
                     }
@@ -57,7 +73,7 @@ export function initAuth(callback) {
                     
                     let role = ROLES.USER;
                     let companyId = 'LIMBO_TENANT';
-                    let sectorId = SECTORS[0].id;
+                    let sectorId = null;
                     
                     if (isFirstUser) {
                         role = ROLES.SUPER_ADMIN; 
@@ -71,9 +87,7 @@ export function initAuth(callback) {
                         
                         if (inviteSnap.exists()) {
                             const inviteData = inviteSnap.data();
-                            role = inviteData.role || ROLES.USER;
                             companyId = inviteData.tenantId || 'LIMBO_TENANT';
-                            sectorId = inviteData.sectorId || SECTORS[0].id;
                         } else {
                             // 3º Prioridade: Não tem convite? Tenta Auto-Provisionamento pelo Domínio
                             const companiesSnap = await getDocs(collection(dbCloud, "companies"));
@@ -88,9 +102,7 @@ export function initAuth(callback) {
                             });
 
                             if (matchedCompanyId) {
-                                role = ROLES.USER;
                                 companyId = matchedCompanyId;
-                                sectorId = SECTORS[0].id; 
                             } else {
                                 // BLOQUEIO IMEDIATO! Sem convite e sem domínio válido.
                                 const { signOut } = await import('https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js');
@@ -130,8 +142,11 @@ export function initAuth(callback) {
                         photoURL: user.photoURL || '', 
                         role: role,
                         companyId: companyId,
-                        sectorId: sectorId,
+                        sectorId: isFirstUser ? SECTORS[0].id : null,
+                        group_id: null,
+                        group_ids: [],
                         approvalStatus: isFirstUser ? 'approved' : 'pending',
+                        status: isFirstUser ? 'approved' : 'pending',
                         approvalRequestedAt: new Date().toISOString()
                     };
                     await safeSetDoc(userRef, userData); 
@@ -139,7 +154,7 @@ export function initAuth(callback) {
 
                 // Configura as variáveis de sessão para o Front-end
                 const companyId = userData.companyId || 'LIMBO_TENANT';
-                const sectorId = userData.sectorId || SECTORS[0].id;
+                const sectorId = userData.sectorId || '';
                 let companyName = "Empresa Pendente";
                 let botName = "Assistente KCS";
                 let tenantMaxUsers = 5;
@@ -258,6 +273,7 @@ export function getCurrentUser() { return currentUser; }
 export function hasRole(role) { return currentUser && currentUser.role === role; }
 export function hasPermission(action) {
     if (!currentUser) return false;
+    if (!isUserApproved(currentUser)) return false;
     const r = currentUser.role;
     if (r === ROLES.SUPER_ADMIN) return true; 
     if (r === ROLES.ADMIN) return true; 
@@ -288,6 +304,7 @@ export async function updateUserApprovalStatusInCloud(uid, approvalStatus = 'app
     const { doc } = await import('https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js');
     await safeUpdateDoc(doc(dbCloud, "users", uid), {
         approvalStatus,
+        status: approvalStatus,
         approvedAt: approvalStatus === 'approved' ? new Date().toISOString() : null
     });
     return { success: true };

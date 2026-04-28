@@ -23,6 +23,19 @@ service cloud.firestore {
       return signedIn() && me().role == 'analyst';
     }
 
+    function isApprovedUser() {
+      return signedIn() && (
+        me().approvalStatus == 'active'
+        || me().approvalStatus == 'approved'
+        || me().status == 'active'
+        || me().status == 'approved'
+      );
+    }
+
+    function canReadKnowledgeByRole() {
+      return isSuperAdmin() || isAdmin() || isAnalyst() || me().role == 'user';
+    }
+
     function sameCompany(data) {
       return signedIn() && data.companyId == me().companyId;
     }
@@ -61,7 +74,10 @@ service cloud.firestore {
     }
 
     function canReadScopedContent(data) {
-      return isSuperAdmin()
+      return isApprovedUser()
+        && canReadKnowledgeByRole()
+        && (
+          isSuperAdmin()
         || (
           sameCompany(data)
           && (
@@ -72,6 +88,7 @@ service cloud.firestore {
               && hasGroupAccess(data)
             )
           )
+          )
         );
     }
 
@@ -79,22 +96,31 @@ service cloud.firestore {
       allow read: if signedIn() && (
         request.auth.uid == userId ||
         isSuperAdmin() ||
-        isAdmin()
+        (
+          isApprovedUser()
+          && isAdmin()
+          && sameCompany(resource.data)
+          && resource.data.sectorId == me().sectorId
+        )
       );
 
-      allow create, update, delete: if isSuperAdmin();
+      allow create: if signedIn() && request.auth.uid == userId;
+      allow update, delete: if isSuperAdmin();
     }
 
     match /articles/{articleId} {
       allow read: if signedIn() && canReadScopedContent(resource.data);
 
       allow create: if signedIn()
+        && isApprovedUser()
         && request.resource.data.companyId == me().companyId
         && request.resource.data.sectorId == me().sectorId;
 
       allow update: if signedIn() && (
         isSuperAdmin()
         || (
+          isApprovedUser()
+          && 
           sameCompany(resource.data)
           && sameSector(resource.data)
           && (
@@ -109,6 +135,8 @@ service cloud.firestore {
       allow delete: if signedIn() && (
         isSuperAdmin()
         || (
+          isApprovedUser()
+          &&
           sameCompany(resource.data)
           && sameSector(resource.data)
           && isAdmin()
@@ -132,6 +160,8 @@ service cloud.firestore {
       allow read: if signedIn() && (
         isSuperAdmin()
         || (
+          isApprovedUser()
+          &&
           sameCompany(resource.data)
           && hasSectorFeature('sqlLibrary')
           && (
@@ -149,6 +179,7 @@ service cloud.firestore {
       );
 
       allow create: if signedIn()
+        && isApprovedUser()
         && request.resource.data.companyId == me().companyId
         && hasSectorFeature('sqlCreate')
         && (isAdmin() || isAnalyst());
@@ -156,6 +187,8 @@ service cloud.firestore {
       allow update, delete: if signedIn() && (
         isSuperAdmin()
         || (
+          isApprovedUser()
+          &&
           sameCompany(resource.data)
           && hasSectorFeature('sqlCreate')
           && (
@@ -169,12 +202,14 @@ service cloud.firestore {
     match /sectorFeatures/{docId} {
       allow read: if signedIn() && (
         isSuperAdmin()
-        || resource.data.companyId == me().companyId
+        || (isApprovedUser() && resource.data.companyId == me().companyId)
       );
 
       allow create: if signedIn() && (
         isSuperAdmin()
         || (
+          isApprovedUser()
+          &&
           isAdmin()
           && request.resource.data.companyId == me().companyId
         )
@@ -183,6 +218,8 @@ service cloud.firestore {
       allow update: if signedIn() && (
         isSuperAdmin()
         || (
+          isApprovedUser()
+          &&
           isAdmin()
           && resource.data.companyId == me().companyId
           && request.resource.data.companyId == me().companyId
@@ -193,24 +230,27 @@ service cloud.firestore {
     }
 
     match /categories/{categoryId} {
-      allow read: if signedIn();
+      allow read: if signedIn() && isApprovedUser();
 
       allow create, update, delete: if signedIn() && (
         isSuperAdmin()
-        || isAdmin()
+        || (isApprovedUser() && isAdmin())
       );
     }
 
     match /groups/{groupId} {
-      allow read: if signedIn() && sameCompany(resource.data);
+      allow read: if signedIn() && isApprovedUser() && sameCompany(resource.data);
 
       allow create: if signedIn()
+        && isApprovedUser()
         && request.resource.data.companyId == me().companyId
         && (isSuperAdmin() || isAdmin());
 
       allow update, delete: if signedIn() && (
         isSuperAdmin()
         || (
+          isApprovedUser()
+          &&
           sameCompany(resource.data)
           && isAdmin()
         )
@@ -218,15 +258,18 @@ service cloud.firestore {
     }
 
     match /sectors/{sectorId} {
-      allow read: if signedIn() && sameCompany(resource.data);
+      allow read: if signedIn() && isApprovedUser() && sameCompany(resource.data);
 
       allow create: if signedIn()
+        && isApprovedUser()
         && request.resource.data.companyId == me().companyId
         && (isSuperAdmin() || isAdmin());
 
       allow update, delete: if signedIn() && (
         isSuperAdmin()
         || (
+          isApprovedUser()
+          &&
           sameCompany(resource.data)
           && isAdmin()
         )
@@ -236,7 +279,7 @@ service cloud.firestore {
     match /companies/{companyId} {
       allow read: if signedIn() && (
         isSuperAdmin()
-        || companyId == me().companyId
+        || (isApprovedUser() && companyId == me().companyId)
       );
 
       allow create, update, delete: if isSuperAdmin();
@@ -245,7 +288,7 @@ service cloud.firestore {
     match /tenants/{tenantId} {
       allow read: if signedIn() && (
         isSuperAdmin()
-        || tenantId == me().companyId
+        || (isApprovedUser() && tenantId == me().companyId)
       );
 
       allow create, update, delete: if isSuperAdmin();

@@ -8,6 +8,7 @@ import {
     logout as authLogout, 
     getCurrentUser, 
     hasPermission, 
+    isUserApproved,
     updateUserRoleInCloud, 
     updateUserCompanyInCloud, 
     updateUserSectorInCloud, 
@@ -474,6 +475,12 @@ async function enterApp(user) {
         toggleLoginScreen(false); 
         renderHeader(); 
 
+        if (!isUserApproved(user)) {
+            renderPendingApprovalScreen();
+            updateActionButtons();
+            return;
+        }
+
         renderCompanyPlanBadge({
             maxUsers: sessionStorage.getItem('tenant_max_users') || 5,
             planName: sessionStorage.getItem('tenant_plan') || 'Bronze'
@@ -517,7 +524,44 @@ await refreshView();
     }, 1000);
 }
 
+function renderPendingApprovalScreen() {
+    const nav = document.getElementById('sidebar-nav');
+    if (nav) {
+        nav.innerHTML = `
+            <div class="p-4 text-sm rounded-xl" style="background-color: var(--color-editor-background); border: 1px solid var(--color-border-subtle); color: var(--color-text-secondary);">
+                Seu acesso está em análise pelo Administrador.
+            </div>
+        `;
+    }
+
+    const dash = document.getElementById('dashboard-container');
+    const grid = document.getElementById('articles-grid');
+    if (dash) dash.classList.add('hidden');
+    if (grid) {
+        grid.classList.remove('hidden');
+        grid.innerHTML = `
+            <section class="col-span-full max-w-3xl mx-auto rounded-2xl p-8" style="background-color: var(--color-sidebar-background); border: 1px solid var(--color-border-subtle);">
+                <h2 class="text-2xl font-extrabold mb-4" style="color: var(--color-text-inverse);">Acesso pendente de aprovação</h2>
+                <p class="mb-3" style="color: var(--color-text-secondary);">
+                    A metodologia <strong>KCS (Knowledge-Centered Service)</strong> organiza e melhora continuamente o conhecimento compartilhado para acelerar o atendimento e padronizar soluções.
+                </p>
+                <p class="mb-3" style="color: var(--color-text-secondary);">
+                    Seu cadastro foi criado com status <strong>pendente</strong>. Para liberar o acesso, um Administrador/Super Administrador deve vincular seu usuário a um setor e a um grupo.
+                </p>
+                <p style="color: var(--color-text-secondary);">
+                    Após a aprovação, você visualizará apenas os conteúdos autorizados para seu setor, grupo e permissões da sua função.
+                </p>
+            </section>
+        `;
+    }
+}
+
 function updateActionButtons() {
+    const btnNewArticle = document.getElementById('btn-new-article');
+    if (btnNewArticle) {
+        btnNewArticle.style.display = hasPermission('create_article') ? 'flex' : 'none';
+    }
+
     const canViewSql = canUseFeature(FEATURE_FLAGS.SQL_LIBRARY);
     const canCreateSql = canUseFeature(FEATURE_FLAGS.SQL_CREATE);
 
@@ -569,6 +613,11 @@ function injectReadmeMenuButton() {
 }
 
 async function refreshView() {
+    if (!isUserApproved(getCurrentUser())) {
+        renderPendingApprovalScreen();
+        return;
+    }
+
     appState.articles = await listArticles();
 
 if (canUseFeature(FEATURE_FLAGS.SQL_LIBRARY)) {

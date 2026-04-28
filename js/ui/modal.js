@@ -1714,7 +1714,7 @@ async function handleToggleSectorFeature(sectorId, featureKey, enabled) {
 
 window.handleToggleSectorFeature = handleToggleSectorFeature;
 
-const approvalQueueHtml = adminSection(
+const approvalQueueHtml = isSuperAdmin ? adminSection(
     'Fila de Aprovação de Novos Usuários',
     'ph-fill ph-user-list',
     'text-amber-500',
@@ -1743,7 +1743,7 @@ const approvalQueueHtml = adminSection(
     </div>
     `,
     false
-);
+) : '';
 
 
 const groupsBySectorHtml = adminSection(
@@ -2015,6 +2015,17 @@ const activeUsersHtml = adminSection(
                                 </td>
 
                                 <td class="py-3 px-5">
+                                    ${isSuperAdmin ? `
+                                        <select class="w-full px-2 py-1.5 rounded text-xs outline-none cursor-pointer" style="background-color: var(--color-editor-background); color: var(--color-text-primary); border: 1px solid var(--color-border);" data-action="update-approval" data-id="${u.id}">
+                                            <option value="approved" ${(u.approvalStatus === 'approved' || u.status === 'approved' || u.approvalStatus === 'active') ? 'selected' : ''}>Ativo</option>
+                                            <option value="pending" ${(u.approvalStatus === 'pending_approval' || u.status === 'pending_approval' || u.approvalStatus === 'pending' || u.status === 'pending') ? 'selected' : ''}>Pendente</option>
+                                        </select>
+                                    ` : `
+                                        <span class="text-xs" style="color: var(--color-text-secondary);">${(u.approvalStatus === 'pending_approval' || u.status === 'pending_approval' || u.approvalStatus === 'pending' || u.status === 'pending') ? 'Pendente' : 'Ativo'}</span>
+                                    `}
+                                </td>
+
+                                <td class="py-3 px-5">
                                     <details class="rounded-lg overflow-hidden transition-colors" style="background-color: var(--color-editor-background); border: 1px solid var(--color-border);">
                                         <summary class="flex items-center justify-between gap-2 px-3 py-2 text-xs font-semibold cursor-pointer transition-colors hover:bg-black/5 dark:hover:bg-white/5" style="color: var(--color-text-primary); list-style:none;">
                                             <span class="flex items-center gap-1.5">
@@ -2047,7 +2058,7 @@ const activeUsersHtml = adminSection(
                                     </button>
                                 </td>
                             </tr>`;
-                        }).join('') || `<tr><td colspan="6" class="py-6 text-center text-sm italic" style="color: var(--color-text-muted);">Nenhum usuário ativo.</td></tr>`}
+                        }).join('') || `<tr><td colspan="7" class="py-6 text-center text-sm italic" style="color: var(--color-text-muted);">Nenhum usuário ativo.</td></tr>`}
                     </tbody>
                 </tbody>
             </table>
@@ -2134,6 +2145,10 @@ const activeUsersHtml = adminSection(
     );
 }));
         container.querySelectorAll('[data-action="update-role"]').forEach(sel => sel.addEventListener('change', (e) => window.__kcs.updateUserRole(e.currentTarget.dataset.id, e.target.value)));
+        container.querySelectorAll('[data-action="update-approval"]').forEach(sel => sel.addEventListener('change', async (e) => {
+            await updateUserApprovalStatusInCloud(e.currentTarget.dataset.id, e.target.value);
+            window.__kcs.showToast('Status de aprovação atualizado.', 'success');
+        }));
         container.querySelectorAll('[data-action="delete-user"]').forEach(btn => btn.addEventListener('click', (e) => window.__kcs.deleteUser(e.currentTarget.dataset.id)));
         container.querySelectorAll('[data-action="trigger-backup"]').forEach(btn => btn.addEventListener('click', () => window.__kcs.triggerManualBackup()));
 

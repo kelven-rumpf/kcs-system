@@ -3,7 +3,7 @@
  */
 
 import { CONFIG, COLLECTION_SQL } from '../config.js';
-import { getCurrentUser, hasPermission } from '../auth.js';
+import { getCurrentUser, hasPermission, isUserApproved } from '../auth.js';
 import { dbCloud, safeSetDoc, safeUpdateDoc, safeDeleteDoc } from './cloud.js';
 import { doc, getDoc, getDocs, collection, query, where } from 'https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js';
 import { canUseFeature, FEATURE_FLAGS } from './featureAccess.js';
@@ -211,6 +211,7 @@ export async function removeSqlScript(id) {
 
 export async function getSqlScript(id) {
   assertSqlLibraryAccess();
+  if (!isUserApproved(getCurrentUser())) throw new Error('Acesso pendente de aprovação.');
   const docRef = doc(dbCloud, COLLECTION_SQL, id);
   const snap = await getDoc(docRef);
   return snap.exists() ? snap.data() : null;
@@ -220,6 +221,7 @@ export async function listSqlScripts() {
   assertSqlLibraryAccess();
   const user = getCurrentUser();
   if (!user || !user.companyId) return [];
+  if (!isUserApproved(user)) return [];
   
   // Busca apenas os scripts da empresa atual
   const q = query(collection(dbCloud, COLLECTION_SQL), where("companyId", "==", user.companyId));
