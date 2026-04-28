@@ -6682,7 +6682,6 @@ main.workbench-editor {
     bottom: 22px;
     width: 360px;
     max-width: 100%;
-    /* Resolução de merge: manter layout acoplado ao statusbar (evita input cortado). */
     height: auto;
     max-height: calc(100dvh - 22px);
     display: flex;
@@ -7521,9 +7520,6 @@ header.workbench-titlebar .flex-col {
     justify-content: center;
     align-items: flex-start !important; /* Alinha o selo rente ao logo à esquerda */
 }
-
-
-
 /* Tipografia técnica refinada inspirada na Status Bar do VS Code */
 .kcs-plan-badge {
     display: inline-flex;
@@ -7540,9 +7536,6 @@ header.workbench-titlebar .flex-col {
     line-height: 1 !important;
     letter-spacing: 0.05em;
 }
-
-
-
 /* ==========================================================================
    CORREÇÃO 5: Isolamento da Tela de Login + BARREIRA DE AUTENTICAÇÃO
    ========================================================================== */
@@ -7598,11 +7591,6 @@ body.auth-authenticated #app-screen {
 #overlay-root.visible {
     pointer-events: auto !important;
 }
-
-
-
-
-
 /* ==========================================================================
    CORREÇÃO 7: Cores do Header e Fontes do Chatbot (Light/Dark Mode)
    ========================================================================== */
@@ -7610,10 +7598,6 @@ body.auth-authenticated #app-screen {
 header.workbench-titlebar .text-sm.font-bold {
     color: var(--color-text-primary) !important;
 }
-
-
-
-
 /* Força a cor primária no Chatbot para ser legível no modo claro */
 .chat-greet-title,
 .chat-greet-subtitle,
@@ -7623,9 +7607,6 @@ header.workbench-titlebar .text-sm.font-bold {
 .chat-bot-bubble {
     color: var(--color-text-primary) !important;
 }
-
-
-
 /* ==========================================================================
    CORREÇÃO 8: Restauração do Layout de Artigos e Tabelas (ATUALIZADA)
    ========================================================================== */
