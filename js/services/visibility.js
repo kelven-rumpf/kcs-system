@@ -41,6 +41,35 @@ export function normalizeGroupIds(entity) {
   return [];
 }
 
+export function normalizeVisibility(value) {
+  return String(value || 'public').trim().toLowerCase();
+}
+
+export function canUserAccessKnowledge(user, knowledge) {
+  if (!user || !knowledge) return false;
+
+  if (isSuperAdmin(user)) return true;
+
+  if (!hasSameCompany(user, knowledge)) return false;
+
+  const visibility = normalizeVisibility(knowledge.visibility);
+  if (visibility === VISIBILITY.PUBLIC) return true;
+
+  const sameSector = hasSectorAccess(user, knowledge);
+  const sameGroup = hasGroupAccess(user, knowledge);
+  return sameSector && sameGroup;
+}
+
+export function buildKnowledgeAccessFilter(user) {
+  return (knowledge) => canUserAccessKnowledge(user, knowledge);
+}
+
+export function filterKnowledgeByAccess(items, user) {
+  if (!Array.isArray(items)) return [];
+  const matcher = buildKnowledgeAccessFilter(user);
+  return items.filter(matcher);
+}
+
 // ======================
 // Regras base
 // ======================
