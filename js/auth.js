@@ -55,9 +55,12 @@ export function initAuth(callback) {
                         userData.email = user.email || '';
                         needsUpdate = true;
                     }
-                    if (!userData.approvalStatus && !userData.status) {
+                    if (!userData.approvalStatus) {
                         userData.approvalStatus = 'approved';
-                        userData.status = 'approved';
+                        needsUpdate = true;
+                    }
+                    if (!userData.status) {
+                        userData.status = userData.approvalStatus || 'approved';
                         needsUpdate = true;
                     }
                     if (needsUpdate) {
