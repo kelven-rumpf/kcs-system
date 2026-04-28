@@ -1,7 +1,7 @@
 /**
  * auth.js — Módulo de Autenticação (Cloud-Only) e Multi-Auth SaaS
  */
-import { appCloud, dbCloud, checkTenantUserLimit } from './services/cloud.js';
+import { appCloud, dbCloud, checkTenantUserLimit, safeSetDoc, safeUpdateDoc, safeDeleteDoc, safeAddDoc } from './services/cloud.js';
 import { TENANT_KEYS, ROLES, SECTORS } from './config.js';
 
 let currentUser = null;
@@ -13,7 +13,7 @@ export function initAuth(callback) {
         onAuthChangeCallback = callback;
         
         const { getAuth, onAuthStateChanged } = await import('https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js');
-        const { doc, getDoc, setDoc, collection, getDocs } = await import('https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js');
+        const { doc, getDoc, collection, getDocs } = await import('https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js');
         
         authInstance = getAuth(appCloud);
         
@@ -44,7 +44,7 @@ export function initAuth(callback) {
                         needsUpdate = true;
                     }
                     if (needsUpdate) {
-                        await setDoc(userRef, userData, { merge: true });
+                        await safeSetDoc(userRef, userData, { merge: true });
                     }
                 } else {
                     // Novo usuário. Vamos verificar a governança.
@@ -128,7 +128,7 @@ export function initAuth(callback) {
                         companyId: companyId,
                         sectorId: sectorId
                     };
-                    await setDoc(userRef, userData); 
+                    await safeSetDoc(userRef, userData); 
                 }
 
                 // Configura as variáveis de sessão para o Front-end
@@ -279,19 +279,19 @@ export async function getAllUsersFromCloud() {
 }
 
 export async function updateUserRoleInCloud(uid, newRole) {
-    const { doc, updateDoc } = await import('https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js');
-    await updateDoc(doc(dbCloud, "users", uid), { role: newRole });
+    const { doc } = await import('https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js');
+    await safeUpdateDoc(doc(dbCloud, "users", uid), { role: newRole });
     return { success: true };
 }
 
 export async function updateUserCompanyInCloud(uid, newCompanyId) {
-    const { doc, updateDoc } = await import('https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js');
-    await updateDoc(doc(dbCloud, "users", uid), { companyId: newCompanyId });
+    const { doc } = await import('https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js');
+    await safeUpdateDoc(doc(dbCloud, "users", uid), { companyId: newCompanyId });
     return { success: true };
 }
 
 export async function updateUserGroupsInCloud(userId, groupIds) {
-    const { doc, updateDoc } = await import('https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js');
+    const { doc } = await import('https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js');
 
     if (!userId) throw new Error('userId não informado.');
 
@@ -301,7 +301,7 @@ export async function updateUserGroupsInCloud(userId, groupIds) {
 
     const userRef = doc(dbCloud, 'users', userId);
 
-    await updateDoc(userRef, {
+    await safeUpdateDoc(userRef, {
         group_ids: normalizedGroupIds,
         group_id: null,
         updatedAt: new Date().toISOString()
@@ -317,12 +317,10 @@ export async function updateUserGroupsInCloud(userId, groupIds) {
 export async function deleteGroupFromCloud(groupId) {
     const { 
         doc, 
-        deleteDoc, 
         collection, 
         query, 
         where, 
-        getDocs, 
-        updateDoc 
+        getDocs 
     } = await import('https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js');
 
     if (!groupId) throw new Error('groupId não informado.');
@@ -338,7 +336,7 @@ export async function deleteGroupFromCloud(groupId) {
         const userData = userDoc.data();
         const currentGroupIds = Array.isArray(userData.group_ids) ? userData.group_ids : [];
 
-        return updateDoc(doc(dbCloud, 'users', userDoc.id), {
+        return safeUpdateDoc(doc(dbCloud, 'users', userDoc.id), {
             group_ids: currentGroupIds.filter(id => id !== groupId),
             updatedAt: new Date().toISOString()
         });
@@ -346,7 +344,7 @@ export async function deleteGroupFromCloud(groupId) {
 
     await Promise.all(updates);
 
-    await deleteDoc(doc(dbCloud, 'groups', groupId));
+    await safeDeleteDoc(doc(dbCloud, 'groups', groupId));
 
     return {
         success: true,
@@ -355,19 +353,19 @@ export async function deleteGroupFromCloud(groupId) {
 }
 
 export async function updateUserSectorInCloud(uid, newSectorId) {
-    const { doc, updateDoc } = await import('https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js');
-    await updateDoc(doc(dbCloud, "users", uid), { sectorId: newSectorId });
+    const { doc } = await import('https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js');
+    await safeUpdateDoc(doc(dbCloud, "users", uid), { sectorId: newSectorId });
     return { success: true };
 }
 
 export async function deleteUserInCloud(uid) {
-    const { doc, deleteDoc } = await import('https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js');
-    await deleteDoc(doc(dbCloud, "users", uid));
+    const { doc } = await import('https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js');
+    await safeDeleteDoc(doc(dbCloud, "users", uid));
     return { success: true };
 }
 
 export async function createCompanyInCloud(companyName, domainStr) {
-    const { doc, setDoc, getDoc } = await import('https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js');
+    const { doc, getDoc } = await import('https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js');
     
     if (!companyName || companyName.trim().length < 3) throw new Error("Nome da empresa inválido.");
     if (!domainStr) throw new Error("É necessário fornecer ao menos um domínio.");
@@ -390,7 +388,7 @@ export async function createCompanyInCloud(companyName, domainStr) {
     if (docSnap.exists()) throw new Error("Já existe uma empresa cadastrada com este domínio principal.");
 
     // 4. Criação do Documento no Firestore
-    await setDoc(companyRef, {
+    await safeSetDoc(companyRef, {
         companyId,
         companyName: companyName.trim(),
         domains,
@@ -412,9 +410,9 @@ export async function getAllCompaniesFromCloud() {
 }
 
 export async function inviteUserToSystem(email, role, tenantId, sectorId) {
-    const { doc, setDoc } = await import('https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js');
+    const { doc } = await import('https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js');
     const safeEmail = email.toLowerCase().trim();
-    await setDoc(doc(dbCloud, "invites", safeEmail), {
+    await safeSetDoc(doc(dbCloud, "invites", safeEmail), {
         email: safeEmail,
         role: role,
         tenantId: tenantId,
@@ -441,15 +439,15 @@ export async function getAllInvitedUsers() {
 }
 
 export async function removeInvitedUser(email) {
-    const { doc, deleteDoc } = await import('https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js');
-    await deleteDoc(doc(dbCloud, "invites", email.toLowerCase().trim()));
+    const { doc } = await import('https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js');
+    await safeDeleteDoc(doc(dbCloud, "invites", email.toLowerCase().trim()));
     return { success: true };
 }
 
 // NOVA FUNÇÃO: ATUALIZAR PLANO E LIMITES DA EMPRESA (Sincronizado com maxUsers) 10/04/2026
 export async function updateCompanyPlanInCloud(companyId, planName, maxUsers) {
-    const { doc, updateDoc } = await import('https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js');
-    await updateDoc(doc(dbCloud, "companies", companyId), {
+    const { doc } = await import('https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js');
+    await safeUpdateDoc(doc(dbCloud, "companies", companyId), {
         plan: planName,
         maxUsers: Number(maxUsers)
     });
@@ -482,7 +480,7 @@ export async function fetchCompaniesOverview() {
 }
 
 export async function updateCompanyDetailsInCloud(companyId, newName, domainsStr, newPlan) {
-    const { doc, updateDoc } = await import('https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js');
+    const { doc } = await import('https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js');
     
     const domains = domainsStr.split(',')
                               .map(d => d.trim().toLowerCase().replace('@',''))
@@ -494,7 +492,7 @@ export async function updateCompanyDetailsInCloud(companyId, newName, domainsStr
     if (newPlan === 'Teams') maxUsers = 20;
     if (newPlan === 'Unlimited') maxUsers = 9999;
 
-    await updateDoc(companyRef, {
+    await safeUpdateDoc(companyRef, {
         companyName: newName.trim(),
         domains: domains,
         plan: newPlan,
@@ -506,13 +504,13 @@ export async function updateCompanyDetailsInCloud(companyId, newName, domainsStr
 }
 
 export async function deleteCompanyInCloud(companyId) {
-    const { doc, deleteDoc } = await import('https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js');
-    await deleteDoc(doc(dbCloud, "companies", companyId));
+    const { doc } = await import('https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js');
+    await safeDeleteDoc(doc(dbCloud, "companies", companyId));
     return { success: true };
 }
 
 export async function createGroup(groupData) {
-    const { collection, addDoc } = await import('https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js');
+    const { collection } = await import('https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js');
 
     const companyId = groupData.company_id || sessionStorage.getItem(TENANT_KEYS.COMPANY_ID);
 
@@ -527,7 +525,7 @@ export async function createGroup(groupData) {
         createdBy: currentUser?.email || 'system'
     };
 
-    const ref = await addDoc(collection(dbCloud, 'groups'), payload);
+    const ref = await safeAddDoc(collection(dbCloud, 'groups'), payload);
 
     return {
         success: true,
@@ -589,7 +587,7 @@ export async function getCustomSectorsFromCloud() {
 }
 
 export async function createSectorInCloud(name) {
-    const { doc, setDoc } = await import('https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js');
+    const { doc } = await import('https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js');
 
     const companyId = sessionStorage.getItem(TENANT_KEYS.COMPANY_ID);
 
@@ -635,7 +633,7 @@ export async function createSectorInCloud(name) {
         createdBy: currentUser?.email || currentUser?.displayName || 'system'
     };
 
-    await setDoc(
+    await safeSetDoc(
         doc(dbCloud, 'sectors', `${companyId}_${sectorId}`),
         payload,
         { merge: true }
@@ -648,7 +646,7 @@ export async function createSectorInCloud(name) {
 }
 
 export async function deleteSectorFromCloud(sectorId) {
-    const { collection, query, where, getDocs, deleteDoc, doc } = await import('https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js');
+    const { collection, query, where, getDocs, doc } = await import('https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js');
 
     const companyId = sessionStorage.getItem(TENANT_KEYS.COMPANY_ID);
     if (!companyId) throw new Error('company_id não encontrado.');
@@ -699,7 +697,7 @@ export async function deleteSectorFromCloud(sectorId) {
     }
 
     const sectorDoc = sectorsSnap.docs[0];
-    await deleteDoc(sectorDoc.ref);
+    await safeDeleteDoc(sectorDoc.ref);
 
     return { success: true, message: 'Setor excluído com sucesso.' };
 }
