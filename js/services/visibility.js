@@ -56,17 +56,10 @@ export function canUserAccessKnowledge(user, knowledge) {
   if (visibility === VISIBILITY.PUBLIC) return true;
 
   const sameSector = hasSectorAccess(user, knowledge);
-  const knowledgeGroups = normalizeGroupIds(knowledge);
-  const userGroups = Array.isArray(user?.group_ids)
-    ? user.group_ids
-    : Array.isArray(user?.groupIds)
-      ? user.groupIds
-      : [];
-  const sameGroup = knowledgeGroups.length > 0 && userGroups.length > 0
-    ? knowledgeGroups.some(groupId => userGroups.includes(groupId))
-    : false;
-  return sameSector && sameGroup;
-}
+const sameSector = hasSectorAccess(user, knowledge);
+const sameGroup = hasGroupAccess(user, knowledge);
+
+return sameSector && sameGroup;
 
 export function buildKnowledgeAccessFilter(user) {
   return (knowledge) => canUserAccessKnowledge(user, knowledge);

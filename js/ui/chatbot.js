@@ -493,13 +493,17 @@ async function processPromptWithRAGAndStream(userQuestion, botName, messagesEl, 
     const topArticles = authorizedArticles.slice(0, 3);
     const topSql = sqlResults.slice(0, 1);
 
-    if (topArticles.length === 0) {
-        removeElement(typingId, messagesEl);
-        const fallbackHtml = `<p>${SAFE_NO_KNOWLEDGE_MESSAGE}</p>${buildRelatedProceduresHtml([], currentUser)}`;
-        appendBotHTMLMessage(fallbackHtml, messagesEl);
-        return;
-    }
+if (topArticles.length === 0) {
+    removeElement(typingId, messagesEl);
 
+    const fallbackHtml = `
+        <p>${SAFE_NO_KNOWLEDGE_MESSAGE}</p>
+        ${buildRelatedProceduresHtml([], currentUser)}
+    `;
+
+    appendBotHTMLMessage(fallbackHtml, messagesEl);
+    return;
+}
     const cacheKey = buildCacheKey({
         question: userQuestion,
         user: currentUser,
@@ -552,7 +556,6 @@ Versão de prompt: ${CHATBOT_PROMPT_VERSION}.
 - Responda com tom humano, natural, profissional e objetivo.
 - Seja útil e didático, mas sem enrolação.
 - Nunca invente dados fora do contexto autorizado.
-
 2) Segurança
 - Use ESTRITAMENTE o contexto autorizado recebido.
 - Se o contexto autorizado estiver vazio ou insuficiente, responda EXATAMENTE:
@@ -567,13 +570,12 @@ Versão de prompt: ${CHATBOT_PROMPT_VERSION}.
 - Horário atual: ${currentTime}.
 - Origem planetária interna: ${currentPlanet} (não mencionar sem pergunta direta).`;
 
-    const promptText = `${systemPrompt}
+const promptText = `${systemPrompt}
 
 ---
 
 CONTEXTO DE CONHECIMENTO:
 ${contextString || 'Vazio.'}
-
 PERGUNTA DO USUÁRIO:
 "${userQuestion}"`;
 
@@ -623,11 +625,10 @@ PERGUNTA DO USUÁRIO:
             targetId = topArticles[0].id;
         }
 
-        if (!topArticles.find(art => art.id === targetId)) {
-            a.remove();
-            return;
-        }
-
+if (!topArticles.find(art => art.id === targetId)) {
+    a.remove();
+    return;
+}
         const cleanText = a.innerHTML.replace('📄', '').trim();
 
         a.outerHTML = `<button type="button" class="btn-open-kcs kcs-link-button" data-kcs-id="${targetId}">

@@ -6688,6 +6688,7 @@ main.workbench-editor {
     flex-direction: column;
     min-height: 0;
     overflow: hidden;
+}
     z-index: 50;
     background: var(--surface-color) !important;
     color: var(--color-text-primary);
