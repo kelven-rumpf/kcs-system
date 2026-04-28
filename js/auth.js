@@ -43,6 +43,10 @@ export function initAuth(callback) {
                         userData.email = user.email || '';
                         needsUpdate = true;
                     }
+                    if (!userData.approvalStatus) {
+                        userData.approvalStatus = 'approved';
+                        needsUpdate = true;
+                    }
                     if (needsUpdate) {
                         await safeSetDoc(userRef, userData, { merge: true });
                     }
@@ -126,7 +130,9 @@ export function initAuth(callback) {
                         photoURL: user.photoURL || '', 
                         role: role,
                         companyId: companyId,
-                        sectorId: sectorId
+                        sectorId: sectorId,
+                        approvalStatus: isFirstUser ? 'approved' : 'pending',
+                        approvalRequestedAt: new Date().toISOString()
                     };
                     await safeSetDoc(userRef, userData); 
                 }
@@ -276,6 +282,15 @@ export async function getAllUsersFromCloud() {
     const users = [];
     snap.forEach(d => users.push(d.data()));
     return users; 
+}
+
+export async function updateUserApprovalStatusInCloud(uid, approvalStatus = 'approved') {
+    const { doc } = await import('https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js');
+    await safeUpdateDoc(doc(dbCloud, "users", uid), {
+        approvalStatus,
+        approvedAt: approvalStatus === 'approved' ? new Date().toISOString() : null
+    });
+    return { success: true };
 }
 
 export async function updateUserRoleInCloud(uid, newRole) {
