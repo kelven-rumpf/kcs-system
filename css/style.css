@@ -4138,14 +4138,14 @@ input[data-action="toggle-sector-feature"] {
 /* Dashboard period/access alignment */
 .dashboard-period-control {
     margin-left: auto;
-    min-width: 300px;
-    max-width: 380px;
-    width: min(36vw, 380px);
+    min-width: 260px;
+    max-width: 320px;
+    width: min(30vw, 320px);
 }
 .dashboard-period-control .dash-period-range-input {
     width: 100%;
     min-width: 0;
-    height: 32px;
+    height: 30px;
     padding: 0 10px;
     border-radius: 8px;
     border: 1px solid var(--color-border);

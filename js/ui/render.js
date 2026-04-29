@@ -1599,10 +1599,10 @@ if (!window.__kcsDashboardDateRange) {
                 justify-content: center;
                 gap: .35rem;
                 margin-left: auto;
-                min-width: 300px;
-                max-width: 380px;
-                width: min(36vw, 380px);
-                padding: .55rem .7rem;
+                min-width: 260px;
+                max-width: 320px;
+                width: min(30vw, 320px);
+                padding: .45rem .55rem;
                 background: rgba(15, 23, 42, 0.35);
                 border: 1px solid rgba(148, 163, 184, 0.18);
                 border-radius: 10px;
@@ -1610,15 +1610,15 @@ if (!window.__kcsDashboardDateRange) {
             }
             .dash-period-calendar label {
                 font-size: 10px;
-                color: #94a3b8;
-                font-weight: 500;
+                color: #9ca3af;
+                font-weight: 400;
                 margin-bottom: 4px;
                 line-height: 1;
             }
             .dash-period-calendar input {
-                height: 32px;
-                font-size: 12px;
-                font-weight: 600;
+                height: 30px;
+                font-size: 11px;
+                font-weight: 400;
                 letter-spacing: .01em;
                 background: rgba(2, 6, 23, 0.55);
                 border: 1px solid rgba(148, 163, 184, 0.22);
@@ -1631,40 +1631,47 @@ if (!window.__kcsDashboardDateRange) {
             }
             .dash-period-calendar input:focus {
                 outline: none;
-                border-color: rgba(59, 130, 246, 0.65);
-                box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+                border-color: rgba(96, 165, 250, 0.45);
+                box-shadow: 0 0 0 1px rgba(96, 165, 250, 0.28);
             }
             .flatpickr-calendar {
                 font-family: var(--font-family-base);
-                background: #141a24;
-                border: 1px solid rgba(148, 163, 184, 0.2);
-                color: #d4dbe7;
-                box-shadow: 0 10px 24px rgba(2, 6, 23, 0.35);
+                background: #111827;
+                border: 1px solid rgba(148, 163, 184, 0.14);
+                color: #cbd5e1;
+                box-shadow: 0 8px 18px rgba(2, 6, 23, 0.28);
                 border-radius: 8px;
+                padding: 6px;
                 z-index: 70;
             }
             .flatpickr-day {
-                color: #d4dbe7;
-                border-radius: 6px;
+                color: #cbd5e1;
+                border-radius: 5px;
+                width: 30px;
+                height: 30px;
+                line-height: 30px;
+                font-size: 11px;
+                font-weight: 400;
             }
             .flatpickr-day:hover {
-                background: rgba(148, 163, 184, 0.18);
+                background: rgba(148, 163, 184, 0.14);
             }
             .flatpickr-day.selected,
             .flatpickr-day.selected:hover,
             .flatpickr-day.startRange,
             .flatpickr-day.endRange {
-                background: rgba(59, 130, 246, 0.32);
-                border-color: rgba(96, 165, 250, 0.35);
-                color: #f8fafc;
+                background: rgba(96, 165, 250, 0.24);
+                border-color: rgba(96, 165, 250, 0.2);
+                color: #e2e8f0;
             }
             .flatpickr-day.inRange {
-                background: rgba(59, 130, 246, 0.14);
-                border-color: rgba(59, 130, 246, 0.08);
+                background: rgba(96, 165, 250, 0.1);
+                border-color: transparent;
                 box-shadow: none;
             }
             .flatpickr-months {
-                background: #141a24;
+                background: transparent;
+                margin-bottom: 4px;
             }
             .flatpickr-monthDropdown-months,
             .numInputWrapper .numInput {
@@ -1672,6 +1679,30 @@ if (!window.__kcsDashboardDateRange) {
             }
             .flatpickr-weekday {
                 color: #94a3b8;
+                font-size: 10px;
+                font-weight: 500;
+            }
+            .flatpickr-month {
+                height: 34px;
+            }
+            .flatpickr-current-month {
+                font-size: 14px;
+                padding-top: 2px;
+            }
+            .flatpickr-prev-month,
+            .flatpickr-next-month {
+                padding: 4px 6px;
+                color: #94a3b8 !important;
+                fill: #94a3b8 !important;
+            }
+            .flatpickr-prev-month:hover,
+            .flatpickr-next-month:hover {
+                color: #cbd5e1 !important;
+                fill: #cbd5e1 !important;
+            }
+            .flatpickr-current-month .flatpickr-monthDropdown-months,
+            .flatpickr-current-month input.cur-year {
+                font-weight: 700;
             }
             .flatpickr-current-month .flatpickr-monthDropdown-months,
             .flatpickr-current-month input.cur-year {
@@ -2009,6 +2040,28 @@ if (!window.__kcsDashboardDateRange) {
     dashboardInitFlatpickrRange(selectedDateRange);
 }
 
+function buildDashboardRangePickerConfig(defaultDate) {
+    return {
+        mode: 'range',
+        dateFormat: 'Y-m-d',
+        altInput: true,
+        altFormat: 'd/m/Y',
+        allowInput: false,
+        showMonths: 1,
+        monthSelectorType: 'static',
+        defaultDate,
+        locale: {
+            firstDayOfWeek: 1,
+            rangeSeparator: ' até '
+        },
+        onClose: (selectedDates) => {
+            if (!selectedDates || selectedDates.length < 2) return;
+            const toIso = (d) => d.toISOString().slice(0, 10);
+            window.__kcsSetDashboardDateRange(toIso(selectedDates[0]), toIso(selectedDates[1]));
+        }
+    };
+}
+
 function dashboardInitFlatpickrRange(selectedDateRange) {
     const input = document.getElementById('dash-period-range');
     if (!input) return;
@@ -2022,25 +2075,7 @@ function dashboardInitFlatpickrRange(selectedDateRange) {
             input._flatpickr.destroy();
         }
 
-        window.flatpickr(input, {
-            mode: 'range',
-            dateFormat: 'Y-m-d',
-            altInput: true,
-            altFormat: 'd/m/Y',
-            allowInput: false,
-            showMonths: window.innerWidth > 860 ? 2 : 1,
-            monthSelectorType: 'static',
-            defaultDate,
-            locale: {
-                firstDayOfWeek: 1,
-                rangeSeparator: ' até '
-            },
-            onClose: (selectedDates) => {
-                if (!selectedDates || selectedDates.length < 2) return;
-                const toIso = (d) => d.toISOString().slice(0, 10);
-                window.__kcsSetDashboardDateRange(toIso(selectedDates[0]), toIso(selectedDates[1]));
-            }
-        });
+        window.flatpickr(input, buildDashboardRangePickerConfig(defaultDate));
     };
 
     if (!document.getElementById('flatpickr-lib-css')) {
