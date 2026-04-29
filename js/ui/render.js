@@ -1117,6 +1117,13 @@ if (!window.__kcsDashboardDateRange) {
                 hint: `${healthyArticles.length}/${approvedArticles.length} aprovados`,
                 tone: healthRate < 70 ? 'red' : 'green'
             })}
+            ${dashboardMetricCard({
+                icon: 'ph-eye',
+                label: 'Acessos à base de conhecimento',
+                value: totalKnowledgeAccess,
+                hint: `${periodViews} no período`,
+                tone: 'blue'
+            })}
         </div>
 
         <div class="dash-saas-section-grid mt-6">
