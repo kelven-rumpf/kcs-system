@@ -1081,7 +1081,7 @@ if (!window.__kcsDashboardDateRange) {
 
             <div class="dash-period-calendar dashboard-period-control" role="group" aria-label="Filtro de período do dashboard">
                 <label for="dash-period-range">Período</label>
-                <input type="text" id="dash-period-range" class="dash-period-range-input" data-coreui-range="true" placeholder="YYYY-MM-DD to YYYY-MM-DD" readonly>
+                <input type="text" id="dash-period-range" class="dash-period-range-input" data-coreui-range="true" placeholder="Selecione um período" aria-label="Selecionar período do dashboard" readonly>
             </div>
         </div>
 
@@ -1595,11 +1595,14 @@ if (!window.__kcsDashboardDateRange) {
             .dash-period-calendar {
                 display: flex;
                 flex-direction: column;
-                align-items: flex-start;
-                gap: .2rem;
-                padding: 6px 8px;
+                align-items: stretch;
+                justify-content: center;
+                gap: .35rem;
                 margin-left: auto;
-                min-width: 220px;
+                min-width: 300px;
+                max-width: 380px;
+                width: min(36vw, 380px);
+                padding: .55rem .7rem;
                 background: rgba(15, 23, 42, 0.35);
                 border: 1px solid rgba(148, 163, 184, 0.18);
                 border-radius: 10px;
@@ -1613,13 +1616,16 @@ if (!window.__kcsDashboardDateRange) {
                 line-height: 1;
             }
             .dash-period-calendar input {
-                height: 30px;
+                height: 32px;
                 font-size: 12px;
+                font-weight: 600;
+                letter-spacing: .01em;
                 background: rgba(2, 6, 23, 0.55);
                 border: 1px solid rgba(148, 163, 184, 0.22);
                 border-radius: 7px;
                 color: #e5f0ff;
-                min-width: 220px;
+                width: 100%;
+                min-width: 0;
                 padding: 0 10px;
                 box-shadow: none;
             }
@@ -1629,6 +1635,7 @@ if (!window.__kcsDashboardDateRange) {
                 box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
             }
             .flatpickr-calendar {
+                font-family: var(--font-family-base);
                 background: #141a24;
                 border: 1px solid rgba(148, 163, 184, 0.2);
                 color: #d4dbe7;
@@ -1665,6 +1672,10 @@ if (!window.__kcsDashboardDateRange) {
             }
             .flatpickr-weekday {
                 color: #94a3b8;
+            }
+            .flatpickr-current-month .flatpickr-monthDropdown-months,
+            .flatpickr-current-month input.cur-year {
+                font-weight: 700;
             }
 
             .dash-saas-grid {
@@ -2007,12 +2018,22 @@ function dashboardInitFlatpickrRange(selectedDateRange) {
         const defaultDate = selectedDateRange.start && selectedDateRange.end
             ? [selectedDateRange.start, selectedDateRange.end]
             : null;
+        if (input._flatpickr) {
+            input._flatpickr.destroy();
+        }
+
         window.flatpickr(input, {
             mode: 'range',
             dateFormat: 'Y-m-d',
+            altInput: true,
+            altFormat: 'd/m/Y',
+            allowInput: false,
+            showMonths: window.innerWidth > 860 ? 2 : 1,
+            monthSelectorType: 'static',
             defaultDate,
             locale: {
-                rangeSeparator: ' to '
+                firstDayOfWeek: 1,
+                rangeSeparator: ' até '
             },
             onClose: (selectedDates) => {
                 if (!selectedDates || selectedDates.length < 2) return;
