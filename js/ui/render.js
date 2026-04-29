@@ -794,12 +794,15 @@ export function renderDashboard(articles, scripts, topAnalysts = [], topCollabor
 
 if (!window.__kcsDashboardDateRange) {
     const today = new Date();
-    const defaultStart = new Date(today.getTime() - (30 * 24 * 60 * 60 * 1000));
+    // Força o início para o primeiro dia do mês atual
+    const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1); 
+    
     window.__kcsDashboardDateRange = {
-        start: defaultStart.toISOString().slice(0, 10),
+        start: firstDayOfMonth.toISOString().slice(0, 10),
         end: today.toISOString().slice(0, 10)
     };
 }
+
     window.__kcsSetDashboardDateRange = (start, end) => {
         window.__kcsDashboardDateRange = { start, end };
         renderDashboard(
@@ -1047,7 +1050,7 @@ if (!window.__kcsDashboardDateRange) {
     });
     const topAnalystsByPeriod = Object.values(analystApprovals)
         .sort((a, b) => b.approvals - a.approvals)
-        .slice(0, 10);
+        .slice(0, 5);
 
     const collaboratorSource = normalizedArticles.filter(article => {
         const submittedDate = article._createdAt || dashboardToDate(article.submittedAt) || article._updatedAt;
@@ -1061,31 +1064,35 @@ if (!window.__kcsDashboardDateRange) {
         if (!acc[name]) acc[name] = { name, drafts: 0 };
         acc[name].drafts += 1;
         return acc;
-    }, {})).sort((a, b) => b.drafts - a.drafts).slice(0, 10);
+    }, {})).sort((a, b) => b.drafts - a.drafts).slice(0, 5);
 
     container.innerHTML = `
-        <div class="dash-saas-header">
-            <div class="dash-header-content">
-                <p class="dash-saas-eyebrow">Governança KCS</p>
-                <h2 class="dash-title dash-title-saas">
-                    <i class="ph ph-chart-line-up dash-icon-main"></i>
-                    Dashboard Executivo
-                </h2>
-                <div class="dash-saas-subtitle-row dash-content-row">
-                    <p class="dash-saas-subtitle">
-                        Visão de produção, qualidade, reutilização e gargalos da base de conhecimento.
-                    </p>
-                    <span class="dash-inline-access" aria-label="Total de acessos à base"><i class="ph ph-eye"></i> Acessos à base: <strong>${totalKnowledgeAccess}</strong></span>
+       <div class="dash-saas-header-wrapper">
+            <div class="dash-saas-header-top">
+                <div class="dash-header-titles">
+                    <p class="dash-saas-eyebrow">Governança KCS</p>
+                    <h2 class="dash-title dash-title-saas">
+                        <i class="ph ph-chart-line-up dash-icon-main"></i>
+                        Dashboard Executivo
+                    </h2>
+                </div>
+
+                <div class="dash-period-calendar dashboard-period-control" role="group" aria-label="Filtro de período do dashboard">
+                    <label for="dash-period-range">Período</label>
+                    <input type="text" id="dash-period-range" class="dash-period-range-input" data-coreui-range="true" placeholder="Selecione um período" aria-label="Selecionar período do dashboard" readonly>
                 </div>
             </div>
 
-            <div class="dash-period-calendar dashboard-period-control" role="group" aria-label="Filtro de período do dashboard">
-                <label for="dash-period-range">Período</label>
-                <input type="text" id="dash-period-range" class="dash-period-range-input" data-coreui-range="true" placeholder="Selecione um período" aria-label="Selecionar período do dashboard" readonly>
+            <div class="dash-saas-subtitle-row dash-content-row">
+                <p class="dash-saas-subtitle">
+                    Visão de produção, qualidade, reutilização e gargalos da base de conhecimento.
+                </p>
+                <span class="dash-inline-access" aria-label="Total de acessos à base"><i class="ph ph-eye"></i> Acessos à base: <strong>${totalKnowledgeAccess}</strong></span>
             </div>
         </div>
 
         <div class="dash-saas-grid">
+        
             ${dashboardMetricCard({
                 icon: 'ph-file-plus',
                 label: `Criados no período`,
@@ -1342,7 +1349,7 @@ if (!window.__kcsDashboardDateRange) {
                     <i class="ph ph-hand-heart"></i>
                     Top Colaboradores
                 </h3>
-                <p class="dash-widget-subtitle">Top 10 usuários com maior envio de procedimentos para a base.</p>
+                <p class="dash-widget-subtitle">Top 5 usuários com maior envio de procedimentos para a base.</p>
 
                 <div class="table-wrapper">
                     <table class="table-default">
@@ -1374,7 +1381,7 @@ if (!window.__kcsDashboardDateRange) {
                     <i class="ph ph-user-check"></i>
                     Top Analistas (aprovações)
                 </h3>
-                <p class="dash-widget-subtitle">Top 10 analistas que aprovaram procedimentos no período selecionado.</p>
+                <p class="dash-widget-subtitle">Top 5 analistas que aprovaram procedimentos no período selecionado.</p>
                 <div class="table-wrapper">
                     <table class="table-default">
                         <tbody>
@@ -1529,27 +1536,61 @@ if (!window.__kcsDashboardDateRange) {
         </div>
 
         <style>
-            .dash-saas-header {
+           .dash-saas-header-wrapper {
+                display: flex;
+                flex-direction: column;
+                gap: 0 !important; /* Matamos o gap duplo aqui */
+                margin-bottom: 1.5rem;
+                /* Removemos o padding-bottom daqui para não interferir */
+            }
+
+            .dash-saas-header-top {
                 display: flex;
                 align-items: flex-start;
                 justify-content: space-between;
-                gap: .9rem 1.2rem;
-                margin-bottom: 1.5rem;
-                padding-bottom: 1rem;
-                border-bottom: 1px solid rgba(255,255,255,.08);
+                gap: 1rem;
+                flex-wrap: wrap;
+                width: 100%;
+                
+                border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+                padding-bottom: 14px !important; /* Respiro exato ACIMA da linha */
+                margin-bottom: 10px !important;  /* Respiro exato e mais curto ABAIXO da linha */
             }
 
-            .dash-saas-eyebrow {
-                color: #60a5fa;
-                font-size: .7rem;
-                font-weight: 800;
-                letter-spacing: .14em;
+            /* 2. Aproximando o Eyebrow do Título principal */
+            .dash-header-titles {
+                display: flex;
+                flex-direction: column;
+                gap: 0; /* Removemos o gap para controlar na margem */
+            }
+
+            .dash-saas-subtitle-row {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                gap: .7rem 1rem;
+                flex-wrap: wrap;
+                width: 100%; /* Garante que ocupe 100% da tela */
+            }
+
+           .dash-saas-eyebrow {
+                color: var(--color-focus, #3b82f6);
+                font-size: 10px; /* Menor e mais delicado */
+                font-weight: 700;
+                letter-spacing: 0.1em;
                 text-transform: uppercase;
-                margin-bottom: .35rem;
+                margin-bottom: 2px; /* Bem colado ao título */
+                opacity: 0.9;
             }
 
+           /* 3. Refinando o Título e o Ícone */
             .dash-title-saas {
-                margin-bottom: .35rem;
+                font-size: 18px !important; /* Tamanho exato */
+                font-weight: 800 !important;
+                margin: 0 !important;
+                display: flex;
+                align-items: center;
+                gap: 8px;
             }
 
             .dash-saas-subtitle-row {
@@ -1559,11 +1600,19 @@ if (!window.__kcsDashboardDateRange) {
                 gap: .7rem 1rem;
                 flex-wrap: wrap;
             }
+
+            dash-title-saas i {
+                font-size: 20px; /* Ícone levemente menor para não gritar */
+                color: var(--color-text-secondary); /* Ícone mais neutro dá um ar sofisticado */
+            }
+
+
+           /* 4. Subtítulo levemente mais legível */
             .dash-saas-subtitle {
-                color: #9ca3af;
-                font-size: .82rem;
+                color: var(--color-text-secondary, #9ca3af);
+                font-size: 13px;
+                line-height: 1.4;
                 margin: 0;
-                flex: 1 1 440px;
             }
 
             .dash-header-content {
@@ -1592,114 +1641,150 @@ if (!window.__kcsDashboardDateRange) {
                 color: #93c5fd;
                 font-size: 15px;
             }
-            .dash-period-calendar {
+ .dash-period-calendar {
                 display: flex;
                 flex-direction: column;
                 align-items: stretch;
                 justify-content: center;
-                gap: .35rem;
+                gap: 4px;
                 margin-left: auto;
                 min-width: 220px;
                 max-width: 256px;
                 width: min(24vw, 256px);
-                padding: .38rem .45rem;
-                background: rgba(15, 23, 42, 0.35);
-                border: 1px solid rgba(148, 163, 184, 0.18);
-                border-radius: 10px;
-                box-shadow: none;
+                position: relative;
             }
             .dash-period-calendar label {
-                font-size: 10px;
-                color: #9ca3af;
-                font-weight: 400;
-                margin-bottom: 1px;
+                font-size: 11px;
+                color: var(--color-text-secondary);
+                font-weight: 600;
+                margin-bottom: 2px;
                 line-height: 1;
+                text-transform: uppercase;
+                letter-spacing: 0.05em;
             }
             .dash-period-calendar input {
-                height: 30px;
-                font-size: 11px;
-                font-weight: 400;
-                letter-spacing: .01em;
-                background: rgba(2, 6, 23, 0.55);
-                border: 1px solid rgba(148, 163, 184, 0.22);
-                border-radius: 7px;
-                color: #e5f0ff;
-                width: 100%;
-                min-width: 0;
-                padding: 0 10px;
-                box-shadow: none;
-            }
-            .dash-period-calendar input:focus {
-                outline: none;
-                border-color: rgba(100, 116, 139, 0.6);
-                box-shadow: 0 0 0 1px rgba(100, 116, 139, 0.24);
-            }
-            .flatpickr-calendar {
-                font-family: var(--font-family-base);
-                background: #0f172a;
-                border: 1px solid rgba(100, 116, 139, 0.2);
-                color: #cbd5e1;
-                box-shadow: 0 6px 14px rgba(2, 6, 23, 0.24);
-                border-radius: 7px;
-                padding: 4px;
-                z-index: 70;
-            }
-            .flatpickr-day {
-                color: #cbd5e1;
-                border-radius: 4px;
-                width: 23px;
-                height: 23px;
-                line-height: 23px;
-                font-size: 10px;
-                font-weight: 400;
-            }
-            .flatpickr-day:hover {
-                background: rgba(100, 116, 139, 0.2);
-            }
-            .flatpickr-day.selected,
-            .flatpickr-day.selected:hover,
-            .flatpickr-day.startRange,
-            .flatpickr-day.endRange {
-                background: rgba(100, 116, 139, 0.28);
-                border-color: rgba(100, 116, 139, 0.24);
-                color: #e2e8f0;
-            }
-            .flatpickr-day.inRange {
-                background: rgba(100, 116, 139, 0.14);
-                border-color: transparent;
-                box-shadow: none;
-            }
-            .flatpickr-months {
-                background: transparent;
-                margin-bottom: 1px;
-            }
-            .flatpickr-monthDropdown-months,
-            .numInputWrapper .numInput {
-                color: #d4dbe7;
-            }
-            .flatpickr-weekday {
-                color: #64748b;
-                font-size: 9px;
-                font-weight: 500;
-            }
-            .flatpickr-month {
                 height: 28px;
-            }
-            .flatpickr-current-month {
                 font-size: 12px;
-                padding-top: 0;
+                font-family: var(--font-family-base);
+                background-color: var(--color-editor-background) !important;
+                border: 1px solid var(--color-border) !important;
+                border-radius: var(--border-radius-sm) !important;
+                color: var(--color-text-primary) !important;
+                width: 100%;
+                padding: 0 10px;
+                box-shadow: inset 0 1px 2px rgba(0,0,0,0.02);
+                cursor: pointer;
+                transition: border-color 0.15s ease;
             }
-            .flatpickr-prev-month,
-            .flatpickr-next-month {
-                padding: 2px 4px;
-                color: #4a5568 !important;
-                fill: #4a5568 !important;
+            .dash-period-calendar input:focus, .dash-period-calendar input.active {
+                outline: none;
+                border-color: var(--color-focus) !important;
+                box-shadow: 0 0 0 1px var(--color-focus) !important;
             }
-            .flatpickr-prev-month:hover,
-            .flatpickr-next-month:hover {
-                color: #64748b !important;
-                fill: #64748b !important;
-            }
+
+.flatpickr-calendar {
+    font-family: var(--font-family-base);
+    background: #0f172a;
+    border: 1px solid rgba(100, 116, 139, 0.2);
+    color: #cbd5e1;
+    box-shadow: 0 6px 14px rgba(2, 6, 23, 0.24);
+    border-radius: 7px;
+    padding: 8px;
+    max-width: 280px;
+    transform: scale(0.88);
+    transform-origin: top right;
+    z-index: 70;
+    right: 0 !important;
+    left: auto !important;
+    margin-top: 4px;
+}
+
+.flatpickr-calendar.arrowTop:before,
+.flatpickr-calendar.arrowTop:after {
+    left: auto !important;
+    right: 20px !important;
+}
+
+    padding: 8px;  /* aumentar padding interno */
+    max-width: 280px;  /* adicionar limite de largura */
+    transform: scale(0.85);  /* reduzir escala geral */
+    transform-origin: top right;
+}
+
+.flatpickr-days {
+    padding: 0 4px 4px;
+}
+
+.flatpickr-day {
+    color: #cbd5e1;
+    border-radius: 4px;
+    width: 28px;
+    height: 28px;
+    line-height: 28px;
+    font-size: 11px;
+    font-weight: 400;
+}
+    
+.flatpickr-day.selected,
+.flatpickr-day.selected:hover,
+.flatpickr-day.startRange,
+.flatpickr-day.endRange {
+    background: rgba(71, 85, 105, 0.32);
+    border-color: rgba(71, 85, 105, 0.28);
+    color: #f1f5f9;
+}           
+
+.flatpickr-day.inRange {
+    background: rgba(71, 85, 105, 0.16);
+    border-color: transparent;
+    box-shadow: none;
+}
+
+.flatpickr-day:hover {
+    background: rgba(71, 85, 105, 0.18);
+}
+
+            .flatpickr-months {
+    background: transparent;
+    margin-bottom: 4px;
+    padding: 4px 8px 0;
+}
+       .flatpickr-monthDropdown-months,
+.numInputWrapper .numInput {
+    color: #d4dbe7;
+}
+
+.flatpickr-weekday {
+    color: #64748b;
+    font-size: 9px;
+    font-weight: 500;
+    padding-bottom: 2px;
+}
+            
+   .flatpickr-month {
+    height: 24px;
+}
+
+.flatpickr-current-month .flatpickr-monthDropdown-months,
+.flatpickr-current-month input.cur-year {
+    font-weight: 700;
+}
+
+    .flatpickr-prev-month,
+.flatpickr-next-month {
+    padding: 4px 6px;
+    color: #64748b !important;
+    fill: #64748b !important;
+}
+
+.flatpickr-prev-month:hover,
+.flatpickr-next-month:hover {
+    color: #94a3b8 !important;
+    fill: #94a3b8 !important;
+    background: rgba(100, 116, 139, 0.12);
+    border-radius: 4px;
+}
+
             .flatpickr-calendar.rightMost:before,
             .flatpickr-calendar.arrowRight:before,
             .flatpickr-calendar.rightMost:after,
@@ -1999,7 +2084,7 @@ if (!window.__kcsDashboardDateRange) {
             }
 
             @media (max-width: 768px) {
-                .dash-saas-header {
+                .dash-saas-header-top {
                     flex-direction: column;
                 }
 
@@ -2051,6 +2136,7 @@ function buildDashboardRangePickerConfig(defaultDate) {
         altFormat: 'd/m/Y',
         allowInput: false,
         showMonths: 1,
+        inline: false,
         monthSelectorType: 'static',
         position: 'auto right',
         defaultDate,
@@ -2594,3 +2680,5 @@ export function removeModalElements(modalId) {
     updateOverlayState();
     updateDockState();
 }
+
+
