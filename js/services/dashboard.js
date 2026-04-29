@@ -28,7 +28,7 @@ export async function getTopAnalysts() {
     return users
         .filter(user => ['analyst', 'admin', 'super_admin'].includes(user.role))
         .sort((a, b) => (b.articlesApproved || 0) - (a.articlesApproved || 0))
-        .slice(0, 5);
+        .slice(0, 10);
 }
 
 export async function getTopCollaborators() {
@@ -38,5 +38,5 @@ export async function getTopCollaborators() {
     return users
         .filter(user => user.role === 'user' || user.draftsSubmitted > 0)
         .sort((a, b) => (b.draftsSubmitted || 0) - (a.draftsSubmitted || 0))
-        .slice(0, 5);
+        .slice(0, 10);
 }
