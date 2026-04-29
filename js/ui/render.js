@@ -797,6 +797,14 @@ export function renderDashboard(articles, scripts, topAnalysts = [], topCollabor
 if (!window.__kcsDashboardPeriod) {
     window.__kcsDashboardPeriod = savedPeriod || '30d';
 }
+if (!window.__kcsDashboardAnalystRange) {
+    const today = new Date();
+    const defaultStart = new Date(today.getTime() - (30 * 24 * 60 * 60 * 1000));
+    window.__kcsDashboardAnalystRange = {
+        start: defaultStart.toISOString().slice(0, 10),
+        end: today.toISOString().slice(0, 10)
+    };
+}
 
     window.__kcsSetDashboardPeriod = (period) => {
     window.__kcsDashboardPeriod = period;
@@ -810,10 +818,26 @@ if (!window.__kcsDashboardPeriod) {
         window.__kcsDashboardTopCollaborators || []
     );
 };
+    window.__kcsSetAnalystPeriod = () => {
+        const startInput = document.getElementById('dash-analyst-start');
+        const endInput = document.getElementById('dash-analyst-end');
+        if (!startInput || !endInput) return;
+        window.__kcsDashboardAnalystRange = {
+            start: startInput.value,
+            end: endInput.value
+        };
+        renderDashboard(
+            window.__kcsDashboardArticles || [],
+            window.__kcsDashboardScripts || [],
+            window.__kcsDashboardTopAnalysts || [],
+            window.__kcsDashboardTopCollaborators || []
+        );
+    };
 
     const now = new Date();
     const msPerDay = 1000 * 60 * 60 * 24;
     const selectedPeriod = window.__kcsDashboardPeriod || '30d';
+    const selectedAnalystRange = window.__kcsDashboardAnalystRange || {};
 
     const periodConfig = {
         '7d': { label: '7 dias', days: 7 },
@@ -847,6 +871,7 @@ if (!window.__kcsDashboardPeriod) {
 
     const totalViews = normalizedArticles.reduce((acc, article) => acc + (article.views || 0), 0);
     const periodViews = articlesInPeriod.reduce((acc, article) => acc + (article.views || 0), 0);
+    const totalKnowledgeAccess = totalViews;
 
     const approvalRate = normalizedArticles.length > 0
         ? Math.round((approvedArticles.length / normalizedArticles.length) * 100)
@@ -1030,6 +1055,28 @@ if (!window.__kcsDashboardPeriod) {
     }
 
     const impactRanking = dashboardBuildImpactRanking(normalizedArticles).slice(0, 5);
+    const analystStartDate = selectedAnalystRange.start ? new Date(`${selectedAnalystRange.start}T00:00:00`) : null;
+    const analystEndDate = selectedAnalystRange.end ? new Date(`${selectedAnalystRange.end}T23:59:59`) : null;
+    const analystNameSet = new Set((topAnalysts || []).map(user =>
+        String(user.displayName || user.name || '').trim().toLowerCase()
+    ).filter(Boolean));
+    const analystApprovals = {};
+    approvedArticles.forEach(article => {
+        const approvalDate = article._approvedAt;
+        if (!approvalDate) return;
+        if (analystStartDate && approvalDate < analystStartDate) return;
+        if (analystEndDate && approvalDate > analystEndDate) return;
+        const approverName = String(article.approvedBy || article.validatedBy || article.reviewedBy || 'Sistema').trim();
+        const normalizedApprover = approverName.toLowerCase();
+        if (analystNameSet.size > 0 && !analystNameSet.has(normalizedApprover)) return;
+        if (!analystApprovals[approverName]) {
+            analystApprovals[approverName] = { name: approverName, approvals: 0 };
+        }
+        analystApprovals[approverName].approvals += 1;
+    });
+    const topAnalystsByPeriod = Object.values(analystApprovals)
+        .sort((a, b) => b.approvals - a.approvals)
+        .slice(0, 10);
 
     container.innerHTML = `
         <div class="dash-saas-header">
@@ -1105,6 +1152,13 @@ if (!window.__kcsDashboardPeriod) {
                 hint: `${healthyArticles.length}/${approvedArticles.length} aprovados`,
                 tone: healthRate < 70 ? 'red' : 'green'
             })}
+            ${dashboardMetricCard({
+                icon: 'ph-eye',
+                label: 'Acessos à base de conhecimento',
+                value: totalKnowledgeAccess,
+                hint: `${periodViews} no período`,
+                tone: 'blue'
+            })}
         </div>
 
         <div class="dash-saas-section-grid mt-6">
@@ -1130,6 +1184,10 @@ if (!window.__kcsDashboardPeriod) {
                                 <div class="dash-timeline-bars">
                                     <span class="dash-bar dash-bar-created" style="height:${createdHeight}%"></span>
                                     <span class="dash-bar dash-bar-approved" style="height:${approvedHeight}%"></span>
+                                </div>
+                                <div class="dash-timeline-values">
+                                    <span>${day.created}</span>
+                                    <span>${day.approved}</span>
                                 </div>
                                 <span class="dash-timeline-label">${day.shortLabel}</span>
                             </div>
@@ -1313,7 +1371,7 @@ if (!window.__kcsDashboardPeriod) {
                     <i class="ph ph-hand-heart"></i>
                     Top Colaboradores
                 </h3>
-                <p class="dash-widget-subtitle">Usuários com maior envio de rascunhos/contribuições.</p>
+                <p class="dash-widget-subtitle">Top 10 usuários com maior envio de procedimentos para a base.</p>
 
                 <div class="table-wrapper">
                     <table class="table-default">
@@ -1332,6 +1390,40 @@ if (!window.__kcsDashboardPeriod) {
                             `).join('') || `
                                 <tr>
                                     <td colspan="2" class="empty-cell">Nenhum envio registrado.</td>
+                                </tr>
+                            `}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="dash-widget dash-saas-card">
+                <h3 class="widget-header header-blue">
+                    <i class="ph ph-user-check"></i>
+                    Top Analistas (aprovações)
+                </h3>
+                <p class="dash-widget-subtitle">Top 10 analistas que aprovaram procedimentos no período selecionado.</p>
+                <div class="dash-analyst-range">
+                    <label>Início <input type="date" id="dash-analyst-start" value="${selectedAnalystRange.start || ''}" onchange="window.__kcsSetAnalystPeriod()"></label>
+                    <label>Fim <input type="date" id="dash-analyst-end" value="${selectedAnalystRange.end || ''}" onchange="window.__kcsSetAnalystPeriod()"></label>
+                </div>
+                <div class="table-wrapper">
+                    <table class="table-default">
+                        <tbody>
+                            ${topAnalystsByPeriod.map((user, index) => `
+                                <tr class="table-row">
+                                    <td class="user-cell">
+                                        <div class="rank-number">#${index + 1}</div>
+                                        <div class="avatar-mini">${(user.name || '?').charAt(0).toUpperCase()}</div>
+                                        <p class="user-name">${escapeHtml(formatFullName(user.name || 'Analista'))}</p>
+                                    </td>
+                                    <td class="stat-cell">
+                                        <span class="badge-blue">${user.approvals || 0}</span>
+                                    </td>
+                                </tr>
+                            `).join('') || `
+                                <tr>
+                                    <td colspan="2" class="empty-cell">Nenhuma aprovação encontrada neste período.</td>
                                 </tr>
                             `}
                         </tbody>
@@ -1694,6 +1786,34 @@ if (!window.__kcsDashboardPeriod) {
                 color: #6b7280;
                 font-size: .62rem;
                 white-space: nowrap;
+            }
+            .dash-timeline-values {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                font-size: .58rem;
+                line-height: 1.05;
+                color: #9ca3af;
+            }
+            .dash-analyst-range {
+                display: flex;
+                gap: .6rem;
+                margin-bottom: .8rem;
+                flex-wrap: wrap;
+            }
+            .dash-analyst-range label {
+                display: flex;
+                flex-direction: column;
+                font-size: .72rem;
+                color: #9ca3af;
+                gap: .2rem;
+            }
+            .dash-analyst-range input[type="date"] {
+                background: rgba(17, 24, 39, .85);
+                border: 1px solid rgba(255, 255, 255, .15);
+                border-radius: .45rem;
+                color: #e5e7eb;
+                padding: .35rem .45rem;
             }
 
             .dash-chart-legend {
