@@ -1641,12 +1641,12 @@ if (!window.__kcsDashboardDateRange) {
             .flatpickr-day.selected:hover,
             .flatpickr-day.startRange,
             .flatpickr-day.endRange {
-                background: rgba(59, 130, 246, 0.38);
-                border-color: rgba(59, 130, 246, 0.38);
+                background: rgba(59, 130, 246, 0.4);
+                border-color: rgba(59, 130, 246, 0.4);
                 color: #f8fafc;
             }
             .flatpickr-day.inRange {
-                background: rgba(59, 130, 246, 0.14);
+                background: rgba(59, 130, 246, 0.16);
                 box-shadow: none;
             }
             .flatpickr-months {
