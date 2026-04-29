@@ -842,7 +842,6 @@ if (!window.__kcsDashboardDateRange) {
     const approvedInPeriod = approvedArticles.filter(article => isDateInRange(article._approvedAt));
 
     const totalViews = normalizedArticles.reduce((acc, article) => acc + (article.views || 0), 0);
-    const periodViews = articlesInPeriod.reduce((acc, article) => acc + (article.views || 0), 0);
     const totalKnowledgeAccess = totalViews;
 
     const approvalRate = normalizedArticles.length > 0
@@ -1060,12 +1059,13 @@ if (!window.__kcsDashboardDateRange) {
                 </h2>
                 <p class="dash-saas-subtitle">
                     Visão de produção, qualidade, reutilização e gargalos da base de conhecimento.
-                    <span class="dash-inline-access">Acessos à base: <strong>${totalKnowledgeAccess}</strong></span>
+                    <span class="dash-inline-access"><i class="ph ph-eye"></i> Acessos à base: <strong>${totalKnowledgeAccess}</strong></span>
                 </p>
             </div>
 
             <div class="dash-period-calendar" role="group" aria-label="Filtro de período do dashboard">
-                <label>Período <input type="text" id="dash-period-range" placeholder="Selecione intervalo" readonly></label>
+                <label for="dash-period-range">Período</label>
+                <input type="text" id="dash-period-range" placeholder="YYYY-MM-DD to YYYY-MM-DD" readonly>
             </div>
         </div>
 
@@ -1116,13 +1116,6 @@ if (!window.__kcsDashboardDateRange) {
                 value: `${healthRate}%`,
                 hint: `${healthyArticles.length}/${approvedArticles.length} aprovados`,
                 tone: healthRate < 70 ? 'red' : 'green'
-            })}
-            ${dashboardMetricCard({
-                icon: 'ph-eye',
-                label: 'Acessos à base de conhecimento',
-                value: totalKnowledgeAccess,
-                hint: `${periodViews} no período`,
-                tone: 'blue'
             })}
         </div>
 
@@ -1555,6 +1548,10 @@ if (!window.__kcsDashboardDateRange) {
                 color: #9ca3af;
                 font-size: .82rem;
                 margin: 0;
+                display: flex;
+                align-items: center;
+                flex-wrap: wrap;
+                gap: .45rem .8rem;
             }
 
             .dash-header-content {
@@ -1563,37 +1560,40 @@ if (!window.__kcsDashboardDateRange) {
                 gap: .2rem;
             }
             .dash-inline-access {
-                margin-left: .7rem;
                 color: #cbd5e1;
                 font-size: .76rem;
+                display: inline-flex;
+                align-items: center;
+                gap: .35rem;
+                white-space: nowrap;
+            }
+            .dash-inline-access i {
+                color: #93c5fd;
+                font-size: .9rem;
             }
             .dash-period-calendar {
                 display: flex;
-                gap: .6rem;
-                padding: .25rem;
-                background: rgba(255,255,255,.035);
-                border: 1px solid rgba(255,255,255,.08);
-                border-radius: .75rem;
+                flex-direction: column;
+                align-items: flex-start;
+                gap: .35rem;
+                padding: .55rem .65rem;
+                margin-left: auto;
+                background: rgba(15, 23, 42, .7);
+                border: 1px solid rgba(148, 163, 184, .26);
+                border-radius: .85rem;
             }
             .dash-period-calendar label {
-                display: flex;
-                flex-direction: column;
                 font-size: .72rem;
                 color: #9ca3af;
-                gap: .2rem;
-            }
-            .dash-period-calendar input[type="date"] {
-                background: rgba(17, 24, 39, .85);
-                border: 1px solid rgba(255, 255, 255, .15);
-                border-radius: .45rem;
-                color: #e5e7eb;
-                padding: .35rem .45rem;
+                font-weight: 600;
             }
             .dash-period-calendar input {
-                background: #1e1e1e;
-                border: 1px solid #3c3c3c;
+                background: rgba(15, 23, 42, .9);
+                border: 1px solid rgba(148, 163, 184, .32);
+                border-radius: .55rem;
                 color: #cccccc;
-                min-width: 220px;
+                min-width: 270px;
+                padding: .45rem .6rem;
             }
             .flatpickr-calendar {
                 background: #1e1e1e;
@@ -1912,15 +1912,27 @@ if (!window.__kcsDashboardDateRange) {
 
                 .dash-period-calendar {
                     width: 100%;
-                    overflow-x: auto;
+                    margin-left: 0;
                 }
 
                 .dash-saas-grid {
-                    grid-template-columns: 1fr;
+                    grid-template-columns: repeat(2, minmax(0, 1fr));
                 }
 
                 .dash-alert-grid {
                     grid-template-columns: 1fr;
+                }
+            }
+            @media (max-width: 560px) {
+                .dash-saas-grid {
+                    grid-template-columns: 1fr;
+                }
+                .dash-period-calendar input {
+                    min-width: 100%;
+                    width: 100%;
+                }
+                .dash-inline-access {
+                    white-space: normal;
                 }
             }
         </style>
@@ -1942,7 +1954,9 @@ function dashboardInitFlatpickrRange(selectedDateRange) {
             mode: 'range',
             dateFormat: 'Y-m-d',
             defaultDate,
-            locale: 'pt',
+            locale: {
+                rangeSeparator: ' to '
+            },
             onClose: (selectedDates) => {
                 if (!selectedDates || selectedDates.length < 2) return;
                 const toIso = (d) => d.toISOString().slice(0, 10);
