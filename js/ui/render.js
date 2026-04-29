@@ -1704,6 +1704,10 @@ if (!window.__kcsDashboardDateRange) {
             .flatpickr-current-month input.cur-year {
                 font-weight: 700;
             }
+            .flatpickr-current-month .flatpickr-monthDropdown-months,
+            .flatpickr-current-month input.cur-year {
+                font-weight: 700;
+            }
 
             .dash-saas-grid {
                 display: grid;
