@@ -792,37 +792,19 @@ export function renderDashboard(articles, scripts, topAnalysts = [], topCollabor
     window.__kcsDashboardTopAnalysts = topAnalysts || [];
     window.__kcsDashboardTopCollaborators = topCollaborators || [];
 
-    const savedPeriod = localStorage.getItem('kcs_dashboard_period');
-
-if (!window.__kcsDashboardPeriod) {
-    window.__kcsDashboardPeriod = savedPeriod || '30d';
-}
-if (!window.__kcsDashboardAnalystRange) {
+if (!window.__kcsDashboardDateRange) {
     const today = new Date();
     const defaultStart = new Date(today.getTime() - (30 * 24 * 60 * 60 * 1000));
-    window.__kcsDashboardAnalystRange = {
+    window.__kcsDashboardDateRange = {
         start: defaultStart.toISOString().slice(0, 10),
         end: today.toISOString().slice(0, 10)
     };
 }
-
-    window.__kcsSetDashboardPeriod = (period) => {
-    window.__kcsDashboardPeriod = period;
-
-    localStorage.setItem('kcs_dashboard_period', period);
-
-    renderDashboard(
-        window.__kcsDashboardArticles || [],
-        window.__kcsDashboardScripts || [],
-        window.__kcsDashboardTopAnalysts || [],
-        window.__kcsDashboardTopCollaborators || []
-    );
-};
-    window.__kcsSetAnalystPeriod = () => {
-        const startInput = document.getElementById('dash-analyst-start');
-        const endInput = document.getElementById('dash-analyst-end');
+    window.__kcsSetDashboardDateRange = () => {
+        const startInput = document.getElementById('dash-period-start');
+        const endInput = document.getElementById('dash-period-end');
         if (!startInput || !endInput) return;
-        window.__kcsDashboardAnalystRange = {
+        window.__kcsDashboardDateRange = {
             start: startInput.value,
             end: endInput.value
         };
@@ -836,18 +818,9 @@ if (!window.__kcsDashboardAnalystRange) {
 
     const now = new Date();
     const msPerDay = 1000 * 60 * 60 * 24;
-    const selectedPeriod = window.__kcsDashboardPeriod || '30d';
-    const selectedAnalystRange = window.__kcsDashboardAnalystRange || {};
-
-    const periodConfig = {
-        '7d': { label: '7 dias', days: 7 },
-        '30d': { label: '30 dias', days: 30 },
-        '90d': { label: '90 dias', days: 90 },
-        'all': { label: 'Tudo', days: null }
-    };
-
-    const activePeriod = periodConfig[selectedPeriod] || periodConfig['30d'];
-    const periodStart = activePeriod.days ? new Date(now.getTime() - activePeriod.days * msPerDay) : null;
+    const selectedDateRange = window.__kcsDashboardDateRange || {};
+    const periodStart = selectedDateRange.start ? new Date(`${selectedDateRange.start}T00:00:00`) : null;
+    const periodEnd = selectedDateRange.end ? new Date(`${selectedDateRange.end}T23:59:59`) : null;
 
     const normalizedArticles = (articles || []).map(article => ({
         ...article,
@@ -865,9 +838,14 @@ if (!window.__kcsDashboardAnalystRange) {
     const reviewArticles = normalizedArticles.filter(article => article._status === 'review');
     const pendingArticles = normalizedArticles.filter(article => article._status !== 'approved');
 
-    const articlesInPeriod = normalizedArticles.filter(article => dashboardIsInPeriod(article._createdAt, periodStart));
-    const approvedInPeriod = approvedArticles.filter(article => dashboardIsInPeriod(article._approvedAt, periodStart));
-    const updatedInPeriod = normalizedArticles.filter(article => dashboardIsInPeriod(article._updatedAt, periodStart));
+    const isDateInRange = (date) => {
+        if (!date) return false;
+        if (periodStart && date < periodStart) return false;
+        if (periodEnd && date > periodEnd) return false;
+        return true;
+    };
+    const articlesInPeriod = normalizedArticles.filter(article => isDateInRange(article._createdAt));
+    const approvedInPeriod = approvedArticles.filter(article => isDateInRange(article._approvedAt));
 
     const totalViews = normalizedArticles.reduce((acc, article) => acc + (article.views || 0), 0);
     const periodViews = articlesInPeriod.reduce((acc, article) => acc + (article.views || 0), 0);
@@ -1000,7 +978,10 @@ if (!window.__kcsDashboardAnalystRange) {
         .slice(0, 8);
 
     const agingBuckets = dashboardBuildAgingBuckets(approvedArticles, now, msPerDay);
-    const timeline = dashboardBuildTimeline(normalizedArticles, selectedPeriod, now, msPerDay);
+    const rangeDays = periodStart && periodEnd
+        ? Math.max(1, Math.ceil((periodEnd - periodStart) / msPerDay) + 1)
+        : 30;
+    const timeline = dashboardBuildTimeline(normalizedArticles, Math.min(rangeDays, 90), now, msPerDay, periodStart, periodEnd);
     const funnel = dashboardBuildFunnel(normalizedArticles);
 
     const sortedByViews = [...approvedArticles]
@@ -1055,8 +1036,6 @@ if (!window.__kcsDashboardAnalystRange) {
     }
 
     const impactRanking = dashboardBuildImpactRanking(normalizedArticles).slice(0, 5);
-    const analystStartDate = selectedAnalystRange.start ? new Date(`${selectedAnalystRange.start}T00:00:00`) : null;
-    const analystEndDate = selectedAnalystRange.end ? new Date(`${selectedAnalystRange.end}T23:59:59`) : null;
     const analystNameSet = new Set((topAnalysts || []).map(user =>
         String(user.displayName || user.name || '').trim().toLowerCase()
     ).filter(Boolean));
@@ -1064,11 +1043,10 @@ if (!window.__kcsDashboardAnalystRange) {
     approvedArticles.forEach(article => {
         const approvalDate = article._approvedAt;
         if (!approvalDate) return;
-        if (analystStartDate && approvalDate < analystStartDate) return;
-        if (analystEndDate && approvalDate > analystEndDate) return;
+        if (periodStart && approvalDate < periodStart) return;
+        if (periodEnd && approvalDate > periodEnd) return;
         const approverName = String(article.approvedBy || article.validatedBy || article.reviewedBy || 'Sistema').trim();
         const normalizedApprover = approverName.toLowerCase();
-        if (analystNameSet.size > 0 && !analystNameSet.has(normalizedApprover)) return;
         if (!analystApprovals[approverName]) {
             analystApprovals[approverName] = { name: approverName, approvals: 0 };
         }
@@ -1080,7 +1058,7 @@ if (!window.__kcsDashboardAnalystRange) {
 
     container.innerHTML = `
         <div class="dash-saas-header">
-            <div>
+            <div class="dash-header-content">
                 <p class="dash-saas-eyebrow">Governança KCS</p>
                 <h2 class="dash-title dash-title-saas">
                     <i class="ph ph-chart-line-up dash-icon-main"></i>
@@ -1088,19 +1066,13 @@ if (!window.__kcsDashboardAnalystRange) {
                 </h2>
                 <p class="dash-saas-subtitle">
                     Visão de produção, qualidade, reutilização e gargalos da base de conhecimento.
+                    <span class="dash-inline-access">Acessos à base: <strong>${totalKnowledgeAccess}</strong></span>
                 </p>
             </div>
 
-            <div class="dash-period-filter" role="group" aria-label="Filtro de período do dashboard">
-                ${Object.entries(periodConfig).map(([key, config]) => `
-                    <button
-                        type="button"
-                        class="dash-period-btn ${selectedPeriod === key ? 'active' : ''}"
-                        onclick="window.__kcsSetDashboardPeriod('${key}')"
-                    >
-                        ${config.label}
-                    </button>
-                `).join('')}
+            <div class="dash-period-calendar" role="group" aria-label="Filtro de período do dashboard">
+                <label>Início <input type="date" id="dash-period-start" value="${selectedDateRange.start || ''}" onchange="window.__kcsSetDashboardDateRange()"></label>
+                <label>Fim <input type="date" id="dash-period-end" value="${selectedDateRange.end || ''}" onchange="window.__kcsSetDashboardDateRange()"></label>
             </div>
         </div>
 
@@ -1109,7 +1081,7 @@ if (!window.__kcsDashboardAnalystRange) {
                 icon: 'ph-file-plus',
                 label: `Criados no período`,
                 value: articlesInPeriod.length,
-                hint: activePeriod.label,
+                hint: `${selectedDateRange.start || '--'} até ${selectedDateRange.end || '--'}`,
                 tone: 'blue'
             })}
 
@@ -1185,10 +1157,7 @@ if (!window.__kcsDashboardAnalystRange) {
                                     <span class="dash-bar dash-bar-created" style="height:${createdHeight}%"></span>
                                     <span class="dash-bar dash-bar-approved" style="height:${approvedHeight}%"></span>
                                 </div>
-                                <div class="dash-timeline-values">
-                                    <span>${day.created}</span>
-                                    <span>${day.approved}</span>
-                                </div>
+                                <div class="dash-timeline-values"><span>${day.created}/${day.approved}</span></div>
                                 <span class="dash-timeline-label">${day.shortLabel}</span>
                             </div>
                         `;
@@ -1376,7 +1345,16 @@ if (!window.__kcsDashboardAnalystRange) {
                 <div class="table-wrapper">
                     <table class="table-default">
                         <tbody>
-                            ${finalCollaborators.filter(user => (user.draftsSubmitted || user.drafts || 0) > 0).map((user, index) => `
+                            ${(finalCollaborators.length ? finalCollaborators : Object.values((() => {
+                                const byAuthor = {};
+                                normalizedArticles.forEach(article => {
+                                    const author = article.createdBy || 'Sistema';
+                                    if (!byAuthor[author]) byAuthor[author] = { name: author, drafts: 0 };
+                                    byAuthor[author].drafts += 1;
+                                });
+                                return byAuthor;
+                            })())).sort((a, b) => (b.draftsSubmitted || b.drafts || 0) - (a.draftsSubmitted || a.drafts || 0)).slice(0, 10)
+                            .filter(user => (user.draftsSubmitted || user.drafts || 0) > 0).map((user, index) => `
                                 <tr class="table-row">
                                     <td class="user-cell">
                                         <div class="rank-number">#${index + 1}</div>
@@ -1403,10 +1381,6 @@ if (!window.__kcsDashboardAnalystRange) {
                     Top Analistas (aprovações)
                 </h3>
                 <p class="dash-widget-subtitle">Top 10 analistas que aprovaram procedimentos no período selecionado.</p>
-                <div class="dash-analyst-range">
-                    <label>Início <input type="date" id="dash-analyst-start" value="${selectedAnalystRange.start || ''}" onchange="window.__kcsSetAnalystPeriod()"></label>
-                    <label>Fim <input type="date" id="dash-analyst-end" value="${selectedAnalystRange.end || ''}" onchange="window.__kcsSetAnalystPeriod()"></label>
-                </div>
                 <div class="table-wrapper">
                     <table class="table-default">
                         <tbody>
@@ -1590,33 +1564,37 @@ if (!window.__kcsDashboardAnalystRange) {
                 margin: 0;
             }
 
-            .dash-period-filter {
+            .dash-header-content {
                 display: flex;
-                gap: .35rem;
+                flex-direction: column;
+                gap: .2rem;
+            }
+            .dash-inline-access {
+                margin-left: .7rem;
+                color: #cbd5e1;
+                font-size: .76rem;
+            }
+            .dash-period-calendar {
+                display: flex;
+                gap: .6rem;
                 padding: .25rem;
                 background: rgba(255,255,255,.035);
                 border: 1px solid rgba(255,255,255,.08);
                 border-radius: .75rem;
             }
-
-            .dash-period-btn {
-                padding: .45rem .75rem;
-                border-radius: .55rem;
+            .dash-period-calendar label {
+                display: flex;
+                flex-direction: column;
+                font-size: .72rem;
                 color: #9ca3af;
-                font-size: .75rem;
-                font-weight: 700;
-                transition: all .15s ease;
+                gap: .2rem;
             }
-
-            .dash-period-btn:hover {
-                color: #fff;
-                background: rgba(255,255,255,.06);
-            }
-
-            .dash-period-btn.active {
-                color: #fff;
-                background: #007acc;
-                box-shadow: 0 0 0 1px rgba(96,165,250,.35);
+            .dash-period-calendar input[type="date"] {
+                background: rgba(17, 24, 39, .85);
+                border: 1px solid rgba(255, 255, 255, .15);
+                border-radius: .45rem;
+                color: #e5e7eb;
+                padding: .35rem .45rem;
             }
 
             .dash-saas-grid {
@@ -1789,31 +1767,10 @@ if (!window.__kcsDashboardAnalystRange) {
             }
             .dash-timeline-values {
                 display: flex;
-                flex-direction: column;
                 align-items: center;
-                font-size: .58rem;
+                font-size: .61rem;
                 line-height: 1.05;
                 color: #9ca3af;
-            }
-            .dash-analyst-range {
-                display: flex;
-                gap: .6rem;
-                margin-bottom: .8rem;
-                flex-wrap: wrap;
-            }
-            .dash-analyst-range label {
-                display: flex;
-                flex-direction: column;
-                font-size: .72rem;
-                color: #9ca3af;
-                gap: .2rem;
-            }
-            .dash-analyst-range input[type="date"] {
-                background: rgba(17, 24, 39, .85);
-                border: 1px solid rgba(255, 255, 255, .15);
-                border-radius: .45rem;
-                color: #e5e7eb;
-                padding: .35rem .45rem;
             }
 
             .dash-chart-legend {
@@ -1931,7 +1888,7 @@ if (!window.__kcsDashboardAnalystRange) {
                     flex-direction: column;
                 }
 
-                .dash-period-filter {
+                .dash-period-calendar {
                     width: 100%;
                     overflow-x: auto;
                 }
@@ -2083,19 +2040,14 @@ function dashboardBuildAgingBuckets(approvedArticles, now, msPerDay) {
     }));
 }
 
-function dashboardBuildTimeline(articles, selectedPeriod, now, msPerDay) {
-    const daysByPeriod = {
-        '7d': 7,
-        '30d': 30,
-        '90d': 90,
-        'all': 30
-    };
-
-    const days = daysByPeriod[selectedPeriod] || 30;
+function dashboardBuildTimeline(articles, daysInput, now, msPerDay, startDate = null, endDate = null) {
+    const days = Math.max(1, Number(daysInput) || 30);
     const timeline = [];
 
     for (let index = days - 1; index >= 0; index--) {
-        const date = new Date(now.getTime() - index * msPerDay);
+        const anchor = endDate || now;
+        const date = new Date(anchor.getTime() - index * msPerDay);
+        if (startDate && date < new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate())) continue;
         const key = date.toISOString().slice(0, 10);
 
         timeline.push({
