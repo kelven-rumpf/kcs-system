@@ -800,14 +800,8 @@ if (!window.__kcsDashboardDateRange) {
         end: today.toISOString().slice(0, 10)
     };
 }
-    window.__kcsSetDashboardDateRange = () => {
-        const startInput = document.getElementById('dash-period-start');
-        const endInput = document.getElementById('dash-period-end');
-        if (!startInput || !endInput) return;
-        window.__kcsDashboardDateRange = {
-            start: startInput.value,
-            end: endInput.value
-        };
+    window.__kcsSetDashboardDateRange = (start, end) => {
+        window.__kcsDashboardDateRange = { start, end };
         renderDashboard(
             window.__kcsDashboardArticles || [],
             window.__kcsDashboardScripts || [],
@@ -1071,8 +1065,7 @@ if (!window.__kcsDashboardDateRange) {
             </div>
 
             <div class="dash-period-calendar" role="group" aria-label="Filtro de período do dashboard">
-                <label>Início <input type="date" id="dash-period-start" value="${selectedDateRange.start || ''}" onchange="window.__kcsSetDashboardDateRange()"></label>
-                <label>Fim <input type="date" id="dash-period-end" value="${selectedDateRange.end || ''}" onchange="window.__kcsSetDashboardDateRange()"></label>
+                <label>Período <input type="text" id="dash-period-range" placeholder="Selecione intervalo" readonly></label>
             </div>
         </div>
 
@@ -1596,6 +1589,35 @@ if (!window.__kcsDashboardDateRange) {
                 color: #e5e7eb;
                 padding: .35rem .45rem;
             }
+            .dash-period-calendar input {
+                background: #1e1e1e;
+                border: 1px solid #3c3c3c;
+                color: #cccccc;
+                min-width: 220px;
+            }
+            .flatpickr-calendar {
+                background: #1e1e1e;
+                border: 1px solid #2d2d2d;
+                color: #d4d4d4;
+                box-shadow: none;
+            }
+            .flatpickr-day {
+                color: #d4d4d4;
+            }
+            .flatpickr-day:hover {
+                background: #2a2d2e;
+            }
+            .flatpickr-day.startRange,
+            .flatpickr-day.endRange {
+                background: #007acc;
+                color: white;
+            }
+            .flatpickr-day.inRange {
+                background: rgba(0, 122, 204, 0.25);
+            }
+            .flatpickr-months {
+                background: #1e1e1e;
+            }
 
             .dash-saas-grid {
                 display: grid;
@@ -1903,6 +1925,49 @@ if (!window.__kcsDashboardDateRange) {
             }
         </style>
     `;
+
+    dashboardInitFlatpickrRange(selectedDateRange);
+}
+
+function dashboardInitFlatpickrRange(selectedDateRange) {
+    const input = document.getElementById('dash-period-range');
+    if (!input) return;
+
+    const applyPicker = () => {
+        if (!window.flatpickr) return;
+        const defaultDate = selectedDateRange.start && selectedDateRange.end
+            ? [selectedDateRange.start, selectedDateRange.end]
+            : null;
+        window.flatpickr(input, {
+            mode: 'range',
+            dateFormat: 'Y-m-d',
+            defaultDate,
+            locale: 'pt',
+            onClose: (selectedDates) => {
+                if (!selectedDates || selectedDates.length < 2) return;
+                const toIso = (d) => d.toISOString().slice(0, 10);
+                window.__kcsSetDashboardDateRange(toIso(selectedDates[0]), toIso(selectedDates[1]));
+            }
+        });
+    };
+
+    if (!document.getElementById('flatpickr-lib-css')) {
+        const link = document.createElement('link');
+        link.id = 'flatpickr-lib-css';
+        link.rel = 'stylesheet';
+        link.href = 'https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css';
+        document.head.appendChild(link);
+    }
+
+    if (!document.getElementById('flatpickr-lib-js')) {
+        const script = document.createElement('script');
+        script.id = 'flatpickr-lib-js';
+        script.src = 'https://cdn.jsdelivr.net/npm/flatpickr';
+        script.onload = applyPicker;
+        document.head.appendChild(script);
+    } else {
+        applyPicker();
+    }
 }
 
 function dashboardToDate(value) {
