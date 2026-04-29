@@ -1057,10 +1057,12 @@ if (!window.__kcsDashboardDateRange) {
                     <i class="ph ph-chart-line-up dash-icon-main"></i>
                     Dashboard Executivo
                 </h2>
-                <p class="dash-saas-subtitle">
-                    Visão de produção, qualidade, reutilização e gargalos da base de conhecimento.
+                <div class="dash-saas-subtitle-row">
+                    <p class="dash-saas-subtitle">
+                        Visão de produção, qualidade, reutilização e gargalos da base de conhecimento.
+                    </p>
                     <span class="dash-inline-access"><i class="ph ph-eye"></i> Acessos à base: <strong>${totalKnowledgeAccess}</strong></span>
-                </p>
+                </div>
             </div>
 
             <div class="dash-period-calendar" role="group" aria-label="Filtro de período do dashboard">
@@ -1544,14 +1546,18 @@ if (!window.__kcsDashboardDateRange) {
                 margin-bottom: .35rem;
             }
 
+            .dash-saas-subtitle-row {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                gap: .7rem 1rem;
+                flex-wrap: wrap;
+            }
             .dash-saas-subtitle {
                 color: #9ca3af;
                 font-size: .82rem;
                 margin: 0;
-                display: flex;
-                align-items: center;
-                flex-wrap: wrap;
-                gap: .45rem .8rem;
+                flex: 1 1 440px;
             }
 
             .dash-header-content {
@@ -1566,57 +1572,85 @@ if (!window.__kcsDashboardDateRange) {
                 align-items: center;
                 gap: .35rem;
                 white-space: nowrap;
+                margin-left: auto;
+                flex-shrink: 0;
             }
             .dash-inline-access i {
                 color: #93c5fd;
-                font-size: .9rem;
+                font-size: .92rem;
             }
             .dash-period-calendar {
                 display: flex;
                 flex-direction: column;
                 align-items: flex-start;
-                gap: .35rem;
-                padding: .55rem .65rem;
+                gap: .2rem;
+                padding: 6px 8px;
                 margin-left: auto;
-                background: rgba(15, 23, 42, .7);
-                border: 1px solid rgba(148, 163, 184, .26);
-                border-radius: .85rem;
-            }
-            .dash-period-calendar label {
-                font-size: .72rem;
-                color: #9ca3af;
-                font-weight: 600;
-            }
-            .dash-period-calendar input {
-                background: rgba(15, 23, 42, .9);
-                border: 1px solid rgba(148, 163, 184, .32);
-                border-radius: .55rem;
-                color: #cccccc;
-                min-width: 270px;
-                padding: .45rem .6rem;
-            }
-            .flatpickr-calendar {
-                background: #1e1e1e;
-                border: 1px solid #2d2d2d;
-                color: #d4d4d4;
+                min-width: 220px;
+                background: rgba(15, 23, 42, 0.35);
+                border: 1px solid rgba(148, 163, 184, 0.18);
+                border-radius: 10px;
                 box-shadow: none;
             }
+            .dash-period-calendar label {
+                font-size: 10px;
+                color: #94a3b8;
+                font-weight: 500;
+                margin-bottom: 4px;
+                line-height: 1;
+            }
+            .dash-period-calendar input {
+                height: 30px;
+                font-size: 12px;
+                background: rgba(2, 6, 23, 0.55);
+                border: 1px solid rgba(148, 163, 184, 0.22);
+                border-radius: 7px;
+                color: #e5f0ff;
+                min-width: 220px;
+                padding: 0 10px;
+                box-shadow: none;
+            }
+            .dash-period-calendar input:focus {
+                outline: none;
+                border-color: rgba(59, 130, 246, 0.65);
+                box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+            }
+            .flatpickr-calendar {
+                background: #141a24;
+                border: 1px solid rgba(148, 163, 184, 0.2);
+                color: #d4dbe7;
+                box-shadow: none;
+                border-radius: 8px;
+                z-index: 80;
+            }
             .flatpickr-day {
-                color: #d4d4d4;
+                color: #d4dbe7;
+                border-radius: 6px;
             }
             .flatpickr-day:hover {
-                background: #2a2d2e;
+                background: rgba(148, 163, 184, 0.18);
             }
+            .flatpickr-day.selected,
+            .flatpickr-day.selected:hover,
             .flatpickr-day.startRange,
             .flatpickr-day.endRange {
-                background: #007acc;
-                color: white;
+                background: rgba(59, 130, 246, 0.45);
+                border-color: rgba(59, 130, 246, 0.45);
+                color: #f8fafc;
             }
             .flatpickr-day.inRange {
-                background: rgba(0, 122, 204, 0.25);
+                background: rgba(59, 130, 246, 0.2);
+                box-shadow: none;
             }
             .flatpickr-months {
-                background: #1e1e1e;
+                background: #141a24;
+            }
+            .flatpickr-monthDropdown-months,
+            .numInputWrapper .numInput {
+                color: #d4dbe7;
+            }
+            .flatpickr-weekday {
+                color: #94a3b8;
             }
 
             .dash-saas-grid {
@@ -1914,6 +1948,9 @@ if (!window.__kcsDashboardDateRange) {
                     width: 100%;
                     margin-left: 0;
                 }
+                .dash-inline-access {
+                    margin-left: 0;
+                }
 
                 .dash-saas-grid {
                     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1933,6 +1970,8 @@ if (!window.__kcsDashboardDateRange) {
                 }
                 .dash-inline-access {
                     white-space: normal;
+                    width: 100%;
+                    justify-content: flex-start;
                 }
             }
         </style>
