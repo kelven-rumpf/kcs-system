@@ -36,7 +36,7 @@ export async function getTopCollaborators() {
     const users = await getUsersSafely();
 
     return users
-        .filter(user => user.role === 'user' || user.draftsSubmitted > 0)
+        .filter(user => (user.draftsSubmitted || 0) > 0)
         .sort((a, b) => (b.draftsSubmitted || 0) - (a.draftsSubmitted || 0))
         .slice(0, 10);
 }

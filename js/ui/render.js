@@ -1049,6 +1049,20 @@ if (!window.__kcsDashboardDateRange) {
         .sort((a, b) => b.approvals - a.approvals)
         .slice(0, 10);
 
+    const collaboratorSource = normalizedArticles.filter(article => {
+        const submittedDate = article._createdAt || dashboardToDate(article.submittedAt) || article._updatedAt;
+        return isDateInRange(submittedDate);
+    });
+    const collaboratorsByPeriod = Object.values(collaboratorSource.reduce((acc, article) => {
+        const rawAuthor = article.createdBy || article.author || article.submittedBy || article.createdById || article.authorId || article.submittedById;
+        if (!rawAuthor) return acc;
+        const name = String(rawAuthor).trim();
+        if (!name) return acc;
+        if (!acc[name]) acc[name] = { name, drafts: 0 };
+        acc[name].drafts += 1;
+        return acc;
+    }, {})).sort((a, b) => b.drafts - a.drafts).slice(0, 10);
+
     container.innerHTML = `
         <div class="dash-saas-header">
             <div class="dash-header-content">
@@ -1057,17 +1071,17 @@ if (!window.__kcsDashboardDateRange) {
                     <i class="ph ph-chart-line-up dash-icon-main"></i>
                     Dashboard Executivo
                 </h2>
-                <div class="dash-saas-subtitle-row">
+                <div class="dash-saas-subtitle-row dash-content-row">
                     <p class="dash-saas-subtitle">
                         Visão de produção, qualidade, reutilização e gargalos da base de conhecimento.
                     </p>
-                    <span class="dash-inline-access"><i class="ph ph-eye"></i> Acessos à base: <strong>${totalKnowledgeAccess}</strong></span>
+                    <span class="dash-inline-access" aria-label="Total de acessos à base"><i class="ph ph-eye"></i> Acessos à base: <strong>${totalKnowledgeAccess}</strong></span>
                 </div>
             </div>
 
-            <div class="dash-period-calendar" role="group" aria-label="Filtro de período do dashboard">
+            <div class="dash-period-calendar dashboard-period-control" role="group" aria-label="Filtro de período do dashboard">
                 <label for="dash-period-range">Período</label>
-                <input type="text" id="dash-period-range" placeholder="YYYY-MM-DD to YYYY-MM-DD" readonly>
+                <input type="text" id="dash-period-range" class="dash-period-range-input" data-coreui-range="true" placeholder="YYYY-MM-DD to YYYY-MM-DD" readonly>
             </div>
         </div>
 
@@ -1333,15 +1347,7 @@ if (!window.__kcsDashboardDateRange) {
                 <div class="table-wrapper">
                     <table class="table-default">
                         <tbody>
-                            ${(finalCollaborators.length ? finalCollaborators : Object.values((() => {
-                                const byAuthor = {};
-                                normalizedArticles.forEach(article => {
-                                    const author = article.createdBy || 'Sistema';
-                                    if (!byAuthor[author]) byAuthor[author] = { name: author, drafts: 0 };
-                                    byAuthor[author].drafts += 1;
-                                });
-                                return byAuthor;
-                            })())).sort((a, b) => (b.draftsSubmitted || b.drafts || 0) - (a.draftsSubmitted || a.drafts || 0)).slice(0, 10)
+                            ${(collaboratorsByPeriod.length ? collaboratorsByPeriod : finalCollaborators)
                             .filter(user => (user.draftsSubmitted || user.drafts || 0) > 0).map((user, index) => `
                                 <tr class="table-row">
                                     <td class="user-cell">
