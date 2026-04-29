@@ -842,7 +842,6 @@ if (!window.__kcsDashboardDateRange) {
     const approvedInPeriod = approvedArticles.filter(article => isDateInRange(article._approvedAt));
 
     const totalViews = normalizedArticles.reduce((acc, article) => acc + (article.views || 0), 0);
-    const periodViews = articlesInPeriod.reduce((acc, article) => acc + (article.views || 0), 0);
     const totalKnowledgeAccess = totalViews;
 
     const approvalRate = normalizedArticles.length > 0
@@ -1058,14 +1057,17 @@ if (!window.__kcsDashboardDateRange) {
                     <i class="ph ph-chart-line-up dash-icon-main"></i>
                     Dashboard Executivo
                 </h2>
-                <p class="dash-saas-subtitle">
-                    Visão de produção, qualidade, reutilização e gargalos da base de conhecimento.
-                    <span class="dash-inline-access">Acessos à base: <strong>${totalKnowledgeAccess}</strong></span>
-                </p>
+                <div class="dash-saas-subtitle-row">
+                    <p class="dash-saas-subtitle">
+                        Visão de produção, qualidade, reutilização e gargalos da base de conhecimento.
+                    </p>
+                    <span class="dash-inline-access"><i class="ph ph-eye"></i> Acessos à base: <strong>${totalKnowledgeAccess}</strong></span>
+                </div>
             </div>
 
             <div class="dash-period-calendar" role="group" aria-label="Filtro de período do dashboard">
-                <label>Período <input type="text" id="dash-period-range" placeholder="Selecione intervalo" readonly></label>
+                <label for="dash-period-range">Período</label>
+                <input type="text" id="dash-period-range" placeholder="YYYY-MM-DD to YYYY-MM-DD" readonly>
             </div>
         </div>
 
@@ -1116,13 +1118,6 @@ if (!window.__kcsDashboardDateRange) {
                 value: `${healthRate}%`,
                 hint: `${healthyArticles.length}/${approvedArticles.length} aprovados`,
                 tone: healthRate < 70 ? 'red' : 'green'
-            })}
-            ${dashboardMetricCard({
-                icon: 'ph-eye',
-                label: 'Acessos à base de conhecimento',
-                value: totalKnowledgeAccess,
-                hint: `${periodViews} no período`,
-                tone: 'blue'
             })}
         </div>
 
@@ -1551,10 +1546,18 @@ if (!window.__kcsDashboardDateRange) {
                 margin-bottom: .35rem;
             }
 
+            .dash-saas-subtitle-row {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                gap: .7rem 1rem;
+                flex-wrap: wrap;
+            }
             .dash-saas-subtitle {
                 color: #9ca3af;
                 font-size: .82rem;
                 margin: 0;
+                flex: 1 1 440px;
             }
 
             .dash-header-content {
@@ -1563,60 +1566,91 @@ if (!window.__kcsDashboardDateRange) {
                 gap: .2rem;
             }
             .dash-inline-access {
-                margin-left: .7rem;
                 color: #cbd5e1;
                 font-size: .76rem;
+                display: inline-flex;
+                align-items: center;
+                gap: .35rem;
+                white-space: nowrap;
+                margin-left: auto;
+                flex-shrink: 0;
+            }
+            .dash-inline-access i {
+                color: #93c5fd;
+                font-size: .92rem;
             }
             .dash-period-calendar {
                 display: flex;
-                gap: .6rem;
-                padding: .25rem;
-                background: rgba(255,255,255,.035);
-                border: 1px solid rgba(255,255,255,.08);
-                border-radius: .75rem;
-            }
-            .dash-period-calendar label {
-                display: flex;
                 flex-direction: column;
-                font-size: .72rem;
-                color: #9ca3af;
+                align-items: flex-start;
                 gap: .2rem;
-            }
-            .dash-period-calendar input[type="date"] {
-                background: rgba(17, 24, 39, .85);
-                border: 1px solid rgba(255, 255, 255, .15);
-                border-radius: .45rem;
-                color: #e5e7eb;
-                padding: .35rem .45rem;
-            }
-            .dash-period-calendar input {
-                background: #1e1e1e;
-                border: 1px solid #3c3c3c;
-                color: #cccccc;
+                padding: 6px 8px;
+                margin-left: auto;
                 min-width: 220px;
-            }
-            .flatpickr-calendar {
-                background: #1e1e1e;
-                border: 1px solid #2d2d2d;
-                color: #d4d4d4;
+                background: rgba(15, 23, 42, 0.35);
+                border: 1px solid rgba(148, 163, 184, 0.18);
+                border-radius: 10px;
                 box-shadow: none;
             }
+            .dash-period-calendar label {
+                font-size: 10px;
+                color: #94a3b8;
+                font-weight: 500;
+                margin-bottom: 4px;
+                line-height: 1;
+            }
+            .dash-period-calendar input {
+                height: 30px;
+                font-size: 12px;
+                background: rgba(2, 6, 23, 0.55);
+                border: 1px solid rgba(148, 163, 184, 0.22);
+                border-radius: 7px;
+                color: #e5f0ff;
+                min-width: 220px;
+                padding: 0 10px;
+                box-shadow: none;
+            }
+            .dash-period-calendar input:focus {
+                outline: none;
+                border-color: rgba(59, 130, 246, 0.65);
+                box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+            }
+            .flatpickr-calendar {
+                background: #141a24;
+                border: 1px solid rgba(148, 163, 184, 0.2);
+                color: #d4dbe7;
+                box-shadow: none;
+                border-radius: 8px;
+                z-index: 80;
+            }
             .flatpickr-day {
-                color: #d4d4d4;
+                color: #d4dbe7;
+                border-radius: 6px;
             }
             .flatpickr-day:hover {
-                background: #2a2d2e;
+                background: rgba(148, 163, 184, 0.18);
             }
+            .flatpickr-day.selected,
+            .flatpickr-day.selected:hover,
             .flatpickr-day.startRange,
             .flatpickr-day.endRange {
-                background: #007acc;
-                color: white;
+                background: rgba(59, 130, 246, 0.45);
+                border-color: rgba(59, 130, 246, 0.45);
+                color: #f8fafc;
             }
             .flatpickr-day.inRange {
-                background: rgba(0, 122, 204, 0.25);
+                background: rgba(59, 130, 246, 0.2);
+                box-shadow: none;
             }
             .flatpickr-months {
-                background: #1e1e1e;
+                background: #141a24;
+            }
+            .flatpickr-monthDropdown-months,
+            .numInputWrapper .numInput {
+                color: #d4dbe7;
+            }
+            .flatpickr-weekday {
+                color: #94a3b8;
             }
 
             .dash-saas-grid {
@@ -1912,15 +1946,32 @@ if (!window.__kcsDashboardDateRange) {
 
                 .dash-period-calendar {
                     width: 100%;
-                    overflow-x: auto;
+                    margin-left: 0;
+                }
+                .dash-inline-access {
+                    margin-left: 0;
                 }
 
                 .dash-saas-grid {
-                    grid-template-columns: 1fr;
+                    grid-template-columns: repeat(2, minmax(0, 1fr));
                 }
 
                 .dash-alert-grid {
                     grid-template-columns: 1fr;
+                }
+            }
+            @media (max-width: 560px) {
+                .dash-saas-grid {
+                    grid-template-columns: 1fr;
+                }
+                .dash-period-calendar input {
+                    min-width: 100%;
+                    width: 100%;
+                }
+                .dash-inline-access {
+                    white-space: normal;
+                    width: 100%;
+                    justify-content: flex-start;
                 }
             }
         </style>
@@ -1942,7 +1993,9 @@ function dashboardInitFlatpickrRange(selectedDateRange) {
             mode: 'range',
             dateFormat: 'Y-m-d',
             defaultDate,
-            locale: 'pt',
+            locale: {
+                rangeSeparator: ' to '
+            },
             onClose: (selectedDates) => {
                 if (!selectedDates || selectedDates.length < 2) return;
                 const toIso = (d) => d.toISOString().slice(0, 10);
