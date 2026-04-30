@@ -428,78 +428,34 @@ async function init() {
         exposeGlobalAPI();
         injectReadmeMenuButton();
 
-        // INJEÇÃO DA INTERFACE PREMIUM SAAS
-        const form = document.getElementById('login-form');
-        if (form) {
-            form.innerHTML = `
-                <div class="flex flex-col items-center mb-10 text-center animate-fade-in group">
-                    <div class="brand-logo-box hover:scale-[1.08] hover:-translate-y-1 hover:shadow-[0_15px_40px_rgba(0,127,212,0.6)] transition-all duration-300 cursor-default" style="width: 64px; height: 60px; border-radius: 16px; margin-bottom: 20px; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #007fd4 0%, #3b82f6 100%); box-shadow: 0 10px 30px rgba(0, 122, 204, 0.3);">
-                        <i class="ph-bold ph-hexagon" style="font-size: 32px; color: white;"></i>
-                    </div>
-                    <h2 style="font-size: 32px; display: flex; gap: 4px; line-height: 1;">
-                        <span style="font-weight: 900; color: white;">KCS</span>
-                        <span style="font-weight: 200; color: #94a3b8;">Hub</span>
-                    </h2>
-                    <p style="font-size: 14px; color: #64748b; margin-top: 10px;">Knowledge Management System</p>
-                </div>
-
-                <div class="space-y-4">
-                    <div>
-                        <label style="display:block; font-size: 10px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">E-mail Corporativo</label>
-                        <input type="email" id="login-email" placeholder="nome@empresa.com" class="login-input-custom w-full bg-black/20 border border-white/10 px-4 py-3 rounded-xl text-white outline-none focus:ring-1 focus:ring-blue-500 transition-all">
-                    </div>
-                    <div>
-                        <label style="display:block; font-size: 10px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">Senha</label>
-                        <input type="password" id="login-password" placeholder="••••••••" class="login-input-custom w-full bg-black/20 border border-white/10 px-4 py-3 rounded-xl text-white outline-none focus:ring-1 focus:ring-blue-500 transition-all">
-                    </div>
-                    <button type="button" id="btn-email-login" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3.5 rounded-xl transition-all shadow-lg active:scale-95" style="margin-top: 10px;">
-                        Acessar Plataforma
-                    </button>
-                </div>
-
-                <div class="flex items-center my-8 opacity-20">
-                    <div class="flex-1 border-t border-white"></div>
-                    <span class="px-4 text-[10px] font-black uppercase text-white">OU</span>
-                    <div class="flex-1 border-t border-white"></div>
-                </div>
-
-                <div class="grid grid-cols-2 gap-3">
-                    <button type="button" id="btn-google-login" class="btn-sso-premium flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold border border-white/10 hover:bg-white/5 transition-all">
-                        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="18"> Google
-                    </button>
-                    <button type="button" id="btn-microsoft-login" class="btn-sso-premium flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold border border-white/10 hover:bg-white/5 transition-all">
-                        <svg width="18" viewBox="0 0 21 21"><path fill="#f25022" d="M1 1h9v9H1z"/><path fill="#00a4ef" d="M11 1h9v9h-9z"/><path fill="#7fba00" d="M1 11h9v9H1z"/><path fill="#ffb900" d="M11 11h9v9h-9z"/></svg> Microsoft
-                    </button>
-                </div>
-
-                <div class="mt-10 text-center">
-                    <p style="font-size: 13px; color: #64748b;">
-                        Novo por aqui? 
-                        <button type="button" id="btn-email-register" class="bg-transparent border-none p-0 ml-1 text-blue-500 hover:text-blue-400 font-bold hover:underline outline-none cursor-pointer transition-colors">
-                            Solicitar Convite
-                        </button>
-                    </p>
-                </div>
-            `;
-            
-            // EVENTOS DE AUTENTICAÇÃO
-            document.getElementById('btn-google-login').addEventListener('click', async () => {
+        // ========================================================
+        // LIGAÇÃO DIRETA DOS BOTÕES DE AUTENTICAÇÃO
+        // ========================================================
+        const btnGoogle = document.getElementById('btn-google-login');
+        if (btnGoogle) {
+            btnGoogle.addEventListener('click', async () => {
                 showLoading(true);
                 if (loadingMsg) loadingMsg.textContent = "Abrindo Google...";
                 const { loginWithGoogle } = await import('./auth.js');
                 const res = await loginWithGoogle();
                 if (!res.success) { showToast(res.message, 'error'); showLoading(false); }
             });
+        }
 
-            document.getElementById('btn-microsoft-login').addEventListener('click', async () => {
+        const btnMicrosoft = document.getElementById('btn-microsoft-login');
+        if (btnMicrosoft) {
+            btnMicrosoft.addEventListener('click', async () => {
                 showLoading(true);
                 if (loadingMsg) loadingMsg.textContent = "Abrindo Microsoft...";
                 const { loginWithMicrosoft } = await import('./auth.js');
                 const res = await loginWithMicrosoft();
                 if (!res.success) { showToast(res.message, 'error'); showLoading(false); }
             });
+        }
 
-            document.getElementById('btn-email-login').addEventListener('click', async () => {
+        const btnEmail = document.getElementById('btn-email-login');
+        if (btnEmail) {
+            btnEmail.addEventListener('click', async () => {
                 const email = document.getElementById('login-email').value;
                 const pass = document.getElementById('login-password').value;
                 if (!email || !pass) return showToast('Preencha e-mail e senha.', 'warning');
@@ -509,8 +465,11 @@ async function init() {
                 const res = await loginWithEmail(email, pass);
                 if (!res.success) { showToast(res.message, 'error'); showLoading(false); }
             });
+        }
 
-            document.getElementById('btn-email-register').addEventListener('click', async () => {
+        const btnRegister = document.getElementById('btn-email-register');
+        if (btnRegister) {
+            btnRegister.addEventListener('click', async () => {
                 const email = document.getElementById('login-email').value;
                 const pass = document.getElementById('login-password').value;
                 if (!email || pass.length < 6) return showToast('Insira e-mail válido e senha maior que 6 caracteres.', 'warning');
@@ -522,6 +481,9 @@ async function init() {
             });
         }
 
+        // ========================================================
+        // VERIFICAÇÃO DE SESSÃO
+        // ========================================================
         if (loadingMsg) loadingMsg.textContent = "Verificando sessão...";
         setAuthStatus('checking');
         
@@ -540,12 +502,6 @@ async function init() {
         showLoading(false);
     }
 }
-
-
-
-
-
-
 
 async function enterApp(user) { 
     try {
@@ -682,25 +638,19 @@ function injectReadmeMenuButton() {
 }
 
 async function refreshView() {
-    if (!isUserApproved(getCurrentUser())) {
-        renderPendingApprovalScreen();
-        return;
-    }
-
     appState.articles = await listArticles();
 
-if (canUseFeature(FEATURE_FLAGS.SQL_LIBRARY)) {
-    appState.sqlScripts = await listSqlScripts();
-} else {
-    appState.sqlScripts = [];
-
-    if (appState.currentView === 'sql') {
-        appState.currentView = 'articles';
-        appState.currentSqlFilter = 'all';
+    if (canUseFeature(FEATURE_FLAGS.SQL_LIBRARY)) {
+        appState.sqlScripts = await listSqlScripts();
+    } else {
+        appState.sqlScripts = [];
+        if (appState.currentView === 'sql') {
+            appState.currentView = 'articles';
+            appState.currentSqlFilter = 'all';
+        }
     }
-}
 
-updateActionButtons();
+    updateActionButtons();
     
     const articleCounts = computeCounts(appState.articles);
     const sqlCounts = computeSqlCounts(appState.sqlScripts);
@@ -714,14 +664,55 @@ updateActionButtons();
         if(dash) dash.classList.remove('hidden');
         
         try {
-            const [analysts, collaborators] = await Promise.all([
-                getTopAnalysts(),
-                getTopCollaborators()
-            ]);
+            // O FILTRO ANTIMÁQUINA E ANTI-FANTASMA
+            const sanitizeName = (name) => {
+                const cleanName = String(name || '').trim();
+                if (!cleanName || cleanName === 'undefined' || cleanName === 'null') return null;
+                if (cleanName.toLowerCase() === 'sistema' || cleanName.toLowerCase() === 'system' || cleanName.toLowerCase() === 'admin') return null;
+                return cleanName;
+            };
+
+            const approvalCounts = {};
+            const collabCounts = {};
+
+            // VARREDURA NOS DADOS LOCAIS DA TELA
+            appState.articles.forEach(art => {
+                
+                // 1. TOP ANALISTAS (Quem fez a REVISÃO/APROVAÇÃO)
+                // Usando o campo EXATO do seu banco de dados: `updatedBy`
+                if (art.status === 'published' || art.status === 'approved') {
+                    // Pega estritamente o updatedBy (Revisor)
+                    const approver = sanitizeName(art.updatedBy || art.approvedBy || art.reviewedBy);
+                    if (approver) {
+                        approvalCounts[approver] = (approvalCounts[approver] || 0) + 1;
+                    }
+                }
+
+                // 2. TOP COLABORADORES (Quem CRIOU o documento)
+                // Usando o campo EXATO do seu banco de dados: `createdBy`
+                const creator = sanitizeName(art.createdBy || art.author);
+                if (creator) {
+                    collabCounts[creator] = (collabCounts[creator] || 0) + 1;
+                }
+            });
+
+            // Transforma os objetos em Arrays, ordena e pega o Top 5
+            const analysts = Object.entries(approvalCounts)
+                .map(([name, count]) => ({ name, count, value: count, total: count }))
+                .sort((a, b) => b.count - a.count)
+                .slice(0, 5);
+
+            const collaborators = Object.entries(collabCounts)
+                .map(([name, count]) => ({ name, count, value: count, total: count }))
+                .sort((a, b) => b.count - a.count)
+                .slice(0, 5);
+
+            // Renderiza o Dashboard com os dados reais do banco
             renderDashboard(appState.articles, appState.sqlScripts, analysts, collaborators);
+            
         } catch (error) {
-            console.warn("Aviso: Não foi possível carregar os Rankings do Firestore. Usando fallback dinâmico.", error);
-            renderDashboard(appState.articles, appState.sqlScripts);
+            console.warn("Aviso: Falha na renderização do Dashboard.", error);
+            renderDashboard(appState.articles, appState.sqlScripts, [], []);
         }
         
     } else if (appState.currentView === 'articles') {

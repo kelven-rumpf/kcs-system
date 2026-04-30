@@ -1957,7 +1957,7 @@ const activeUsersHtml = adminSection(
                     </select>
                 </div>
             </div>
-        </div>
+        </div> 
 
         <!-- Tabela de Usuários -->
         <div class="rounded-xl overflow-hidden shadow-sm" style="background-color: var(--color-sidebar-background); border: 1px solid var(--color-border-subtle);">

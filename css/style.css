@@ -4841,3 +4841,59 @@ body.sidebar-collapsed .brand-text-group {
 #toast-container > div.info i, 
 #toast-container > div.bg-blue-500 i { color: #3794ff !important; }
 
+
+/* ==========================================================================
+   FIX ESTRUTURAL DEFINITIVO: CHATBOT LAYOUT (FLEXBOX)
+   ========================================================================== */
+
+/* 1. O Painel principal TEM que ser uma coluna flexível e não pode vazar */
+#chatbot-panel {
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+}
+
+/* 2. A MÁGICA: min-height: 0 avisa o navegador que essa área pode encolher 
+   para caber na tela, forçando a barra de rolagem a aparecer em vez de empurrar o input */
+#chatbot-messages {
+    flex: 1 1 auto !important;
+    overflow-y: auto !important;
+    min-height: 0 !important; 
+    padding-bottom: 10px !important;
+}
+
+/* 3. O formulário vira uma rocha: não cresce, NÃO ENCOLHE (0 0 auto) */
+#chatbot-form {
+    flex: 0 0 auto !important; 
+    display: flex !important;
+    align-items: flex-end !important; /* Se o texto tiver várias linhas, o botão fica alinhado por baixo */
+    padding: 12px 16px !important;
+    min-height: 64px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    border-top: 1px solid var(--color-border-subtle) !important;
+    background-color: var(--color-sidebar-background, #1e1e1e) !important;
+}
+
+/* 4. O Input ganha altura mínima intocável */
+#chatbot-input {
+    flex: 1 1 auto !important;
+    min-height: 40px !important;
+    height: 40px; /* Será sobrescrito pelo JS se o texto crescer, mas nunca será menor que 40px */
+    padding: 8px 14px !important;
+    box-sizing: border-box !important;
+    border-radius: 8px !important;
+    margin-right: 8px !important;
+}
+
+/* 5. Botão de enviar fixo e quadrado */
+.chatbot-send {
+    flex: 0 0 40px !important;
+    width: 40px !important;
+    height: 40px !important;
+    min-height: 40px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border-radius: 8px !important;
+}

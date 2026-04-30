@@ -77,11 +77,55 @@
 
   <div id="login-screen" style="display:none;" class="hidden fixed inset-0 z-[100] flex items-center justify-center login-page-bg transition-colors duration-500 overflow-hidden" aria-hidden="true" inert>
     <div class="login-container relative w-full max-w-[420px] p-8 sm:p-10 rounded-[18px] shadow-2xl flex flex-col transform transition-all">
-        <span class="absolute top-6 right-6 text-[9px] login-text-muted font-mono font-bold tracking-widest px-3 py-1.5 rounded border login-border-subtle opacity-70">v1.0.1</span>
+        <span class="absolute top-6 right-6 text-[9px] text-gray-500 font-mono font-bold tracking-widest px-3 py-1.5 rounded border border-gray-700 opacity-70">v2.0.0</span>
         
-        <div id="login-form" class="w-full"></div>
-        <div class="mt-8 flex items-center justify-center gap-2 text-xs login-text-muted font-medium w-full">
-            <i class="ph ph-lock text-[16px]"></i> Acesso via Whitelist SaaS
+        <div class="flex flex-col items-center mb-10 text-center animate-fade-in group mt-4">
+            <div class="brand-logo-box hover:scale-[1.08] hover:-translate-y-1 hover:shadow-[0_15px_40px_rgba(0,127,212,0.6)] transition-all duration-300 cursor-default" style="width: 64px; height: 60px; border-radius: 16px; margin-bottom: 20px; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #007fd4 0%, #3b82f6 100%); box-shadow: 0 10px 30px rgba(0, 122, 204, 0.3);">
+                <i class="ph-bold ph-hexagon" style="font-size: 32px; color: white;"></i>
+            </div>
+            <h2 style="font-size: 32px; display: flex; gap: 4px; line-height: 1;">
+                <span style="font-weight: 900; color: white;">KCS</span>
+                <span style="font-weight: 200; color: #94a3b8;">Hub</span>
+            </h2>
+            <p style="font-size: 14px; color: #64748b; margin-top: 10px;">Knowledge Management System</p>
+        </div>
+
+        <div class="space-y-4 w-full">
+            <div>
+                <label style="display:block; font-size: 10px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">E-mail Corporativo</label>
+                <input type="email" id="login-email" placeholder="nome@empresa.com" class="w-full bg-black/20 border border-white/10 px-4 py-3.5 rounded-xl text-white outline-none focus:ring-1 focus:ring-blue-500 transition-all text-sm">
+            </div>
+            <div>
+                <label style="display:block; font-size: 10px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">Senha</label>
+                <input type="password" id="login-password" placeholder="••••••••" class="w-full bg-black/20 border border-white/10 px-4 py-3.5 rounded-xl text-white outline-none focus:ring-1 focus:ring-blue-500 transition-all text-sm">
+            </div>
+            <button type="button" id="btn-email-login" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-xl transition-all shadow-lg active:scale-95 mt-2">
+                Acessar Plataforma
+            </button>
+        </div>
+
+        <div class="flex items-center my-8 w-full opacity-20">
+            <div class="flex-1 border-t border-white"></div>
+            <span class="px-4 text-[10px] font-black uppercase text-white">OU</span>
+            <div class="flex-1 border-t border-white"></div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3 w-full">
+            <button type="button" id="btn-google-login" class="flex items-center justify-center gap-2 py-3.5 rounded-xl text-sm font-semibold border border-white/10 text-gray-300 hover:bg-white/5 transition-all">
+                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="18" alt="Google"> Google
+            </button>
+            <button type="button" id="btn-microsoft-login" class="flex items-center justify-center gap-2 py-3.5 rounded-xl text-sm font-semibold border border-white/10 text-gray-300 hover:bg-white/5 transition-all">
+                <svg width="18" viewBox="0 0 21 21"><path fill="#f25022" d="M1 1h9v9H1z"/><path fill="#00a4ef" d="M11 1h9v9h-9z"/><path fill="#7fba00" d="M1 11h9v9H1z"/><path fill="#ffb900" d="M11 11h9v9h-9z"/></svg> Microsoft
+            </button>
+        </div>
+
+        <div class="mt-8 text-center w-full">
+            <p style="font-size: 13px; color: #64748b;">
+                 
+                <button type="button" id="btn-email-register" class="bg-transparent border-none p-0 ml-1 text-blue-500 hover:text-blue-400 font-bold hover:underline outline-none cursor-pointer transition-colors">
+                    
+                </button>
+            </p>
         </div>
     </div>
   </div>
@@ -264,7 +308,7 @@
           <li id="settings-admin-item" onclick="window.__kcs.openSettings()">Administração</li>
           <li onclick="window.__kcs.openCategoryManager()">Gerenciar Categorias</li>
           <li class="menu-separator"></li>
-          <li onclick="window.__kcs.toggleTheme()">Alternar Tema</li>
+          
       </ul>
   </div>
 

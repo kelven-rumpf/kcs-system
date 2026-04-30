@@ -1,6 +1,6 @@
 /**
  * editor.js — Motor de Rich Text, IA e Renderização Visual
- * Correções visuais do Chatbot: Rodapé 'Assistente' (borda transparente) e Painel (tema dark). (v1.0.1, UTF-8)
+ * Correções visuais do Chatbot: Rodapé 'Assistente' (borda transparente) e Painel (tema dark). (v2.0.2, UTF-8)
  */
 
 import { canUseFeature, FEATURE_FLAGS } from '../services/featureAccess.js';

@@ -2,7 +2,7 @@
  * ui/chatbot.js — Motor do Chatbot IA (SaaS Premium)
  * Assistente Sensei: Especialista KCS Hub
  * Refatorado para Design System Semântico (Workbench)
- */ 
+ */
 
 import { CONFIG, TENANT_KEYS } from '../config.js';
 import { searchDirect, searchSqlScripts } from '../services/search.js';
@@ -719,7 +719,7 @@ function isCacheEntryValid(entry, user, docs) {
 
 function buildRelatedProceduresHtml(articles, user) {
     if (!Array.isArray(articles) || !articles.length) {
-        return `<div class="chat-related-procedures"><p class="chat-related-empty">${SAFE_NO_KNOWLEDGE_MESSAGE}</p></div>`;
+        return ``; // Retorna vazio em vez da mensagem de erro duplicada
     }
 
     const cards = articles
@@ -745,7 +745,7 @@ function buildRelatedProceduresHtml(articles, user) {
         .join('');
 
     if (!cards) {
-        return `<div class="chat-related-procedures"><p class="chat-related-empty">${SAFE_NO_KNOWLEDGE_MESSAGE}</p></div>`;
+        return ``; // Retorna vazio em vez da mensagem de erro duplicada
     }
 
     return `<section class="chat-related-procedures"><h3>Procedimentos relacionados</h3>${cards}</section>`;

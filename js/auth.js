@@ -265,6 +265,7 @@ export async function logout() {
     }
 }
 
+
 // ==========================================
 // UTILITÁRIOS E PERMISSÕES
 // ==========================================
@@ -278,7 +279,10 @@ export function hasPermission(action) {
     if (r === ROLES.SUPER_ADMIN) return true; 
     if (r === ROLES.ADMIN) return true; 
     if (r === ROLES.ANALYST) return ['create_article', 'edit_article', 'delete_article', 'validate_article', 'read_article', 'search', 'manage_sql'].includes(action);
-    if (r === ROLES.USER) return ['read_article', 'like_article', 'comment_article', 'search'].includes(action);
+    
+    // LINHA ALTERADA: Mantido o 'create_article', adicionado o 'manage_sql', e removido o 'edit_article'
+    if (r === ROLES.USER) return ['create_article', 'read_article', 'like_article', 'comment_article', 'search', 'manage_sql'].includes(action);
+    
     return false;
 }
 
