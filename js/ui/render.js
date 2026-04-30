@@ -1032,6 +1032,12 @@ if (!window.__kcsDashboardDateRange) {
     }
 
     const impactRanking = dashboardBuildImpactRanking(normalizedArticles).slice(0, 5);
+    const isValidDashboardActorName = (value) => {
+        const name = String(value || '').trim();
+        if (!name) return false;
+        const normalized = name.toLowerCase();
+        return !['sistema', 'system', 'admin', 'undefined', 'null'].includes(normalized);
+    };
     const analystNameSet = new Set((topAnalysts || []).map(user =>
         String(user.displayName || user.name || '').trim().toLowerCase()
     ).filter(Boolean));
@@ -1041,7 +1047,8 @@ if (!window.__kcsDashboardDateRange) {
         if (!approvalDate) return;
         if (periodStart && approvalDate < periodStart) return;
         if (periodEnd && approvalDate > periodEnd) return;
-        const approverName = String(article.approvedBy || article.validatedBy || article.reviewedBy || 'Sistema').trim();
+        const approverName = String(article.approvedBy || article.validatedBy || article.reviewedBy || article.updatedBy || '').trim();
+        if (!isValidDashboardActorName(approverName)) return;
         const normalizedApprover = approverName.toLowerCase();
         if (!analystApprovals[approverName]) {
             analystApprovals[approverName] = { name: approverName, approvals: 0 };
@@ -1060,7 +1067,7 @@ if (!window.__kcsDashboardDateRange) {
         const rawAuthor = article.createdBy || article.author || article.submittedBy || article.createdById || article.authorId || article.submittedById;
         if (!rawAuthor) return acc;
         const name = String(rawAuthor).trim();
-        if (!name) return acc;
+        if (!isValidDashboardActorName(name)) return acc;
         if (!acc[name]) acc[name] = { name, drafts: 0 };
         acc[name].drafts += 1;
         return acc;
@@ -2678,5 +2685,4 @@ export function removeModalElements(modalId) {
     updateOverlayState();
     updateDockState();
 }
-
 
