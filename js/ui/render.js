@@ -157,16 +157,15 @@ export function addNotificationUI(title, subtitle, articleId) {
     }
 }
 
-export function renderArticleGrid(articles, paginationConfig = null) {
+export function renderArticleGrid(articles, allArticles, paginationConfig = null) {
     const container = document.getElementById('articles-grid');
     if (!container) return;
 
     const currentViewMode = localStorage.getItem('kcs_view_mode') || 'grid';
 
-    // Extrai autores únicos para o filtro (ignorando vazios/nulos)
-    const uniqueAuthors = [...new Set(articles.map(a => a.createdBy).filter(Boolean))].sort();
+    // Extrai autores de TODA a base para que o filtro nunca fique vazio
+    const uniqueAuthors = [...new Set(allArticles.map(a => a.createdBy).filter(Boolean))].sort();
 
-    // NOVO CABEÇALHO: Inclui o Título, Filtros (Dropdowns) e os Botões (Cards/Tabela)
     let html = `
         <div class="view-header" style="flex-wrap: wrap; gap: 16px;">
             <h2 class="view-title">
@@ -176,12 +175,12 @@ export function renderArticleGrid(articles, paginationConfig = null) {
             <div style="display: flex; align-items: center; gap: 12px; margin-left: auto;">
                 
                 <div style="display: flex; gap: 8px; border-right: 1px solid var(--color-border-subtle); padding-right: 12px;">
-                    <select id="grid-filter-author" class="vscode-select hidden sm:block">
+                    <select id="grid-filter-author" class="vscode-select">
                         <option value="all">Todos os Autores</option>
                         ${uniqueAuthors.map(author => `<option value="${escapeHtml(author)}">${escapeHtml(author)}</option>`).join('')}
                     </select>
                     
-                    <select id="grid-filter-status" class="vscode-select hidden sm:block">
+                    <select id="grid-filter-status" class="vscode-select">
                         <option value="all">Todos os Status</option>
                         <option value="approved">Aprovados</option>
                         <option value="pendente_revisao">Em Revisão</option>
@@ -201,56 +200,140 @@ export function renderArticleGrid(articles, paginationConfig = null) {
         </div>
     `;
 
+    // CORREÇÃO: Removido o "return;" para que o código continue e reative os filtros!
     if (!articles || articles.length === 0) {
-        container.innerHTML = html + `<div class="empty-state"><i class="ph ph-folder-open empty-icon"></i><p>Nenhum procedimento encontrado</p></div>`; 
-        return;
-    }
-
-    if (currentViewMode === 'grid') {
-        html += `<div class="content-grid">`;
-        html += articles.map((article) => renderArticleCard(article)).join('');
-        html += `</div>`;
+        html += `<div class="empty-state"><i class="ph ph-folder-open empty-icon"></i><p>Nenhum procedimento encontrado</p></div>`; 
     } else {
-        html += renderArticleTable(articles);
-    }
+        if (currentViewMode === 'grid') {
+            html += `<div class="content-grid">`;
+            html += articles.map((article) => renderArticleCard(article)).join('');
+            html += `</div>`;
+        } else {
+            html += renderArticleTable(articles);
+        }
 
-    if (paginationConfig) {
-        html += `
-            <div class="pagination-footer">
-                <span class="pagination-info">
-                    Mostrando <strong>${articles.length}</strong> de <strong>${paginationConfig.totalItems}</strong> procedimentos &mdash; Página ${paginationConfig.currentPage} de ${paginationConfig.totalPages}
-                </span>
-                <div class="pagination-controls">
-                    <button onclick="window.__kcs.loadPage('prev')" class="btn-pagination" ${!paginationConfig.hasPrev ? 'disabled' : ''}>
-                        <i class="ph ph-caret-left"></i> Anterior
-                    </button>
-                    <button onclick="window.__kcs.loadPage('next')" class="btn-pagination" ${!paginationConfig.hasNext ? 'disabled' : ''}>
-                        Próxima <i class="ph ph-caret-right"></i>
-                    </button>
+        if (paginationConfig) {
+            html += `
+                <div class="pagination-footer">
+                    <span class="pagination-info">
+                        Mostrando <strong>${articles.length}</strong> de <strong>${paginationConfig.totalItems}</strong> &mdash; Página ${paginationConfig.currentPage} de ${paginationConfig.totalPages}
+                    </span>
+                    <div class="pagination-controls">
+                        <button onclick="window.__kcs.loadPage('prev')" class="btn-pagination" ${!paginationConfig.hasPrev ? 'disabled' : ''}>
+                            <i class="ph ph-caret-left"></i> Anterior
+                        </button>
+                        <button onclick="window.__kcs.loadPage('next')" class="btn-pagination" ${!paginationConfig.hasNext ? 'disabled' : ''}>
+                            Próxima <i class="ph ph-caret-right"></i>
+                        </button>
+                    </div>
                 </div>
-            </div>
-        `;
+            `;
+        }
     }
 
     container.innerHTML = html;
     
-    // --- LIGAÇÃO DOS EVENTOS DE FILTRO ---
-    // Após injetar o HTML, conectamos a função que vai recarregar a lista quando o usuário mudar a opção
+    // Vinculação de eventos garantida (mesmo se a tela estiver vazia)
     setTimeout(() => {
         const authorFilter = document.getElementById('grid-filter-author');
         const statusFilter = document.getElementById('grid-filter-status');
         
         if (authorFilter && window.__kcs.applyGridFilters) {
-            // Mantém a seleção atual caso já exista filtro aplicado
-            if (window.__kcs.currentGridAuthor) authorFilter.value = window.__kcs.currentGridAuthor;
-            authorFilter.addEventListener('change', (e) => window.__kcs.applyGridFilters('author', e.target.value));
+            authorFilter.value = window.__kcs.currentGridAuthor || 'all';
+            authorFilter.onchange = (e) => window.__kcs.applyGridFilters('author', e.target.value);
         }
         
         if (statusFilter && window.__kcs.applyGridFilters) {
-            if (window.__kcs.currentGridStatus) statusFilter.value = window.__kcs.currentGridStatus;
-            statusFilter.addEventListener('change', (e) => window.__kcs.applyGridFilters('status', e.target.value));
+            statusFilter.value = window.__kcs.currentGridStatus || 'all';
+            statusFilter.onchange = (e) => window.__kcs.applyGridFilters('status', e.target.value);
         }
-    }, 50);
+    }, 10);
+}
+
+export function renderSqlGrid(scripts, allScripts, paginationConfig = null) {
+  const container = document.getElementById('articles-grid');
+  if (!container) return;
+
+  const currentViewMode = localStorage.getItem('kcs_sql_view_mode') || 'grid';
+  const uniqueAuthors = [...new Set(allScripts.map(s => s.createdBy).filter(Boolean))].sort();
+
+  let html = `
+    <div class="view-header" style="flex-wrap: wrap; gap: 16px;">
+        <h2 class="view-title">
+            <i class="ph ph-database text-purple-500"></i> BIBLIOTECA SQL
+        </h2>
+        <div style="display: flex; align-items: center; gap: 12px; margin-left: auto;">
+            
+            <div style="display: flex; gap: 8px; border-right: 1px solid var(--color-border-subtle); padding-right: 12px;">
+                <select id="grid-sql-filter-author" class="vscode-select">
+                    <option value="all">Todos os Autores</option>
+                    ${uniqueAuthors.map(author => `<option value="${escapeHtml(author)}">${escapeHtml(author)}</option>`).join('')}
+                </select>
+                
+                <select id="grid-sql-filter-op" class="vscode-select">
+                    <option value="all">Todas as Operações</option>
+                    <option value="SELECT">Consultas (SELECT)</option>
+                    <option value="UPDATE">Alterações (UPDATE)</option>
+                    <option value="DELETE">Exclusões (DELETE)</option>
+                </select>
+            </div>
+
+            <div class="view-toggles">
+                <button onclick="window.__kcs.setSqlViewMode('grid')" class="view-toggle-btn ${currentViewMode === 'grid' ? 'active-view' : ''}">
+                    <i class="ph ph-squares-four"></i> <span>Cards</span>
+                </button>
+                <button onclick="window.__kcs.setSqlViewMode('table')" class="view-toggle-btn ${currentViewMode === 'table' ? 'active-view' : ''}">
+                    <i class="ph ph-list-dashes"></i> <span>Tabela</span>
+                </button>
+            </div>
+        </div>
+    </div>
+  `;
+
+  // CORREÇÃO: Removido o "return;"
+  if (!scripts || scripts.length === 0) {
+    html += `<div class="empty-state"><i class="ph ph-database empty-icon text-purple-500/50"></i><p>Nenhum script SQL encontrado</p></div>`; 
+  } else {
+      if (currentViewMode === 'grid') {
+        html += `<div class="content-grid">`;
+        html += scripts.map((script) => renderSqlCard(script)).join('');
+        html += `</div>`;
+      } else {
+        html += renderSqlTable(scripts);
+      }
+
+      if (paginationConfig) {
+        html += `
+            <div class="pagination-footer">
+                <span class="pagination-info">
+                    Mostrando <strong>${scripts.length}</strong> de <strong>${paginationConfig.totalItems}</strong> &mdash; Página ${paginationConfig.currentPage} de ${paginationConfig.totalPages}
+                </span>
+                <div class="pagination-controls">
+                    <button onclick="window.__kcs.loadPage('prev')" class="btn-pagination" ${!paginationConfig.hasPrev ? 'disabled' : ''}><i class="ph ph-caret-left"></i> Anterior</button>
+                    <button onclick="window.__kcs.loadPage('next')" class="btn-pagination" ${!paginationConfig.hasNext ? 'disabled' : ''}>Próxima <i class="ph ph-caret-right"></i></button>
+                </div>
+            </div>
+        `;
+      }
+  }
+
+  container.innerHTML = html;
+
+  // Vinculação de eventos garantida
+  setTimeout(() => {
+      const authorFilter = document.getElementById('grid-sql-filter-author');
+      const opFilter = document.getElementById('grid-sql-filter-op');
+      
+      if (authorFilter && window.__kcs.applyGridFilters) {
+          authorFilter.value = window.__kcs.currentGridSqlAuthor || 'all';
+          authorFilter.onchange = (e) => window.__kcs.applyGridFilters('sql-author', e.target.value);
+      }
+      
+      if (opFilter && window.__kcs.applyGridFilters) {
+          opFilter.value = window.__kcs.currentGridSqlOp || 'all';
+          opFilter.onchange = (e) => window.__kcs.applyGridFilters('sql-op', e.target.value);
+      }
+  }, 10);
 }
 
 function renderArticleTable(articles) {
@@ -385,90 +468,7 @@ export function renderArticleCard(article) {
   `;
 }
 
-export function renderSqlGrid(scripts, paginationConfig = null) {
-  const container = document.getElementById('articles-grid');
-  if (!container) return;
 
-  const currentViewMode = localStorage.getItem('kcs_sql_view_mode') || 'grid';
-  const uniqueAuthors = [...new Set(scripts.map(s => s.createdBy).filter(Boolean))].sort();
-
-  let html = `
-    <div class="view-header" style="flex-wrap: wrap; gap: 16px;">
-        <h2 class="view-title">
-            <i class="ph ph-database text-purple-500"></i> BIBLIOTECA SQL
-        </h2>
-        <div style="display: flex; align-items: center; gap: 12px; margin-left: auto;">
-            
-            <div style="display: flex; gap: 8px; border-right: 1px solid var(--color-border-subtle); padding-right: 12px;">
-                <select id="grid-sql-filter-author" class="vscode-select hidden sm:block">
-                    <option value="all">Todos os Autores</option>
-                    ${uniqueAuthors.map(author => `<option value="${escapeHtml(author)}">${escapeHtml(author)}</option>`).join('')}
-                </select>
-                
-                <select id="grid-sql-filter-op" class="vscode-select hidden sm:block">
-                    <option value="all">Todas as Operações</option>
-                    <option value="SELECT">Consultas (SELECT)</option>
-                    <option value="UPDATE">Alterações (UPDATE)</option>
-                    <option value="DELETE">Exclusões (DELETE)</option>
-                </select>
-            </div>
-
-            <div class="view-toggles">
-                <button onclick="window.__kcs.setSqlViewMode('grid')" class="view-toggle-btn ${currentViewMode === 'grid' ? 'active-view' : ''}">
-                    <i class="ph ph-squares-four"></i> <span>Cards</span>
-                </button>
-                <button onclick="window.__kcs.setSqlViewMode('table')" class="view-toggle-btn ${currentViewMode === 'table' ? 'active-view' : ''}">
-                    <i class="ph ph-list-dashes"></i> <span>Tabela</span>
-                </button>
-            </div>
-        </div>
-    </div>
-  `;
-
-  if (!scripts || scripts.length === 0) {
-    container.innerHTML = html + `<div class="empty-state"><i class="ph ph-database empty-icon text-purple-500/50"></i><p>Nenhum script SQL encontrado</p></div>`; 
-    return;
-  }
-
-  if (currentViewMode === 'grid') {
-    html += `<div class="content-grid">`;
-    html += scripts.map((script) => renderSqlCard(script)).join('');
-    html += `</div>`;
-  } else {
-    html += renderSqlTable(scripts);
-  }
-
-  if (paginationConfig) {
-    html += `
-        <div class="pagination-footer">
-            <span class="pagination-info">
-                Mostrando <strong>${scripts.length}</strong> de <strong>${paginationConfig.totalItems}</strong> scripts &mdash; Página ${paginationConfig.currentPage} de ${paginationConfig.totalPages}
-            </span>
-            <div class="pagination-controls">
-                <button onclick="window.__kcs.loadPage('prev')" class="btn-pagination" ${!paginationConfig.hasPrev ? 'disabled' : ''}><i class="ph ph-caret-left"></i> Anterior</button>
-                <button onclick="window.__kcs.loadPage('next')" class="btn-pagination" ${!paginationConfig.hasNext ? 'disabled' : ''}>Próxima <i class="ph ph-caret-right"></i></button>
-            </div>
-        </div>
-    `;
-  }
-
-  container.innerHTML = html;
-
-  setTimeout(() => {
-      const authorFilter = document.getElementById('grid-sql-filter-author');
-      const opFilter = document.getElementById('grid-sql-filter-op');
-      
-      if (authorFilter && window.__kcs.applyGridFilters) {
-          if (window.__kcs.currentGridSqlAuthor) authorFilter.value = window.__kcs.currentGridSqlAuthor;
-          authorFilter.addEventListener('change', (e) => window.__kcs.applyGridFilters('sql-author', e.target.value));
-      }
-      
-      if (opFilter && window.__kcs.applyGridFilters) {
-          if (window.__kcs.currentGridSqlOp) opFilter.value = window.__kcs.currentGridSqlOp;
-          opFilter.addEventListener('change', (e) => window.__kcs.applyGridFilters('sql-op', e.target.value));
-      }
-  }, 50);
-}
 
 function renderSqlTable(scripts) {
   const user = getCurrentUser();
@@ -1399,15 +1399,13 @@ if (!window.__kcsDashboardDateRange) {
                             `).join('') || `
                                 <tr>
                                     <td colspan="2" class="empty-cell">Nenhuma aprovação encontrada neste período.</td>
-                                </tr>
+                  </tr>
                             `}
                         </tbody>
                     </table>
                 </div>
             </div>
-        </div>
 
-        <div class="dash-tables-row mt-6">
             <div class="dash-widget dash-saas-card">
                 <div class="widget-header-row">
                     <div>
@@ -1464,7 +1462,7 @@ if (!window.__kcsDashboardDateRange) {
             </div>
 
             ${normalizedScripts.length > 0 ? `
-                <div class="dash-widget dash-saas-card">
+                <div class="dash-widget dash-saas-card" style="grid-column: 1 / -1;">
                     <div class="widget-header-row">
                         <div>
                             <h3 class="widget-header header-purple">
@@ -1522,7 +1520,7 @@ if (!window.__kcsDashboardDateRange) {
                     </div>
                 </div>
             ` : `
-                <div class="dash-widget dash-saas-card">
+                <div class="dash-widget dash-saas-card" style="grid-column: 1 / -1;">
                     <h3 class="widget-header header-purple">
                         <i class="ph ph-lock-key"></i>
                         Biblioteca SQL

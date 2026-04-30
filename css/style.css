@@ -823,66 +823,69 @@ main.workbench-editor {
     pointer-events: none !important;
 }
 
-.chatbot-container,
-.chatbot-panel {
-    position: fixed;
-    right: 0;
-    top: 48px;
-bottom: 22px;
-bottom: calc(22px + env(safe-area-inset-bottom, 0px));
-
-max-height: calc(100vh - 72px);
-max-height: calc(100dvh - 72px - env(safe-area-inset-bottom, 0px));
-overflow-y: auto;
+/* ==========================================================================
+   CHATBOT PANEL (FIX DE ENCAIXE E RESPONSIVIDADE)
+   ========================================================================== */
+#chatbot-panel.chatbot-panel {
+    position: fixed !important;
+    right: 0 !important;
+    top: 48px !important; /* Respeita a altura do Header */
+    bottom: 22px !important; /* Respeita a altura do Footer */
+    width: var(--chatbot-width) !important;
+    max-width: 100% !important;
+    height: calc(100vh - 70px) !important; /* 100% da tela menos 48px(topo) e 22px(baixo) */
     display: flex;
     flex-direction: column;
-    min-height: 0;
-    overflow: hidden;
-    z-index: 50;
-    background: var(--color-panel-background) !important;
+    z-index: 80 !important;
+    background-color: var(--color-sidebar-background) !important;
+    border-left: 1px solid var(--color-border) !important;
     color: var(--color-text-primary);
     transform: translateX(100%);
     transition: transform 0.25s ease;
-    border-left: 1px solid var(--color-border);
-    box-shadow: -24px 0 60px rgba(15, 23, 42, 0.2);
+    box-shadow: -8px 0 24px rgba(0, 0, 0, 0.15) !important;
     pointer-events: auto;
 }
-.chatbot-popout-mode .chatbot-panel,
-.chatbot-panel.chatbot-popout-mode,
-#chatbot-container.chatbot-popout-mode .chatbot-panel {
-    top: 0;
-    bottom: 0;
-    max-height: 100dvh;
-}
-.chatbot-container.active,
-.chatbot-panel.active {
-    transform: translateX(0);
+
+#chatbot-panel.chatbot-panel.active {
+    transform: translateX(0) !important;
 }
 
+/* Protege o Header e o Footer para nunca serem cobertos pelas sombras do chat */
+header.workbench-titlebar {
+    position: relative;
+    z-index: 100 !important;
+}
+.workbench-statusbar {
+    position: relative;
+    z-index: 100 !important;
+}
+
+/* Empurra o layout para o lado esquerdo sem encavalar */
 body.chatbot-open .workbench-titlebar,
 body.chatbot-open .workbench-editor {
-    padding-right: var(--chatbot-width);
+    padding-right: calc(var(--chatbot-width) + 16px) !important;
     box-sizing: border-box;
     transition: padding-right 180ms ease;
 }
 
-body.chatbot-open .workbench-grid {
-    padding-right: var(--chatbot-width);
-    box-sizing: border-box;
+/* Mágica: Evita o esmagamento do Dashboard (Transforma 6 colunas em 3) */
+body.chatbot-open .dash-saas-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+}
+body.chatbot-open .dash-saas-section-grid,
+body.chatbot-open .dash-tables-row {
+    grid-template-columns: 1fr !important;
 }
 
+/* Responsividade para Celulares (Volta a ocupar 100% cobrindo tudo) */
 @media (max-width: 900px) {
-    body.chatbot-open .workbench-grid {
-        padding-right: 0;
-    }
     body.chatbot-open .workbench-titlebar,
     body.chatbot-open .workbench-editor {
-        margin-right: 0;
+        padding-right: 16px !important;
     }
-    .chatbot-container,
-    .chatbot-panel {
-        width: min(100vw, var(--chatbot-width));
-        max-width: min(100vw, var(--chatbot-width));
+    #chatbot-panel.chatbot-panel {
+        width: 100vw !important;
+        border-left: none !important;
     }
 }
 
@@ -2873,44 +2876,69 @@ header.workbench-titlebar {
 }
 
 /* ==========================================================================
-   CORREÇÃO 34: Tipografia e Efeito Hover na Marca (Logo)
+   CORREÇÃO 34: IDENTIDADE VISUAL PREMIUM (KCS HUB LOGO)
    ========================================================================== */
-/* Container da logo com transição para interatividade */
+
+/* Container clicável e com feedback tátil */
 .workbench-brand-container {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
     cursor: pointer;
-    transition: opacity 0.2s ease;
     user-select: none;
+    padding: 4px 6px;
+    border-radius: 6px;
+    transition: background-color 0.2s ease;
 }
 
-/* Efeito ao passar o mouse: Brilho sutil e leve aumento de opacidade */
 .workbench-brand-container:hover {
-    opacity: 0.85;
-}
-
-.workbench-brand-container:hover .brand-icon-wrapper {
-    background-color: rgba(59, 130, 246, 0.3) !important;
-    transform: scale(1.02);
+    background-color: var(--color-hover);
 }
 
 .workbench-brand-container:active {
-    transform: scale(0.98); /* Feedback de clique */
+    transform: scale(0.98);
 }
 
-/* Ajuste fino do texto da marca */
-.brand-text {
-    font-size: 13px !important;
-    font-weight: 700 !important;
-    letter-spacing: 0.4px !important;
-    color: var(--color-text-primary) !important;
+/* O novo Ícone: Bloco com Gradiente (Estilo VS Code / Vercel) */
+.brand-logo-box {
+    width: 26px;
+    height: 26px;
+    background: linear-gradient(135deg, #007fd4 0%, #3b82f6 100%);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 8px rgba(0, 127, 212, 0.4);
+    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.brand-logo-box i {
+    color: #ffffff !important;
+    font-size: 16px;
+}
+
+.workbench-brand-container:hover .brand-logo-box {
+    box-shadow: 0 4px 12px rgba(0, 127, 212, 0.6); /* Sombra mais vibrante */
+}
+
+/* Tipografia Mista (Grosso + Fino) */
+.brand-text-group {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    font-size: 16px;
+    letter-spacing: 0.5px;
     font-family: var(--font-family-base);
 }
 
-/* Wrapper do ícone para animação suave */
-.brand-icon-wrapper {
-    transition: all 0.2s ease-in-out;
+.brand-text-kcs {
+    font-weight: 900;
+    color: var(--color-text-inverse); /* Branco no escuro, Preto no claro */
+}
+
+.brand-text-hub {
+    font-weight: 300;
+    color: var(--color-text-secondary); /* Tom mais sutil para contraste */
 }
 
 /* ==========================================================================
@@ -4134,7 +4162,7 @@ input[data-action="toggle-sector-feature"] {
     accent-color: #06b6d4;
     cursor: pointer;
 }
-
+   
 /* Dashboard period/access alignment */
 .dashboard-period-control {
     margin-left: auto;
@@ -4390,4 +4418,285 @@ html.light .flatpickr-day.inRange {
         opacity: 1;
         transform: translateY(0);
     }
+}
+
+/* ==========================================================================
+   FIX DEFINITIVO: ENCAIXE DO CHATBOT NO WORKBENCH E CORES
+   ========================================================================== */
+
+/* 1. Força o painel do Chatbot a respeitar as margens exatas do VS Code */
+#chatbot-panel {
+    position: fixed !important;
+    top: 48px !important; /* Exatamente abaixo da barra do título */
+    bottom: 22px !important; /* Exatamente acima do rodapé */
+    right: 0 !important;
+    height: calc(100vh - 70px) !important; /* Mata a regra nativa de 100vh */
+    
+    /* Integração Perfeita de Cores do Tema */
+    background-color: var(--color-sidebar-background) !important;
+    border-left: 1px solid var(--color-border) !important;
+    box-shadow: -4px 0 24px rgba(0, 0, 0, 0.15) !important;
+    z-index: 80 !important;
+}
+
+/* 2. PROTEÇÃO MÁXIMA: Garante que o Header e o Footer NUNCA sejam cobertos */
+header.workbench-titlebar,
+.workbench-statusbar {
+    position: relative !important;
+    z-index: 100 !important;
+}
+
+/* 3. Estiliza a área de digitação para não destoar das cores do seu painel */
+.chatbot-input-area {
+    background-color: var(--color-sidebar-background) !important;
+    border-top: 1px solid var(--color-border) !important;
+}
+.chatbot-input-area input {
+    background-color: var(--color-editor-background) !important;
+    border: 1px solid var(--color-border) !important;
+    color: var(--color-text-primary) !important;
+}
+
+/* 4. Empurra o conteúdo sem esmagar o layout */
+body.chatbot-open main.workbench-editor {
+    margin-right: 0 !important; 
+    padding-right: calc(var(--chatbot-width) + 24px) !important; 
+}
+body.chatbot-open header.workbench-titlebar {
+    padding-right: calc(var(--chatbot-width) + 16px) !important;
+}
+
+/* 5. A MÁGICA: Reorganiza os gráficos do Dashboard de 6 para 3 colunas ao abrir o chat */
+body.chatbot-open .dash-saas-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+}
+
+/* ==========================================================================
+   FIX RÁPIDO: BOTÕES SOCIAIS E INPUT DO CHATBOT
+   ========================================================================== */
+
+/* 1. Impede a quebra de linha dos botões Curtir/Comentar */
+.btn-interaction {
+    white-space: nowrap !important; /* Proíbe o texto de pular linha */
+    flex-shrink: 0 !important; /* Impede o botão de ser esmagado */
+}
+
+/* Permite que a barra de ações jogue os itens para baixo se a tela ficar muito apertada */
+.view-footer-actions {
+    flex-wrap: wrap !important;
+    gap: 16px !important;
+}
+
+/* 2. Força o Input do Chatbot a preencher todo o espaço disponível na barra */
+.chatbot-input-area {
+    display: flex !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+}
+
+#chatbot-input {
+    flex: 1 1 auto !important; /* Força o crescimento máximo */
+    width: 100% !important;
+    min-width: 0 !important; /* Hack mágico do Flexbox para inputs não travarem */
+}
+
+/* ==========================================================================
+   FEATURE PREMIUM: RESIZE E COLAPSO DA SIDEBAR (VS CODE STYLE)
+   ========================================================================== */
+:root {
+    /* Variável dinâmica controlada pelo JS. Largura inicial: 260px */
+    --sidebar-width: 260px; 
+}
+
+/* O grid principal agora respira com a variável */
+.workbench-grid {
+    grid-template-columns: 48px var(--sidebar-width) 1fr !important;
+    transition: grid-template-columns 0s; /* Instantâneo ao arrastar para não ter lag */
+}
+
+/* A barra invisível para o usuário puxar com o mouse */
+.sidebar-resizer {
+    position: absolute;
+    top: 0;
+    right: -2px; /* Metade para dentro, metade para fora da borda */
+    width: 4px;
+    height: 100%;
+    cursor: col-resize;
+    z-index: 100;
+    background-color: transparent;
+    transition: background-color 0.2s ease;
+    transition-delay: 0.1s; /* Pequeno atraso para não piscar à toa */
+}
+
+/* Fica com a bordinha azul ao passar o mouse ou arrastar (IDÊNTICO ao VS Code) */
+.sidebar-resizer:hover,
+body.is-resizing .sidebar-resizer {
+    background-color: var(--color-focus);
+}
+
+/* Impede o usuário de selecionar texto acidentalmente enquanto arrasta */
+body.is-resizing {
+    user-select: none;
+    cursor: col-resize !important;
+}
+
+/* Regras de quando a barra for ocultada (Colapsada) */
+body.sidebar-collapsed .workbench-grid {
+    --sidebar-width: 0px !important;
+    transition: grid-template-columns 0.2s ease; /* Transição suave apenas no clique do botão */
+}
+
+body.sidebar-collapsed #sidebar.workbench-sidebar {
+    overflow: hidden !important;
+    opacity: 0 !important;
+    border-right: none !important;
+    visibility: hidden !important;
+    padding: 0 !important;
+    transition: opacity 0.1s ease;
+}
+
+/* O alinhamento perfeito do Logo e Barra de Pesquisa acompanhando o resize */
+.workbench-brand-container {
+    width: calc(48px + var(--sidebar-width) - 16px) !important;
+    min-width: calc(48px + var(--sidebar-width) - 16px) !important;
+    flex-shrink: 0 !important;
+    box-sizing: border-box;
+    transition: width 0s;
+}
+
+header.workbench-titlebar .max-w-3xl {
+    margin-left: 16px !important;
+}
+
+body.sidebar-collapsed .workbench-brand-container {
+    width: 48px !important;
+    min-width: 48px !important;
+    padding: 4px;
+    justify-content: center;
+    transition: width 0.2s ease;
+}
+
+body.sidebar-collapsed .brand-text-group {
+    display: none !important; /* Esconde o "KCS Hub" e deixa só o ícone Hexágono */
+}
+
+/* ==========================================================================
+   FEATURE: COLAPSO DA SIDEBAR (MODO FOCO / VS CODE STYLE)
+   ========================================================================== */
+
+/* Remove a largura da coluna da Sidebar no Grid */
+body.sidebar-collapsed .workbench-grid {
+    grid-template-columns: 48px 0 1fr !important;
+    transition: grid-template-columns 0.2s ease;
+}
+
+/* Esconde o conteúdo da Sidebar */
+body.sidebar-collapsed #sidebar.workbench-sidebar {
+    overflow: hidden !important;
+    opacity: 0 !important;
+    border-right: none !important;
+    visibility: hidden !important;
+    padding: 0 !important;
+    transition: opacity 0.1s ease;
+}
+
+/* Opcional e elegante: Encolhe a Logo do topo para a barra de pesquisa usar o espaço ganho */
+body.sidebar-collapsed .workbench-brand-container {
+    width: 48px !important;
+    min-width: 48px !important;
+    padding: 4px;
+    justify-content: center;
+}
+body.sidebar-collapsed .brand-text-group {
+    display: none !important; /* Esconde a escrita "KCS Hub", deixa só o ícone Hexágono */
+}
+
+/* ==========================================================================
+   FIX: ESTILIZAÇÃO PREMIUM DO MARKDOWN (README E VISUALIZADOR)
+   ========================================================================== */
+.markdown-body {
+    color: var(--color-text-primary);
+    font-size: 14px;
+    line-height: 1.6;
+    padding: 16px;
+}
+
+.markdown-body h1, .markdown-body h2, .markdown-body h3 {
+    color: var(--color-text-inverse);
+    margin-top: 24px;
+    margin-bottom: 16px;
+    font-weight: 700;
+    border-bottom: 1px solid var(--color-border-subtle);
+    padding-bottom: 8px;
+}
+
+.markdown-body h1 { font-size: 24px; }
+.markdown-body h2 { font-size: 20px; }
+.markdown-body h3 { font-size: 16px; border-bottom: none; }
+
+.markdown-body p { margin-bottom: 16px; }
+
+.markdown-body ul, .markdown-body ol {
+    margin-bottom: 16px;
+    padding-left: 24px;
+}
+
+.markdown-body li { margin-bottom: 6px; }
+
+/* Tabelas Premium */
+.markdown-body table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 24px;
+    background-color: var(--color-editor-background);
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid var(--color-border);
+}
+
+.markdown-body th {
+    background-color: var(--color-sidebar-background);
+    padding: 12px;
+    text-align: left;
+    font-weight: 700;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.markdown-body td {
+    padding: 12px;
+    border-bottom: 1px solid var(--color-border-subtle);
+}
+
+/* Código Inline */
+.markdown-body code {
+    background-color: rgba(99, 102, 241, 0.15);
+    color: #8b5cf6;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: var(--font-family-mono);
+    font-size: 12px;
+}
+
+/* Efeito de Vidro (Glassmorphism) e Background para o Login */
+.login-container {
+    background: rgba(20, 23, 30, 0.85) !important;
+    backdrop-filter: blur(20px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.05) !important;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5) !important;
+}
+
+/* Animação suave de entrada */
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+    animation: fadeInUp 0.6s ease-out forwards;
+}
+
+/* Deixa os botões sociais com brilho sutil no hover */
+#btn-google-login:hover, #btn-microsoft-login:hover {
+    border-color: rgba(59, 130, 246, 0.5) !important;
+    box-shadow: 0 0 15px rgba(59, 130, 246, 0.1);
 }

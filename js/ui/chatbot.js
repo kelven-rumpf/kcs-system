@@ -2,7 +2,7 @@
  * ui/chatbot.js — Motor do Chatbot IA (SaaS Premium)
  * Assistente Sensei: Especialista KCS Hub
  * Refatorado para Design System Semântico (Workbench)
- */
+ */ 
 
 import { CONFIG, TENANT_KEYS } from '../config.js';
 import { searchDirect, searchSqlScripts } from '../services/search.js';

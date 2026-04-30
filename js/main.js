@@ -372,6 +372,7 @@ async function init() {
         if (versionDisplay) versionDisplay.textContent = `v${APP_VERSION}`;
 
         bindGlobalEvents();
+        initSidebarResizer();
         exposeGlobalAPI();
         
         injectReadmeMenuButton();
@@ -582,34 +583,26 @@ function updateActionButtons() {
 }
 
 function injectReadmeMenuButton() {
-    const sidebar = document.getElementById('sidebar') || document.getElementById('sidebar-nav');
-    if (!sidebar) return;
-
+    // 1. Remove a caixa antiga da sidebar caso exista (limpeza)
     document.getElementById('readme-menu-container')?.remove();
 
-    const footerHtml = `
-        <div id="readme-menu-container" class="mt-auto py-4 px-4 border-t border-border-subtle bg-surface">
-            <div class="flex flex-col items-start w-full">
-                
-                <a href="javascript:void(0)" onclick="window.__kcs.showReadme()" 
-                   class="flex items-center gap-2 text-[12px] text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors mb-3 w-full font-medium">
-                    <i class="ph ph-book-open text-[16px]"></i>
-                    Documentação
-                </a>
+    // 2. Localiza o rodapé da barra de atividades (Activity Bar)
+    const activityBarBottom = document.querySelector('.activitybar-bottom');
+    if (!activityBarBottom) return;
 
-                <div class="space-y-1 select-none">
-                    <p class="text-[10px] text-gray-400 dark:text-gray-500 font-mono">
-                        KCS Hub v${APP_VERSION}
-                    </p>
-                    <p class="text-[10px] text-gray-400 dark:text-gray-500 font-mono">
-                        Dev: Kelven Rumpf
-                    </p>
-                </div>
-            </div>
-        </div>
-    `;
+    // Evita duplicar o botão caso a função rode mais de uma vez
+    if (document.getElementById('btn-activity-docs')) return;
 
-    sidebar.insertAdjacentHTML('beforeend', footerHtml);
+    // 3. Cria um novo botão elegante padrão VS Code
+    const docsBtn = document.createElement('button');
+    docsBtn.id = 'btn-activity-docs';
+    docsBtn.className = 'activitybar-btn';
+    docsBtn.title = 'Documentação do Sistema';
+    docsBtn.onclick = () => window.__kcs.showReadme();
+    docsBtn.innerHTML = '<i class="ph ph-book-open"></i>';
+
+    // 4. Insere o botão no topo do grupo inferior (logo acima da engrenagem/perfil)
+    activityBarBottom.insertBefore(docsBtn, activityBarBottom.firstChild);
 }
 
 async function refreshView() {
@@ -770,44 +763,64 @@ function exposeGlobalAPI() {
             }
         },
 
-       applyGridFilters: (type, value) => {
+       // CORREÇÃO: Filtros Inteligentes e Isolados por View
+        applyGridFilters: (type, value) => {
+            // Inicializa as variáveis se não existirem
+            window.__kcs.currentGridAuthor = window.__kcs.currentGridAuthor || 'all';
+            window.__kcs.currentGridStatus = window.__kcs.currentGridStatus || 'all';
+            window.__kcs.currentGridSqlAuthor = window.__kcs.currentGridSqlAuthor || 'all';
+            window.__kcs.currentGridSqlOp = window.__kcs.currentGridSqlOp || 'all';
+
             if (type === 'author') window.__kcs.currentGridAuthor = value;
             if (type === 'status') window.__kcs.currentGridStatus = value;
             if (type === 'sql-author') window.__kcs.currentGridSqlAuthor = value;
             if (type === 'sql-op') window.__kcs.currentGridSqlOp = value;
+            
+            // Reseta para a primeira página ao filtrar
             appState.pagination.currentPage = 1;
-            window.__kcs.renderPaginatedView();
-            window.__kcs.renderPaginatedSqlView();
+
+            // CORREÇÃO CRÍTICA: Renderiza apenas a view que está visível para evitar que o SQL invada os Procedimentos
+            if (appState.currentView === 'articles') {
+                window.__kcs.renderPaginatedView();
+            } else if (appState.currentView === 'sql') {
+                window.__kcs.renderPaginatedSqlView();
+            }
         },
 
+        // CORREÇÃO: Lógica Unificada de Procedimentos (Sidebar + Dropdowns)
         renderPaginatedView: () => {
-            let filtered = appState.articles;
+            let filtered = [...appState.articles];
 
-            // Filtro da Sidebar
+            // 1. Sincronização de Status (Prioridade para o Dropdown do Topo)
+            let activeStatus = 'all';
+            if (window.__kcs.currentGridStatus && window.__kcs.currentGridStatus !== 'all') {
+                activeStatus = window.__kcs.currentGridStatus;
+            } else if (appState.currentFilter !== 'all' && appState.currentFilter !== 'favorites') {
+                activeStatus = appState.currentFilter;
+            }
+
+            if (activeStatus !== 'all') {
+                filtered = filtered.filter(a => a.status === activeStatus);
+            }
+
+            // 2. Filtro de Favoritos (Sidebar)
             if (appState.currentFilter === 'favorites') {
                 const user = getCurrentUser();
                 const userId = user.uid || user.id;
                 filtered = filtered.filter(a => (a.favorites || []).includes(userId));
-            } else if (appState.currentFilter !== 'all') { 
-                filtered = filtered.filter(a => a.status === appState.currentFilter);
             }
             
-            // Filtro de Categoria da Sidebar
+            // 3. Filtro de Categoria (Sidebar)
             if (appState.currentCategoryFilter) {
                 filtered = filtered.filter(a => a.categoryId === appState.currentCategoryFilter || a.category === appState.currentCategoryFilter);
             }
 
-            // NOVO: Aplica o filtro de Autor (Dropdown do Grid)
+            // 4. Filtro de Autor (Dropdown Superior)
             if (window.__kcs.currentGridAuthor && window.__kcs.currentGridAuthor !== 'all') {
                 filtered = filtered.filter(a => a.createdBy === window.__kcs.currentGridAuthor);
             }
             
-            // NOVO: Aplica o filtro de Status (Dropdown do Grid)
-            if (window.__kcs.currentGridStatus && window.__kcs.currentGridStatus !== 'all') {
-                filtered = filtered.filter(a => a.status === window.__kcs.currentGridStatus);
-            }
-            
-            // Filtro de Busca Semântica
+            // 5. Busca Semântica
             if (appState.searchQuery) {
                 const q = appState.searchQuery.toLowerCase();
                 filtered = filtered.filter(a => 
@@ -818,54 +831,43 @@ function exposeGlobalAPI() {
                 );
             }
 
-            // Ordenação (Mais recentes primeiro)
-            filtered.sort((a, b) => {
-                const dateA = a.updatedAt || a.createdAt || 0;
-                const dateB = b.updatedAt || b.createdAt || 0;
-                return new Date(dateB) - new Date(dateA);
-            });
+            // Ordenação (Novos primeiro)
+            filtered.sort((a, b) => new Date(b.updatedAt || b.createdAt || 0) - new Date(a.updatedAt || a.createdAt || 0));
 
             // Paginação
             const totalItems = filtered.length;
             const totalPages = Math.ceil(totalItems / appState.pagination.pageSize) || 1;
-
             if (appState.pagination.currentPage > totalPages) appState.pagination.currentPage = totalPages;
-            if (appState.pagination.currentPage < 1) appState.pagination.currentPage = 1;
 
             const startIndex = (appState.pagination.currentPage - 1) * appState.pagination.pageSize;
             const paginatedItems = filtered.slice(startIndex, startIndex + appState.pagination.pageSize);
 
-            const paginationConfig = {
-                hasPrev: appState.pagination.currentPage > 1,
-                hasNext: appState.pagination.currentPage < totalPages,
-                currentPage: appState.pagination.currentPage,
-                totalPages: totalPages,
-                totalItems: totalItems
-            };
-
             import('./ui/render.js').then(module => {
-                 module.renderArticleGrid(paginatedItems, paginationConfig);
+                 // Passamos appState.articles para que o dropdown de autores seja sempre completo
+                 module.renderArticleGrid(paginatedItems, appState.articles, {
+                    hasPrev: appState.pagination.currentPage > 1,
+                    hasNext: appState.pagination.currentPage < totalPages,
+                    currentPage: appState.pagination.currentPage,
+                    totalPages: totalPages,
+                    totalItems: totalItems
+                });
             });
         },
 
-     renderPaginatedSqlView: () => {
-            let filtered = appState.sqlScripts;
+        // CORREÇÃO: Lógica Unificada de Biblioteca SQL
+        renderPaginatedSqlView: () => {
+            let filtered = [...appState.sqlScripts];
 
-            // Filtros da Sidebar
+            // 1. Filtros da Sidebar
             if (appState.currentSqlFilter === 'favorites') {
                 const user = getCurrentUser();
                 const userId = user.uid || user.id;
                 filtered = filtered.filter(s => (s.favorites || []).includes(userId));
             } else if (appState.currentSqlFilter !== 'all') {
-                filtered = filtered.filter(s => {
-                    const op = s.sqlCategory || 'SELECT';
-                    if (appState.currentSqlFilter === 'UPDATE') return op === 'UPDATE';
-                    if (appState.currentSqlFilter === 'DELETE') return op === 'DELETE';
-                    return op !== 'UPDATE' && op !== 'DELETE'; 
-                });
+                filtered = filtered.filter(s => (s.sqlCategory || 'SELECT') === appState.currentSqlFilter);
             }
 
-            // Filtro Dropdown do Grid (Novo!)
+            // 2. Filtros Dropdown (Autor e Operação)
             if (window.__kcs.currentGridSqlAuthor && window.__kcs.currentGridSqlAuthor !== 'all') {
                 filtered = filtered.filter(s => s.createdBy === window.__kcs.currentGridSqlAuthor);
             }
@@ -873,7 +875,7 @@ function exposeGlobalAPI() {
                 filtered = filtered.filter(s => (s.sqlCategory || 'SELECT') === window.__kcs.currentGridSqlOp);
             }
             
-            // Busca Semântica
+            // 3. Busca Semântica
             if (appState.searchQuery) {
                 const q = appState.searchQuery.toLowerCase();
                 filtered = filtered.filter(s => 
@@ -883,7 +885,6 @@ function exposeGlobalAPI() {
                 );
             }
 
-            // Ordenação e Paginação
             filtered.sort((a, b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0));
 
             const totalItems = filtered.length;
@@ -894,7 +895,7 @@ function exposeGlobalAPI() {
             const paginatedItems = filtered.slice(startIndex, startIndex + appState.pagination.pageSize);
 
             import('./ui/render.js').then(module => {
-                module.renderSqlGrid(paginatedItems, {
+                module.renderSqlGrid(paginatedItems, appState.sqlScripts, {
                     hasPrev: appState.pagination.currentPage > 1,
                     hasNext: appState.pagination.currentPage < totalPages,
                     currentPage: appState.pagination.currentPage,
@@ -903,6 +904,10 @@ function exposeGlobalAPI() {
                 });
             });
         },
+
+        
+
+     
 
         openMasterPlanManager: async () => {
             const currentUser = getCurrentUser();
@@ -1195,11 +1200,61 @@ function exposeGlobalAPI() {
         
         showReadme: async () => { 
             try { 
-                const r = await fetch('../README.md'); 
-                const m = await r.text(); 
-                import('./ui/modal.js').then(module => module.openReadmeModal(m)); 
+                // 1. Busca o arquivo Markdown
+                const response = await fetch('./README.md'); 
+                if (!response.ok) throw new Error("Arquivo não encontrado");
+                
+                const markdown = await response.text(); 
+                
+                // 2. Carrega o parser de Markdown dinamicamente
+                if (typeof window.marked === 'undefined') {
+                    await new Promise((resolve) => {
+                        const script = document.createElement('script');
+                        script.src = 'https://cdn.jsdelivr.net/npm/marked/marked.min.js';
+                        script.onload = resolve;
+                        document.head.appendChild(script);
+                    });
+                }
+
+                const htmlContent = window.marked.parse(markdown);
+                
+                // 3. Monta a Estrutura da Nova Aba (Estilo Configurações)
+                const idUnico = 'tab-system-docs';
+                const container = document.createElement('div');
+                container.className = 'flex flex-col h-full';
+                container.id = `view-container-${idUnico}`;
+                container.style.backgroundColor = 'var(--color-editor-background)';
+                
+                container.innerHTML = `
+                    <div class="flex-1 overflow-y-auto p-6 md:p-10 custom-scrollbar">
+                        <div class="max-w-4xl mx-auto">
+                            <div class="mb-8 pb-6" style="border-bottom: 1px solid var(--color-border-subtle);">
+                                <h2 class="text-3xl font-extrabold mb-2 flex items-center gap-3" style="color: var(--color-text-inverse);">
+                                    <i class="ph-bold ph-book-open text-blue-500"></i> Documentação Oficial
+                                </h2>
+                                <p class="text-sm" style="color: var(--color-text-secondary);">Guia completo de uso e recursos do KCS Hub</p>
+                            </div>
+                            
+                            <div class="markdown-body rounded-xl shadow-sm" style="background-color: var(--color-sidebar-background); border: 1px solid var(--color-border-subtle);">
+                                ${htmlContent}
+                            </div>
+                            
+                            <div class="h-12"></div>
+                        </div>
+                    </div>
+                `;
+                
+                // 4. Evita que o sistema pergunte se quer salvar ao fechar a aba
+                if (window.TabManager?.markDirty) {
+                    window.TabManager.markDirty(idUnico, false);
+                }
+
+                // 5. Abre a Aba no MDI
+                window.TabManager.openTab(idUnico, 'Documentação', 'ph-book-open', container);
+                
             } catch (e) { 
-                alert("README.md não encontrado."); 
+                console.error("Erro ao carregar documentação:", e);
+                window.__kcs.showToast("README.md não encontrado na raiz do projeto.", "error"); 
             } 
         },
         
@@ -1639,6 +1694,71 @@ function exposeGlobalAPI() {
 // ACTIVITY BAR: EVENT DELEGATION & SYNC
 // ==========================================
 
+// ==========================================
+// FEATURE: SIDEBAR RESIZER (VS CODE ENGINE)
+// ==========================================
+function initSidebarResizer() {
+    const sidebar = document.getElementById('sidebar');
+    if (!sidebar) return;
+
+    // Cria a barra "puxadora" se não existir
+    if (!document.getElementById('sidebar-resizer')) {
+        const resizer = document.createElement('div');
+        resizer.id = 'sidebar-resizer';
+        resizer.className = 'sidebar-resizer';
+        sidebar.appendChild(resizer);
+    }
+
+    const resizer = document.getElementById('sidebar-resizer');
+    let isResizing = false;
+
+    // Restaura a largura salva do usuário
+    const savedWidth = localStorage.getItem('kcs_sidebar_width');
+    if (savedWidth) {
+        document.documentElement.style.setProperty('--sidebar-width', `${savedWidth}px`);
+        if (savedWidth == 0) document.body.classList.add('sidebar-collapsed');
+    }
+
+    // Clique na borda (Inicia o arrasto)
+    resizer.addEventListener('mousedown', () => {
+        isResizing = true;
+        document.body.classList.add('is-resizing');
+        document.body.classList.remove('sidebar-collapsed'); // Acorda a barra se estava oculta
+    });
+
+    // Movimento do mouse na tela
+    document.addEventListener('mousemove', (e) => {
+        if (!isResizing) return;
+        
+        // A largura é o mouse(X) menos o tamanho da barra fininha (48px)
+        let newWidth = e.clientX - 48;
+
+        // Limites máximos e mínimos do VS Code
+        if (newWidth > 600) newWidth = 600;
+        
+        // Snap to Collapse: Se esmagar menos de 120px, ele fecha de vez!
+        if (newWidth < 120) {
+            newWidth = 0;
+            document.body.classList.add('sidebar-collapsed');
+            isResizing = false;
+            document.body.classList.remove('is-resizing');
+        } else if (newWidth < 180) {
+            newWidth = 180; // Trava num mínimo decente antes de fechar
+        }
+
+        document.documentElement.style.setProperty('--sidebar-width', `${newWidth}px`);
+        localStorage.setItem('kcs_sidebar_width', newWidth);
+    });
+
+    // Solta o clique
+    document.addEventListener('mouseup', () => {
+        if (isResizing) {
+            isResizing = false;
+            document.body.classList.remove('is-resizing');
+        }
+    });
+}
+
 function bindActivityBarEvents() {
     const activityBar = document.querySelector('.workbench-activitybar');
     if (!activityBar) return;
@@ -1655,6 +1775,14 @@ function bindActivityBarEvents() {
         const btn = event.target.closest('[data-view]');
         if (!btn) return;
         const view = btn.dataset.view;
+
+        if (view === appState.currentView && !['settings', 'account', 'semantic-search'].includes(view)) {
+            document.body.classList.toggle('sidebar-collapsed');
+            return; // Para a execução aqui para não recarregar a tela à toa
+        } else {
+            // Se clicou em um ícone diferente, garante que a sidebar vai abrir
+            document.body.classList.remove('sidebar-collapsed');
+        }
 
         switch (view) {
             case 'articles':
