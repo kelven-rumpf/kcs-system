@@ -28,11 +28,11 @@ import { PLANS } from '../config.js';
 import { READ_ONLY_PROD_FROM_LOCAL, FIREBASE_ENV, COLLECTION_ARTICLES } from '../config/firestore.js';
 
 export const FIREBASE_CONFIG = {
-    apiKey: "AIzaSyC_S8IW_iuTrKHRv76DQ3ve-pZCHqNVimA",
-    authDomain: "kcs-system-180db.firebaseapp.com",
-    projectId: "kcs-system-180db",
-    storageBucket: "kcs-system-180db.firebasestorage.app",
-    appId: "1:57579884453:web:62c4f94cc5b4fe60a9624c"
+    apiKey: "",
+    authDomain: "",
+    projectId: "",
+    storageBucket: "",
+    appId: ""
 };
 
 export const appCloud = initializeApp(FIREBASE_CONFIG);
