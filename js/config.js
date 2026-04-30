@@ -6,7 +6,7 @@ import { FIREBASE_ENV, IS_LOCAL, IS_PROD_DATA, READ_ONLY_PROD_FROM_LOCAL, COLLEC
 // 👉 Para alternar DEV/PROD, ajuste apenas VITE_FIREBASE_ENV em js/config/firestore.js (ou no .env do Vite).
 
 export const CONFIG = {
-  GEMINI_API_KEY: "AIzaSyCxmmZMbCU0U4V0ZfFPVeXUFYGNPAtTVPY", // Substitua pela sua chave real
+  GEMINI_API_KEY: "", // Substitua pela sua chave real
 };
 
 export const INACTIVITY_TIMEOUT = 10 * 60 * 1000;
