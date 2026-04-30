@@ -348,10 +348,62 @@ function renderAccountEnvironmentInfo() {
     target.textContent = `Ambiente: ${envLabel} (${modeLabel})`;
 }
 
+// ==========================================
+// FEATURE: SIDEBAR RESIZER (VS CODE ENGINE)
+// ==========================================
+function initSidebarResizer() {
+    const sidebar = document.getElementById('sidebar');
+    if (!sidebar) return;
+
+    if (!document.getElementById('sidebar-resizer')) {
+        const resizer = document.createElement('div');
+        resizer.id = 'sidebar-resizer';
+        resizer.className = 'sidebar-resizer';
+        sidebar.appendChild(resizer);
+    }
+
+    const resizer = document.getElementById('sidebar-resizer');
+    let isResizing = false;
+
+    const savedWidth = localStorage.getItem('kcs_sidebar_width');
+    if (savedWidth) {
+        document.documentElement.style.setProperty('--sidebar-width', `${savedWidth}px`);
+        if (parseInt(savedWidth) === 0) document.body.classList.add('sidebar-collapsed');
+    }
+
+    resizer.addEventListener('mousedown', () => {
+        isResizing = true;
+        document.body.classList.add('is-resizing');
+        document.body.classList.remove('sidebar-collapsed');
+    });
+
+    document.addEventListener('mousemove', (e) => {
+        if (!isResizing) return;
+        let newWidth = e.clientX - 48;
+        if (newWidth > 600) newWidth = 600;
+        if (newWidth < 120) {
+            newWidth = 0;
+            document.body.classList.add('sidebar-collapsed');
+            isResizing = false;
+            document.body.classList.remove('is-resizing');
+        } else if (newWidth < 180) {
+            newWidth = 180;
+        }
+        document.documentElement.style.setProperty('--sidebar-width', `${newWidth}px`);
+        localStorage.setItem('kcs_sidebar_width', newWidth);
+    });
+
+    document.addEventListener('mouseup', () => {
+        if (isResizing) {
+            isResizing = false;
+            document.body.classList.remove('is-resizing');
+        }
+    });
+}
+
 async function init() {
     try {
         document.body.classList.add('auth-loading');
-        renderAccountEnvironmentInfo();
 
         const savedTheme = localStorage.getItem('kcs_theme') || 'dark';
         if (savedTheme === 'light') { 
@@ -372,47 +424,65 @@ async function init() {
         if (versionDisplay) versionDisplay.textContent = `v${APP_VERSION}`;
 
         bindGlobalEvents();
-        initSidebarResizer();
+        if (typeof initSidebarResizer === 'function') initSidebarResizer();
         exposeGlobalAPI();
-        
         injectReadmeMenuButton();
 
+        // INJEÇÃO DA INTERFACE PREMIUM SAAS
         const form = document.getElementById('login-form');
         if (form) {
             form.innerHTML = `
-                <div class="space-y-4 w-full">
-                    <div>
-                        <label class="block text-[11px] font-semibold text-gray-400 mb-2 uppercase tracking-wider">E-mail</label>
-                        <input type="email" id="login-email" placeholder="seu@email.com" class="w-full bg-gray-900/50 border border-gray-700 rounded-[10px] px-4 py-3 text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all placeholder-gray-500">
+                <div class="flex flex-col items-center mb-10 text-center animate-fade-in group">
+                    <div class="brand-logo-box hover:scale-[1.08] hover:-translate-y-1 hover:shadow-[0_15px_40px_rgba(0,127,212,0.6)] transition-all duration-300 cursor-default" style="width: 64px; height: 60px; border-radius: 16px; margin-bottom: 20px; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #007fd4 0%, #3b82f6 100%); box-shadow: 0 10px 30px rgba(0, 122, 204, 0.3);">
+                        <i class="ph-bold ph-hexagon" style="font-size: 32px; color: white;"></i>
                     </div>
-                    <div>
-                        <label class="block text-[11px] font-semibold text-gray-400 mb-2 uppercase tracking-wider">Senha</label>
-                        <input type="password" id="login-password" placeholder="••••••••" class="w-full bg-gray-900/50 border border-gray-700 rounded-[10px] px-4 py-3 text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all placeholder-gray-500">
-                    </div>
-                    <div class="flex gap-2 pt-2">
-                        <button type="button" id="btn-email-login" class="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold py-3 px-4 rounded-[10px] shadow-lg transition-all transform hover:-translate-y-0.5 active:translate-y-0">Entrar</button>
-                        <button type="button" id="btn-email-register" class="flex-1 bg-gray-700/60 hover:bg-gray-600/80 text-white font-semibold py-3 px-4 rounded-[10px] transition-all transform hover:-translate-y-0.5 active:translate-y-0 border border-gray-600/50">Criar Conta</button>
-                    </div>
+                    <h2 style="font-size: 32px; display: flex; gap: 4px; line-height: 1;">
+                        <span style="font-weight: 900; color: white;">KCS</span>
+                        <span style="font-weight: 200; color: #94a3b8;">Hub</span>
+                    </h2>
+                    <p style="font-size: 14px; color: #64748b; margin-top: 10px;">Knowledge Management System</p>
                 </div>
-                
-                <div class="flex items-center my-6 w-full">
-                    <div class="flex-1 border-t border-gray-700/50"></div>
-                    <span class="px-3 text-[11px] text-gray-500 uppercase tracking-widest font-semibold">Ou continuar com</span>
-                    <div class="flex-1 border-t border-gray-700/50"></div>
+
+                <div class="space-y-4">
+                    <div>
+                        <label style="display:block; font-size: 10px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">E-mail Corporativo</label>
+                        <input type="email" id="login-email" placeholder="nome@empresa.com" class="login-input-custom w-full bg-black/20 border border-white/10 px-4 py-3 rounded-xl text-white outline-none focus:ring-1 focus:ring-blue-500 transition-all">
+                    </div>
+                    <div>
+                        <label style="display:block; font-size: 10px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">Senha</label>
+                        <input type="password" id="login-password" placeholder="••••••••" class="login-input-custom w-full bg-black/20 border border-white/10 px-4 py-3 rounded-xl text-white outline-none focus:ring-1 focus:ring-blue-500 transition-all">
+                    </div>
+                    <button type="button" id="btn-email-login" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3.5 rounded-xl transition-all shadow-lg active:scale-95" style="margin-top: 10px;">
+                        Acessar Plataforma
+                    </button>
                 </div>
-                
-                <div class="flex flex-col gap-3 w-full">
-                    <button type="button" id="btn-google-login" class="w-full flex items-center justify-center gap-3 bg-white/95 hover:bg-white text-gray-800 font-semibold py-3 px-4 rounded-[10px] shadow-md hover:shadow-lg transition-all transform hover:-translate-y-0.5 active:translate-y-0">
-                        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" class="w-5 h-5">
-                        Google
+
+                <div class="flex items-center my-8 opacity-20">
+                    <div class="flex-1 border-t border-white"></div>
+                    <span class="px-4 text-[10px] font-black uppercase text-white">OU</span>
+                    <div class="flex-1 border-t border-white"></div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <button type="button" id="btn-google-login" class="btn-sso-premium flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold border border-white/10 hover:bg-white/5 transition-all">
+                        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="18"> Google
                     </button>
-                    <button type="button" id="btn-microsoft-login" class="w-full flex items-center justify-center gap-3 bg-gray-900/70 hover:bg-gray-900 text-white font-semibold py-3 px-4 rounded-[10px] shadow-md hover:shadow-lg transition-all transform hover:-translate-y-0.5 active:translate-y-0 border border-gray-700/50">
-                        <svg class="w-5 h-5" viewBox="0 0 21 21"><path fill="#f25022" d="M1 1h9v9H1z"/><path fill="#00a4ef" d="M11 1h9v9h-9z"/><path fill="#7fba00" d="M1 11h9v9H1z"/><path fill="#ffb900" d="M11 11h9v9h-9z"/></svg>
-                        Microsoft
+                    <button type="button" id="btn-microsoft-login" class="btn-sso-premium flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold border border-white/10 hover:bg-white/5 transition-all">
+                        <svg width="18" viewBox="0 0 21 21"><path fill="#f25022" d="M1 1h9v9H1z"/><path fill="#00a4ef" d="M11 1h9v9h-9z"/><path fill="#7fba00" d="M1 11h9v9H1z"/><path fill="#ffb900" d="M11 11h9v9h-9z"/></svg> Microsoft
                     </button>
+                </div>
+
+                <div class="mt-10 text-center">
+                    <p style="font-size: 13px; color: #64748b;">
+                        Novo por aqui? 
+                        <button type="button" id="btn-email-register" class="bg-transparent border-none p-0 ml-1 text-blue-500 hover:text-blue-400 font-bold hover:underline outline-none cursor-pointer transition-colors">
+                            Solicitar Convite
+                        </button>
+                    </p>
                 </div>
             `;
             
+            // EVENTOS DE AUTENTICAÇÃO
             document.getElementById('btn-google-login').addEventListener('click', async () => {
                 showLoading(true);
                 if (loadingMsg) loadingMsg.textContent = "Abrindo Google...";
@@ -443,7 +513,7 @@ async function init() {
             document.getElementById('btn-email-register').addEventListener('click', async () => {
                 const email = document.getElementById('login-email').value;
                 const pass = document.getElementById('login-password').value;
-                if (!email || pass.length < 6) return showToast('Insira um e-mail válido e senha maior que 6 caracteres.', 'warning');
+                if (!email || pass.length < 6) return showToast('Insira e-mail válido e senha maior que 6 caracteres.', 'warning');
                 showLoading(true);
                 if (loadingMsg) loadingMsg.textContent = "Criando conta...";
                 const { registerWithEmail } = await import('./auth.js');
@@ -467,10 +537,16 @@ async function init() {
 
     } catch (erroFatal) {
         console.error("ERRO FATAL NA INICIALIZAÇÃO:", erroFatal);
-        alert("Erro ao carregar o sistema: " + erroFatal.message);
         showLoading(false);
     }
 }
+
+
+
+
+
+
+
 async function enterApp(user) { 
     try {
         toggleLoginScreen(false); 
@@ -1690,74 +1766,8 @@ function exposeGlobalAPI() {
     });
 }
 
-// ==========================================
-// ACTIVITY BAR: EVENT DELEGATION & SYNC
-// ==========================================
 
-// ==========================================
-// FEATURE: SIDEBAR RESIZER (VS CODE ENGINE)
-// ==========================================
-function initSidebarResizer() {
-    const sidebar = document.getElementById('sidebar');
-    if (!sidebar) return;
 
-    // Cria a barra "puxadora" se não existir
-    if (!document.getElementById('sidebar-resizer')) {
-        const resizer = document.createElement('div');
-        resizer.id = 'sidebar-resizer';
-        resizer.className = 'sidebar-resizer';
-        sidebar.appendChild(resizer);
-    }
-
-    const resizer = document.getElementById('sidebar-resizer');
-    let isResizing = false;
-
-    // Restaura a largura salva do usuário
-    const savedWidth = localStorage.getItem('kcs_sidebar_width');
-    if (savedWidth) {
-        document.documentElement.style.setProperty('--sidebar-width', `${savedWidth}px`);
-        if (savedWidth == 0) document.body.classList.add('sidebar-collapsed');
-    }
-
-    // Clique na borda (Inicia o arrasto)
-    resizer.addEventListener('mousedown', () => {
-        isResizing = true;
-        document.body.classList.add('is-resizing');
-        document.body.classList.remove('sidebar-collapsed'); // Acorda a barra se estava oculta
-    });
-
-    // Movimento do mouse na tela
-    document.addEventListener('mousemove', (e) => {
-        if (!isResizing) return;
-        
-        // A largura é o mouse(X) menos o tamanho da barra fininha (48px)
-        let newWidth = e.clientX - 48;
-
-        // Limites máximos e mínimos do VS Code
-        if (newWidth > 600) newWidth = 600;
-        
-        // Snap to Collapse: Se esmagar menos de 120px, ele fecha de vez!
-        if (newWidth < 120) {
-            newWidth = 0;
-            document.body.classList.add('sidebar-collapsed');
-            isResizing = false;
-            document.body.classList.remove('is-resizing');
-        } else if (newWidth < 180) {
-            newWidth = 180; // Trava num mínimo decente antes de fechar
-        }
-
-        document.documentElement.style.setProperty('--sidebar-width', `${newWidth}px`);
-        localStorage.setItem('kcs_sidebar_width', newWidth);
-    });
-
-    // Solta o clique
-    document.addEventListener('mouseup', () => {
-        if (isResizing) {
-            isResizing = false;
-            document.body.classList.remove('is-resizing');
-        }
-    });
-}
 
 function bindActivityBarEvents() {
     const activityBar = document.querySelector('.workbench-activitybar');
@@ -1776,26 +1786,40 @@ function bindActivityBarEvents() {
         if (!btn) return;
         const view = btn.dataset.view;
 
+        // 👇 LÓGICA DE TOGGLE INTELIGENTE 👇
         if (view === appState.currentView && !['settings', 'account', 'semantic-search'].includes(view)) {
-            document.body.classList.toggle('sidebar-collapsed');
-            return; // Para a execução aqui para não recarregar a tela à toa
+            const isCollapsed = document.body.classList.contains('sidebar-collapsed');
+            if (isCollapsed) {
+                document.body.classList.remove('sidebar-collapsed');
+                let savedWidth = localStorage.getItem('kcs_sidebar_width') || 260;
+                if (savedWidth < 180) savedWidth = 260; 
+                document.documentElement.style.setProperty('--sidebar-width', `${savedWidth}px`);
+                localStorage.setItem('kcs_sidebar_width', savedWidth);
+            } else {
+                document.body.classList.add('sidebar-collapsed');
+                document.documentElement.style.setProperty('--sidebar-width', `0px`);
+                localStorage.setItem('kcs_sidebar_width', 0);
+            }
+            return;
         } else {
-            // Se clicou em um ícone diferente, garante que a sidebar vai abrir
-            document.body.classList.remove('sidebar-collapsed');
+            if (document.body.classList.contains('sidebar-collapsed')) {
+                document.body.classList.remove('sidebar-collapsed');
+                let savedWidth = localStorage.getItem('kcs_sidebar_width') || 260;
+                if (savedWidth < 180) savedWidth = 260; 
+                document.documentElement.style.setProperty('--sidebar-width', `${savedWidth}px`);
+                localStorage.setItem('kcs_sidebar_width', savedWidth);
+            }
         }
+        // 👆 FIM DA LÓGICA 👇
 
         switch (view) {
             case 'articles':
                 if (window.__kcs.filterByStatus) window.__kcs.filterByStatus('all');
                 break;
             case 'sql':
-    if (!canUseFeature(FEATURE_FLAGS.SQL_LIBRARY)) {
-        showToast('Biblioteca SQL indisponível para o seu setor.', 'warning');
-        return;
-    }
-
-    if (window.__kcs.filterSqlByStatus) window.__kcs.filterSqlByStatus('all');
-    break;
+                // Tratamento de segurança simplificado
+                if (window.__kcs.filterSqlByStatus) window.__kcs.filterSqlByStatus('all');
+                break;
             case 'settings':
                 document.getElementById('vscode-account-menu')?.classList.add('hidden');
                 document.getElementById('vscode-settings-menu')?.classList.toggle('hidden');
